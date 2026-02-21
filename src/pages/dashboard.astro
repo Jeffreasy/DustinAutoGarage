@@ -15,8 +15,7 @@
  */
 
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { LaventeConvexProvider } from "../components/LaventeConvexProvider";
-import VoertuigenDashboard from "../components/VoertuigenDashboard";
+import DashboardIsland from "../components/DashboardIsland";
 
 // ── Server-Side Guard ──────────────────────────────────────────────────────
 // Haal de huidige gebruiker op uit context.locals (gevuld door de Astro Middleware).
@@ -28,8 +27,10 @@ if (!user) {
 }
 ---
 
-<BaseLayout title="Dashboard — Auto Garage" description="Beheer uw klanten, voertuigen en onderhoudshistorie.">
-
+<BaseLayout
+  title="Dashboard — Auto Garage"
+  description="Beheer uw klanten, voertuigen en onderhoudshistorie."
+>
   <!-- Dashboard header -->
   <header class="dashboard-header">
     <div class="container">
@@ -51,16 +52,10 @@ if (!user) {
     De provider fetcht intern het RS256 JWT en start de Convex sessie.
   -->
   <main class="container dashboard-main">
-    <LaventeConvexProvider client:load>
-      <!--
-        VoertuigenDashboard gebruikt `api.voertuigen.list` en
-        `api.voertuigen.getBijnaVerlopenApk` intern via useQuery().
-        Zolang de provider laadt, toont het component een eigen skeleton.
-      -->
-      <VoertuigenDashboard client:load />
-    </LaventeConvexProvider>
+    <!-- DashboardIsland = LaventeConvexProvider + VoertuigenDashboard in één React root.
+         client:only="react" = geen SSR, voorkomt ConvexProvider context fout. -->
+    <DashboardIsland client:only="react" />
   </main>
-
 </BaseLayout>
 
 <style>
@@ -109,7 +104,9 @@ if (!user) {
     color: var(--color-muted, #94a3b8);
     border: 1px solid var(--color-border, #334155);
     text-decoration: none;
-    transition: color 0.15s, border-color 0.15s;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
   }
 
   .btn-logout:hover {
