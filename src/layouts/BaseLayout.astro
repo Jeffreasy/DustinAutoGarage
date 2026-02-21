@@ -1,0 +1,114 @@
+---
+/**
+ * src/layouts/BaseLayout.astro
+ *
+ * Basis page layout voor alle Auto Garage pagina's.
+ * Laadt Google Fonts (Inter) en stelt globale CSS custom properties in.
+ */
+
+export interface Props {
+    title: string;
+    description?: string;
+}
+
+const { title, description = "Auto Garage — Klanten- en voertuigbeheer" } =
+    Astro.props;
+---
+
+<!doctype html>
+<html lang="nl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content={description} />
+        <title>{title}</title>
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+        <!-- Google Fonts: Inter -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+
+    <body>
+        <slot />
+    </body>
+</html>
+
+<style is:global>
+    /* ── Design tokens ─────────────────────────────────────────────────────── */
+    :root {
+        /* Palette */
+        --color-bg: #0a0f1a;
+        --color-surface: #0f1729;
+        --color-surface-2: #162039;
+        --color-border: #1e2d4a;
+        --color-heading: #f0f6ff;
+        --color-body: #94a3b8;
+        --color-muted: #64748b;
+
+        /* Accent — Teal (geen paars per design rules) */
+        --color-accent: #14b8a6;
+        --color-accent-hover: #0d9488;
+        --color-accent-dim: rgba(20, 184, 166, 0.12);
+
+        /* States */
+        --color-error-bg: #1a0a0a;
+        --color-error-border: #7f1d1d;
+        --color-error-text: #f87171;
+        --color-success-text: #4ade80;
+
+        /* Typography */
+        --font-sans: "Inter", system-ui, sans-serif;
+
+        /* Spacing */
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html {
+        font-family: var(--font-sans);
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        background: var(--color-bg);
+        color: var(--color-body);
+        min-height: 100vh;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        color: var(--color-heading);
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    a {
+        color: var(--color-accent);
+        text-decoration: none;
+    }
+
+    a:hover {
+        color: var(--color-accent-hover);
+    }
+</style>

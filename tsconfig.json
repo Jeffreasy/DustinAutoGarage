@@ -1,0 +1,52 @@
+{
+    "compilerOptions": {
+        // ── Compilation target ──────────────────────────────────────────────────
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": [
+            "ES2022",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        // ── React / JSX ─────────────────────────────────────────────────────────
+        "jsx": "react-jsx",
+        "jsxImportSource": "react",
+        // ── Interop ─────────────────────────────────────────────────────────────
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        // ── Type safety ──────────────────────────────────────────────────────────
+        "strict": true,
+        "strictNullChecks": true,
+        "forceConsistentCasingInFileNames": true,
+        "verbatimModuleSyntax": true,
+        // ── Emit ─────────────────────────────────────────────────────────────────
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+        // ── Paths ────────────────────────────────────────────────────────────────
+        "baseUrl": ".",
+        "paths": {
+            "@components/*": [
+                "src/components/*"
+            ],
+            "@layouts/*": [
+                "src/layouts/*"
+            ],
+            "@lib/*": [
+                "src/lib/*"
+            ]
+        }
+    },
+    // Astro gegenereerde types worden hier meegenomen zodra `astro dev` draait
+    "include": [
+        ".astro/types.d.ts",
+        "src/**/*",
+        "*.mjs",
+        "*.ts"
+    ],
+    "exclude": [
+        "dist",
+        "node_modules",
+        "convex"
+    ]
+}

@@ -1,0 +1,31 @@
+{
+    "compilerOptions": {
+        // Convex vereist ES2020+ voor async/await en moderne features
+        "target": "ES2020",
+        "module": "CommonJS",
+        "moduleResolution": "node",
+        "lib": [
+            "ES2020"
+        ],
+        // Node types voor process.env in auth.config.ts
+        "types": [
+            "node"
+        ],
+        // Type safety
+        "strict": true,
+        "strictNullChecks": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        // Geen emit — Convex doet bundling zelf
+        "noEmit": true,
+        "skipLibCheck": true
+    },
+    "include": [
+        "**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "_generated"
+    ]
+}

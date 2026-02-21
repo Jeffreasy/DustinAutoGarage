@@ -1,0 +1,34 @@
+---
+/**
+ * src/pages/index.astro
+ *
+ * Publieke landingspagina — Redirect naar /login of /dashboard.
+ * Geguard door Astro Middleware: als je al ingelogd bent (user in locals)
+ * word je direct doorgestuurd naar het dashboard, anders naar /login.
+ */
+---
+
+<!doctype html>
+<html lang="nl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Dustin Auto Garage</title>
+        <meta http-equiv="refresh" content="0; url=/dashboard" />
+        <style>
+            body {
+                background: #0a0f1a;
+                color: #64748b;
+                font-family: system-ui, sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <p>Doorsturen naar dashboard…</p>
+    </body>
+</html>

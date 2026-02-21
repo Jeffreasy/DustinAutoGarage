@@ -1,0 +1,23 @@
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Build output ──────────────────────────────────────────────────────────────
+dist/
+.astro/
+
+# ── Convex generated ──────────────────────────────────────────────────────────
+convex/_generated/
+
+# ── Environment (bevat secrets — nooit committen) ─────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── Tijdelijk create-astro spoor ──────────────────────────────────────────────
+popular-pegasi/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

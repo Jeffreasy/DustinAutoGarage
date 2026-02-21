@@ -1,0 +1,315 @@
+---
+/**
+ * src/pages/login.astro
+ *
+ * Publieke login pagina — authenticeert via de lokale BFF proxy.
+ * De proxy (/api/auth/login) stuurt het request door naar LaventeCare
+ * en sanitizeert de Set-Cookie headers voor localhost.
+ */
+---
+
+<!doctype html>
+<html lang="nl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Inloggen — Dustin Auto Garage</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: "Inter", system-ui, sans-serif;
+                background: #0a0f1a;
+                color: #94a3b8;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .card {
+                background: #0f1729;
+                border: 1px solid #1e2d4a;
+                border-radius: 0.75rem;
+                padding: 2.5rem;
+                width: 100%;
+                max-width: 400px;
+            }
+
+            .logo {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: #f0f6ff;
+                margin-bottom: 0.25rem;
+            }
+            .subtitle {
+                font-size: 0.875rem;
+                color: #64748b;
+                margin-bottom: 2rem;
+            }
+
+            label {
+                display: block;
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: #94a3b8;
+                margin-bottom: 0.35rem;
+            }
+            input {
+                width: 100%;
+                padding: 0.6rem 0.875rem;
+                background: #162039;
+                border: 1px solid #1e2d4a;
+                border-radius: 0.5rem;
+                color: #f0f6ff;
+                font-size: 0.9rem;
+                font-family: inherit;
+                margin-bottom: 1.25rem;
+                transition: border-color 0.15s;
+            }
+            input:focus {
+                outline: none;
+                border-color: #14b8a6;
+            }
+
+            button {
+                width: 100%;
+                padding: 0.7rem;
+                background: #14b8a6;
+                color: #0a0f1a;
+                font-weight: 600;
+                font-size: 0.9rem;
+                font-family: inherit;
+                border: none;
+                border-radius: 0.5rem;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            button:hover {
+                background: #0d9488;
+            }
+            button:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .error {
+                display: none;
+                background: #1a0a0a;
+                border: 1px solid #7f1d1d;
+                color: #f87171;
+                border-radius: 0.5rem;
+                padding: 0.75rem;
+                font-size: 0.8rem;
+                margin-bottom: 1rem;
+            }
+            .error.visible {
+                display: block;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="card">
+            <p class="logo">🔧 Dustin Auto Garage</p>
+            <p class="subtitle">Log in op uw werkplaatsportaal</p>
+
+            <div id="error-box" class="error" role="alert"></div>
+
+            <form id="login-form" novalidate>
+                <label for="email">E-mailadres</label>
+                <input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="jan@jansen.nl"
+                    autocomplete="email"
+                    required
+                />
+
+                <label for="password">Wachtwoord</label>
+                <input
+                    id="password"
+                    type="password"
+                    name="password"
+                    placeholder="••••••••"
+                    autocomplete="current-password"
+                    required
+                />
+
+                <button type="submit" id="submit-btn">Inloggen</button>
+            </form>
+
+            <!-- MFA stap — verborgen tot backend mfa_required stuurt -->
+            <div id="mfa-step" style="display:none">
+                <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:1rem;">
+                    Voor uw veiligheid is verificatie vereist.<br />
+                    Klik op de knop om een code naar uw e-mailadres te sturen.
+                </p>
+                <button
+                    type="button"
+                    id="send-code-btn"
+                    style="margin-bottom:1.25rem;"
+                >
+                    Stuur verificatiecode
+                </button>
+                <label for="mfa-code">Verificatiecode</label>
+                <input
+                    id="mfa-code"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    placeholder="123456"
+                    autocomplete="one-time-code"
+                />
+                <button type="button" id="mfa-submit-btn">Verifiëren</button>
+            </div>
+        </div>
+
+        <script is:inline>
+            // ── State ────────────────────────────────────────────────────────
+            let mfaRequired = false;
+
+            // ── Elements ─────────────────────────────────────────────────────
+            const form = document.getElementById("login-form");
+            const btn = document.getElementById("submit-btn");
+            const err = document.getElementById("error-box");
+            const mfaStep = document.getElementById("mfa-step");
+            const mfaCode = document.getElementById("mfa-code");
+            const sendBtn = document.getElementById("send-code-btn");
+            const mfaBtn = document.getElementById("mfa-submit-btn");
+
+            // ── Stap 1: Inloggen (e-mail + wachtwoord) ───────────────────────
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                if (mfaRequired) return; // Guard: ignore als we al in MFA-stap zitten
+
+                btn.disabled = true;
+                btn.textContent = "Bezig…";
+                err.classList.remove("visible");
+
+                const email = document.getElementById("email").value.trim();
+                const password = document.getElementById("password").value;
+
+                try {
+                    const res = await fetch("/api/auth/login", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, password }),
+                    });
+
+                    const data = await res.json().catch(() => ({}));
+
+                    if (!res.ok) {
+                        err.textContent =
+                            data.error ?? "Ongeldige inloggegevens.";
+                        err.classList.add("visible");
+                        return;
+                    }
+
+                    // MFA vereist (admin/editor zonder TOTP ingesteld)?
+                    if (data.mfa_required) {
+                        mfaRequired = true;
+                        // Toon MFA-stap, verberg wachtwoord-formulier
+                        form.style.display = "none";
+                        mfaStep.style.display = "block";
+                        return;
+                    }
+
+                    // Volledig ingelogd
+                    window.location.href = "/dashboard";
+                } catch {
+                    err.textContent =
+                        "Verbinding mislukt. Controleer uw internet.";
+                    err.classList.add("visible");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "Inloggen";
+                }
+            });
+
+            // ── Stap 2: Verstuur e-mail verificatiecode ───────────────────────
+            sendBtn.addEventListener("click", async () => {
+                sendBtn.disabled = true;
+                sendBtn.textContent = "Versturen…";
+                err.classList.remove("visible");
+
+                try {
+                    const res = await fetch("/api/auth/mfa/send-email", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({}),
+                    });
+
+                    if (res.ok) {
+                        sendBtn.textContent = "✓ Code verstuurd";
+                        mfaCode.focus();
+                    } else {
+                        const d = await res.json().catch(() => ({}));
+                        err.textContent = d.error ?? "Kon geen code versturen.";
+                        err.classList.add("visible");
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = "Stuur nieuwe code";
+                    }
+                } catch {
+                    err.textContent = "Verbinding mislukt.";
+                    err.classList.add("visible");
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = "Probeer opnieuw";
+                }
+            });
+
+            // ── Stap 3: Verifieer de code ─────────────────────────────────────
+            mfaBtn.addEventListener("click", async () => {
+                const code = mfaCode.value.trim();
+                if (!code) {
+                    mfaCode.focus();
+                    return;
+                }
+
+                mfaBtn.disabled = true;
+                mfaBtn.textContent = "Verifiëren…";
+                err.classList.remove("visible");
+
+                try {
+                    const res = await fetch("/api/auth/mfa/verify", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ code }),
+                    });
+
+                    if (res.ok) {
+                        window.location.href = "/dashboard";
+                    } else {
+                        const d = await res.json().catch(() => ({}));
+                        err.textContent =
+                            d.error ?? "Ongeldige code. Probeer opnieuw.";
+                        err.classList.add("visible");
+                        mfaBtn.disabled = false;
+                        mfaBtn.textContent = "Verifiëren";
+                    }
+                } catch {
+                    err.textContent = "Verbinding mislukt.";
+                    err.classList.add("visible");
+                    mfaBtn.disabled = false;
+                    mfaBtn.textContent = "Verifiëren";
+                }
+            });
+        </script>
+    </body>
+</html>
