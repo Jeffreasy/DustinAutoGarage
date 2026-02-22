@@ -1,0 +1,21 @@
+refactor: consolideer nav naar BaseLayout + voeg footer toe
+
+### Probleem
+Elke pagina (dashboard, werkplaats, medewerkers) had een eigen
+<header> met navigatieknoppen naast de site-header in BaseLayout.
+Resultaat: dubbele navigatiebalk op elke pagina.
+
+### Oplossing
+- refactor(BaseLayout): role-aware sticky nav — alle links centraal
+  Toont "Werkplaats" for iedereen, "Medewerkers" alleen voor editor/admin.
+  Active-state highlighting via isActief() op Astro.url.pathname.
+  Glassmorphism backdrop-filter op de sticky header.
+- feat(BaseLayout): professionele footer toegevoegd
+  Brand + tagline, footerlinks (role-aware), copyright.
+- refactor(dashboard.astro): eigen <header> verwijderd
+- refactor(werkplaats.astro): eigen <header> + stijlen verwijderd
+- refactor(medewerkers.astro): eigen <header> + stijlen verwijderd
+- fix(WerkplaatsBord): dubbele <h1> verwijderd uit toolbar
+  De pagina-kop in werkplaats.astro toont al de titel.
+
+astro check: 0 errors, 0 warnings, 0 hints (31 files)

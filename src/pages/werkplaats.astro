@@ -2,99 +2,63 @@
 /**
  * src/pages/werkplaats.astro
  *
- * Werkplaatsbord — het Digitaal Whiteboard van de garage.
+ * Werkplaatsbord — digitaal whiteboard van de garage.
+ * Navigatie en uitloggen zitten in BaseLayout — geen dubbele header.
  *
  * Toegangslogica:
- *   Alle ingelogde medewerkers → toegang (monteur+ domein-rol check in component)
+ *   Alle ingelogde medewerkers → toegang
  *   Niet ingelogd             → redirect naar /login
- *
- * Het WerkplaatsBord component doet verdere rol-gating client-side:
- *   eigenaar/balie → seed-prompt + nieuwe werkorder knop
- *   monteur        → alleen bord + logboek
  */
 
 import BaseLayout from "../layouts/BaseLayout.astro";
 import WerkplaatsBordIsland from "../components/WerkplaatsBordIsland";
 
-// ── Server-Side Guard ──────────────────────────────────────────────────────
 const user = Astro.locals.user ?? null;
-
-if (!user) {
-    return Astro.redirect("/login?reden=sessie_verlopen");
-}
+if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
 ---
 
 <BaseLayout
     title="Werkplaatsbord — Dustin Auto Garage"
     description="Digitaal werkplaatsbord — real-time overzicht van alle auto's en bruggen."
 >
-    <!-- Pagina header -->
-    <header class="page-header">
-        <div class="container">
-            <div class="header-content">
-                <div>
-                    <h1>Werkplaatsbord</h1>
-                    <p class="header-subtitle">
-                        Real-time overzicht van alle werkorders en bruggen
-                    </p>
-                </div>
-                <nav class="header-nav">
-                    <a href="/dashboard" class="btn btn-ghost btn-sm"
-                        >← Dashboard</a
-                    >
-                    <a href="/logout" class="btn btn-ghost btn-sm">Uitloggen</a>
-                </nav>
-            </div>
+    <div class="werkplaats-wrapper">
+        <!-- Pagina-kop -->
+        <div class="page-kop">
+            <h1>Werkplaatsbord</h1>
+            <p class="pagina-ondertitel">
+                Real-time overzicht van alle werkorders en bruggen
+            </p>
         </div>
-    </header>
 
-    <!-- React Island: LaventeConvexProvider + WerkplaatsBord in één React root -->
-    <main class="container page-main">
+        <!-- React Island: LaventeConvexProvider + WerkplaatsBord in één React root -->
         <WerkplaatsBordIsland client:only="react" />
-    </main>
+    </div>
 </BaseLayout>
 
 <style>
-    /* ── Header ─────────────────────────────────────────────────────────────── */
-    .page-header {
-        background: var(--color-surface);
-        border-bottom: 1px solid var(--color-border);
-        padding: var(--space-5) 0;
-        margin-bottom: var(--space-6);
+    .werkplaats-wrapper {
+        padding: var(--space-5) var(--space-5) 0;
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+        /* Bord heeft eigen horizontale scroll */
+        overflow-x: hidden;
     }
 
-    .header-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-4);
-        flex-wrap: wrap;
+    .page-kop {
+        margin-bottom: var(--space-5);
     }
 
-    .page-header h1 {
+    .page-kop h1 {
         font-size: var(--text-2xl);
         font-weight: var(--weight-bold);
         color: var(--color-heading);
-        margin: 0;
+        margin: 0 0 var(--space-1);
         line-height: var(--leading-tight);
     }
 
-    .header-subtitle {
+    .pagina-ondertitel {
         font-size: var(--text-sm);
         color: var(--color-muted);
-        margin-top: var(--space-1);
-    }
-
-    .header-nav {
-        display: flex;
-        gap: var(--space-2);
-        align-items: center;
-    }
-
-    /* ── Main ────────────────────────────────────────────────────────────────── */
-    .page-main {
-        padding-block: var(--space-6);
-        /* Bord heeft eigen horizontale scroll — container niet overflow:hidden */
-        overflow-x: hidden;
+        margin: 0;
     }
 </style>

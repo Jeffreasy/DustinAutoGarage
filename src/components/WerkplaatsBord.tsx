@@ -218,35 +218,24 @@ export default function WerkplaatsBord() {
 
     return (
         <div>
-            {/* Toolbar */}
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "var(--space-5)",
-                gap: "var(--space-3)",
-                flexWrap: "wrap",
-            }}>
-                <div>
-                    <h1 style={{ fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", margin: 0 }}>
-                        🏭 Werkplaatsbord
-                    </h1>
-                    <p style={{ color: "var(--color-muted)", fontSize: "var(--text-xs)", margin: "var(--space-1) 0 0" }}>
-                        Real-time — alle wijzigingen zijn direct zichtbaar
-                    </p>
-                </div>
-
-                {isBalie && (
+            {/* Toolbar: alleen acties — paginatitel zit in werkplaats.astro page-kop */}
+            {isBalie && (
+                <div style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginBottom: "var(--space-4)",
+                }}>
                     <button
                         className="btn btn-primary btn-sm"
                         id="nieuwe-werkorder-btn"
                         aria-label="Nieuwe werkorder aanmaken"
                         onClick={() => setToonNieuweWerkorderModal(true)}
+                        style={{ minHeight: "44px" }}
                     >
                         + Nieuwe werkorder
                     </button>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Kanban bord — horizontaal scrollbaar */}
             <div style={{

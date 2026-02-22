@@ -3,18 +3,16 @@
  * src/layouts/BaseLayout.astro
  *
  * Root layout voor alle pagina's.
- * Laadt het volledige design system in de correcte volgorde.
+ * Bevat de ENIGE navigatiebalk van de app + footer.
+ * Pages bevatten GEEN eigen <header> meer.
  *
  * Props:
- *   title       — paginatitel (wordt in <title> gezet)
+ *   title       — paginatitel
  *   description — meta-description (SEO)
- *   showHeader  — toon de standaard site-header (default: true)
- *   headerSlot  — custom header content (laat showHeader op false)
  */
 
 import ThemeToggle from "../components/ThemeToggle.astro";
 
-// Design system — Vite verwerkt en bundelt deze bestanden automatisch
 import "../styles/design-tokens.css";
 import "../styles/typography.css";
 import "../styles/spacing.css";
@@ -24,16 +22,20 @@ import "../styles/utilities.css";
 export interface Props {
     title: string;
     description?: string;
-    showHeader?: boolean;
 }
 
 const {
     title,
     description = "Dustin Auto Garage — Professioneel klanten- en voertuigbeheer",
-    showHeader = true,
 } = Astro.props;
 
 const user = Astro.locals.user;
+const isAdmin = user?.role === "editor" || user?.role === "admin";
+
+// Actieve pagina voor nav highlight
+const huidigeUrl = Astro.url.pathname;
+const isActief = (pad: string) =>
+    pad === "/" ? huidigeUrl === pad : huidigeUrl.startsWith(pad);
 ---
 
 <!doctype html>
@@ -52,114 +54,202 @@ const user = Astro.locals.user;
         <script is:inline>
             (function () {
                 var stored = localStorage.getItem("theme");
-                var preferred = window.matchMedia("(prefers-color-scheme: light)").matches
+                var preferred = window.matchMedia(
+                    "(prefers-color-scheme: light)",
+                ).matches
                     ? "light"
                     : "dark";
-                var theme = (stored === "light" || stored === "dark") ? stored : preferred;
+                var theme =
+                    stored === "light" || stored === "dark"
+                        ? stored
+                        : preferred;
                 document.documentElement.setAttribute("data-theme", theme);
-
-                // Meta theme-color synchroon aanpassen
                 var meta = document.getElementById("meta-theme-color");
-                if (meta) {
+                if (meta)
                     meta.setAttribute(
                         "content",
-                        theme === "light" ? "#f8fafc" : "#07090f"
+                        theme === "light" ? "#f8fafc" : "#07090f",
                     );
-                }
             })();
         </script>
 
-        <!--
-            Google Fonts — Inter (UI) + JetBrains Mono (kentekens/code)
-            Preconnect voor minimale latency.
-        -->
+        <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
             href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;700&display=swap"
             rel="stylesheet"
         />
-
-        <!-- Design System wordt geïnjecteerd door Vite via frontmatter imports -->
     </head>
 
     <body>
-        <!-- Site Header -->
-        {showHeader && (
-            <header class="site-header no-print" role="banner">
-                <div class="site-header-inner">
-                    <!-- Logo / Brand -->
-                    <a href="/dashboard" class="site-logo" aria-label="Dustin Auto Garage — Dashboard">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                            style="color: var(--color-accent);"
+        <!-- ── Navigatiebalk (ENIGE nav in de app) ───────────────────────── -->
+        <header class="site-header no-print" role="banner">
+            <div class="site-header-inner">
+                <!-- Logo / Brand -->
+                <a
+                    href="/dashboard"
+                    class="site-logo"
+                    aria-label="Dustin Auto Garage — Dashboard"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                        style="color: var(--color-accent);"
+                    >
+                        <path
+                            d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"
+                        ></path>
+                        <circle cx="6.5" cy="16.5" r="2.5"></circle>
+                        <circle cx="16.5" cy="16.5" r="2.5"></circle>
+                    </svg>
+                    <span>Dustin Auto Garage</span>
+                </a>
+
+                <!-- Navigatielinks — zichtbaar als ingelogd -->
+                {
+                    user && (
+                        <nav
+                            class="site-nav hide-mobile"
+                            aria-label="Hoofdnavigatie"
                         >
-                            <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
-                            <circle cx="6.5" cy="16.5" r="2.5" />
-                            <circle cx="16.5" cy="16.5" r="2.5" />
-                        </svg>
-                        <span>Dustin Auto Garage</span>
-                    </a>
+                            <a
+                                href="/dashboard"
+                                class:list={[
+                                    "nav-link",
+                                    {
+                                        "nav-link--actief":
+                                            isActief("/dashboard"),
+                                    },
+                                ]}
+                            >
+                                Dashboard
+                            </a>
+                            <a
+                                href="/werkplaats"
+                                class:list={[
+                                    "nav-link",
+                                    {
+                                        "nav-link--actief":
+                                            isActief("/werkplaats"),
+                                    },
+                                ]}
+                            >
+                                🏭 Werkplaats
+                            </a>
+                            {isAdmin && (
+                                <a
+                                    href="/medewerkers"
+                                    class:list={[
+                                        "nav-link",
+                                        {
+                                            "nav-link--actief":
+                                                isActief("/medewerkers"),
+                                        },
+                                    ]}
+                                >
+                                    👥 Medewerkers
+                                </a>
+                            )}
+                        </nav>
+                    )
+                }
 
-                    <!-- Navigatie — verborgen op mobiel (toekomstige hamburger menu) -->
-                    <nav class="site-nav hide-mobile" aria-label="Hoofdnavigatie">
-                        <a href="/dashboard" class="nav-link">Dashboard</a>
-                        <a href="/klanten" class="nav-link">Klanten</a>
-                        <a href="/voertuigen" class="nav-link">Voertuigen</a>
-                    </nav>
-
-                    <!-- Acties -->
-                    <div class="flex items-center gap-2">
-                        {user && (
-                            <span class="text-sm text-muted hide-mobile">
-                                {user.full_name}
+                <!-- Acties rechts -->
+                <div class="site-header-actions">
+                    {
+                        user && (
+                            <span
+                                class="nav-user-name hide-mobile"
+                                title={user.email ?? ""}
+                            >
+                                {user.full_name ?? user.email}
                             </span>
-                        )}
-
-                        <!-- Theme toggle -->
-                        <ThemeToggle />
-
-                        <!-- Uitloggen -->
-                        {user && (
-                            <a href="/logout" class="btn btn-ghost btn-sm no-print">
+                        )
+                    }
+                    <ThemeToggle />
+                    {
+                        user && (
+                            <a
+                                href="/logout"
+                                class="btn btn-ghost btn-sm no-print"
+                                aria-label="Uitloggen"
+                            >
                                 Uitloggen
                             </a>
-                        )}
-                    </div>
+                        )
+                    }
                 </div>
-            </header>
-        )}
-
-        <!-- Page content via slot -->
-        <main role="main" id="main-content" class="page-main">
-            <div class="container">
-                <slot />
             </div>
+        </header>
+
+        <!-- ── Page content ─────────────────────────────────────────────── -->
+        <main role="main" id="main-content" class="page-main">
+            <slot />
         </main>
 
+        <!-- ── Footer ───────────────────────────────────────────────────── -->
+        <footer class="site-footer no-print" role="contentinfo">
+            <div class="site-footer-inner">
+                <div class="footer-brand">
+                    <span class="footer-logo-text">Dustin Auto Garage</span>
+                    <span class="footer-tagline"
+                        >Professioneel klanten- en voertuigbeheer</span
+                    >
+                </div>
+
+                {
+                    user && (
+                        <nav class="footer-nav" aria-label="Footernavigatie">
+                            <a href="/dashboard" class="footer-link">
+                                Dashboard
+                            </a>
+                            <a href="/werkplaats" class="footer-link">
+                                Werkplaats
+                            </a>
+                            {isAdmin && (
+                                <a href="/medewerkers" class="footer-link">
+                                    Medewerkers
+                                </a>
+                            )}
+                        </nav>
+                    )
+                }
+
+                <p class="footer-copy">
+                    &copy; {new Date().getFullYear()} Dustin Auto Garage
+                </p>
+            </div>
+        </footer>
+
         <!-- Skip-link voor toetsenbordgebruikers -->
-        <a href="#main-content" class="sr-only focus-ring" style="position:fixed;top:var(--space-2);left:var(--space-2);z-index:var(--z-toast);background:var(--color-accent);color:var(--color-on-accent);padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-weight:var(--weight-medium);">
+        <a
+            href="#main-content"
+            class="sr-only focus-ring"
+            style="position:fixed;top:var(--space-2);left:var(--space-2);z-index:9999;background:var(--color-accent);color:var(--color-on-accent);padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-weight:var(--weight-medium);"
+        >
             Ga naar inhoud
         </a>
 
-        <!-- Theme-toggle meta-theme-color sync na DOM load -->
+        <!-- Theme-toggle meta-sync -->
         <script>
-            // Sync meta theme-color on toggle (ThemeToggle.astro writes data-theme)
-            const metaTheme = document.getElementById("meta-theme-color") as HTMLMetaElement | null;
+            const metaTheme = document.getElementById(
+                "meta-theme-color",
+            ) as HTMLMetaElement | null;
             const observer = new MutationObserver(() => {
-                const theme = document.documentElement.getAttribute("data-theme");
-                if (metaTheme) {
-                    metaTheme.content = theme === "light" ? "#f8fafc" : "#07090f";
-                }
+                const theme =
+                    document.documentElement.getAttribute("data-theme");
+                if (metaTheme)
+                    metaTheme.content =
+                        theme === "light" ? "#f8fafc" : "#07090f";
             });
             observer.observe(document.documentElement, {
                 attributes: true,
@@ -168,3 +258,169 @@ const user = Astro.locals.user;
         </script>
     </body>
 </html>
+
+<style>
+    /* ── Site-header ──────────────────────────────────────────────────────── */
+    .site-header {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky, 100);
+        background: var(--glass-bg-strong, var(--color-surface));
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--glass-border, var(--color-border));
+        box-shadow: 0 1px 0 var(--glass-border, var(--color-border));
+    }
+
+    .site-header-inner {
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+        padding: 0 var(--space-5);
+        height: 60px;
+        display: flex;
+        align-items: center;
+        gap: var(--space-6);
+    }
+
+    .site-logo {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-weight: var(--weight-bold);
+        font-size: var(--text-sm);
+        color: var(--color-heading);
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: opacity var(--transition-base);
+    }
+    .site-logo:hover {
+        opacity: 0.8;
+    }
+
+    /* ── Navigatielinks ──────────────────────────────────────────────────── */
+    .site-nav {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        flex: 1;
+    }
+
+    .nav-link {
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        color: var(--color-muted);
+        text-decoration: none;
+        transition:
+            color var(--transition-base),
+            background var(--transition-base);
+        white-space: nowrap;
+    }
+    .nav-link:hover {
+        color: var(--color-heading);
+        background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+    }
+    .nav-link--actief {
+        color: var(--color-heading);
+        background: var(--glass-bg, rgba(255, 255, 255, 0.08));
+        font-weight: var(--weight-semibold);
+    }
+
+    /* ── Acties rechts ───────────────────────────────────────────────────── */
+    .site-header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .nav-user-name {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        max-width: 160px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+        .hide-mobile {
+            display: none !important;
+        }
+        .site-header-inner {
+            padding: 0 var(--space-4);
+            gap: var(--space-3);
+        }
+    }
+
+    /* ── Page main ───────────────────────────────────────────────────────── */
+    .page-main {
+        min-height: calc(100vh - 60px - 80px); /* viewport - header - footer */
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    .site-footer {
+        background: var(--color-surface);
+        border-top: 1px solid var(--color-border);
+        margin-top: auto;
+    }
+
+    .site-footer-inner {
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+    }
+
+    .footer-brand {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .footer-logo-text {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-semibold);
+        color: var(--color-heading);
+    }
+    .footer-tagline {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+    }
+
+    .footer-nav {
+        display: flex;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+    }
+    .footer-link {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        text-decoration: none;
+        transition: color var(--transition-base);
+    }
+    .footer-link:hover {
+        color: var(--color-heading);
+    }
+
+    .footer-copy {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        margin: 0;
+    }
+
+    @media (max-width: 640px) {
+        .site-footer-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--space-3);
+        }
+    }
+</style>
