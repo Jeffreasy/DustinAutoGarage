@@ -81,3 +81,29 @@ export function useVoertuigById(
         voertuigId ? { voertuigId } : "skip"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Mutatie hooks
+// ---------------------------------------------------------------------------
+
+import { useMutation } from "convex/react";
+
+/** Maak een nieuw voertuig aan (balie+). */
+export function useMaakVoertuigAan() {
+    return useMutation(api.voertuigen.create);
+}
+
+/** Pas voertuiggegevens aan (balie+). */
+export function useUpdateVoertuig() {
+    return useMutation(api.voertuigen.update);
+}
+
+/** Werk de kilometerstand bij (monteur+). */
+export function useUpdateKilometerstand() {
+    return useMutation(api.voertuigen.updateKilometerstand);
+}
+
+/** Verwijder voertuig + cascade (eigenaar via UI gate). */
+export function useVerwijderVoertuig() {
+    return useMutation(api.voertuigen.verwijder);
+}

@@ -1,0 +1,59 @@
+---
+/**
+ * src/pages/voertuigen.astro
+ *
+ * Voertuigen module — rol-gebaseerde interface.
+ * Auth-guarded: alle ingelogde medewerkers mogen binnen.
+ */
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import VoertuigenIsland from "../components/VoertuigenIsland";
+
+const user = Astro.locals.user ?? null;
+if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
+---
+
+<BaseLayout
+    title="Voertuigen — Dustin Auto Garage"
+    description="Voertuigenbeheer — bekijk, zoek en beheer het wagenpark."
+>
+    <div class="voertuigen-pagina">
+        <div class="voertuigen-kop">
+            <h1>Voertuigen</h1>
+            <p class="kop-subtitel">
+                {
+                    user.role === "admin" || user.role === "editor"
+                        ? "Volledig wagenparkbeheer inclusief APK-bewaking en kentekenkoppeling"
+                        : "Bekijk en zoek voertuigen in het wagenpark"
+                }
+            </p>
+        </div>
+        <VoertuigenIsland client:only="react" />
+    </div>
+</BaseLayout>
+
+<style>
+    .voertuigen-pagina {
+        padding: var(--space-5) var(--space-5) var(--space-8);
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+    }
+
+    .voertuigen-kop {
+        margin-bottom: var(--space-6);
+    }
+
+    .voertuigen-kop h1 {
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-bold);
+        color: var(--color-heading);
+        margin: 0 0 var(--space-1);
+        line-height: var(--leading-tight);
+    }
+
+    .kop-subtitel {
+        font-size: var(--text-sm);
+        color: var(--color-muted);
+        margin: 0;
+    }
+</style>
