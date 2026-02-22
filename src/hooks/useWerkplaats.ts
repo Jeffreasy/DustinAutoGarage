@@ -117,3 +117,13 @@ export function useSeedDefaultWerkplekken() {
 export function useSluitWerkorderAf() {
     return useMutation(api.werkorders.sluitWerkorderAf);
 }
+
+/** Planning voor de balie — vandaag + N dagen (balie-only). */
+export function useLijstPlanningVoorBalie(vanafMs?: number, totMs?: number) {
+    return useQuery(api.werkorders.lijstPlanningVoorBalie, { vanafMs, totMs });
+}
+
+/** Archiveer een werkorder (eigenaar-only). */
+export function useArchiveerWerkorder() {
+    return useMutation(api.werkorders.archiveerWerkorder);
+}

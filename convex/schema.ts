@@ -281,6 +281,12 @@ export default defineSchema({
         /** Datum van de afspraak (ms since epoch). */
         afspraakDatum: v.number(),
 
+        /**
+         * Gearchiveerd door eigenaar — verbergt order van het actieve bord.
+         * undefined / false = zichtbaar, true = gearchiveerd.
+         */
+        gearchiveerd: v.optional(v.boolean()),
+
         /** Multi-tenant isolatie. */
         tokenIdentifier: v.string(),
 

@@ -353,3 +353,100 @@ export const sluitWerkorderAf = mutation({
         return { succes: true };
     },
 });
+
+// ---------------------------------------------------------------------------
+// Balie-only: planningsagenda
+// ---------------------------------------------------------------------------
+
+/**
+ * lijstPlanningVoorBalie — werkorders gesorteerd op afspraakDatum.
+ *
+ * Retourneert alle niet-gearchiveerde werkorders gesorteerd op datum,
+ * verrijkt met voertuig- en klantdata voor de planningslijst.
+ * Vereist minimaal de rol "balie".
+ */
+export const lijstPlanningVoorBalie = query({
+    args: {
+        /** Vanafmillis (epoch) — standaard begin van vandaag. */
+        vanafMs: v.optional(v.number()),
+        /** Totms (epoch) — standaard 7 dagen vanaf vandaag. */
+        totMs: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "balie");
+        const tokenIdentifier = profiel.tokenIdentifier;
+
+        const nu = Date.now();
+        const vanafMs = args.vanafMs ?? (nu - (nu % 86400000)); // begin vandaag
+        const totMs = args.totMs ?? (vanafMs + 8 * 24 * 60 * 60 * 1000);  // +8 dagen
+
+        const orders = await ctx.db
+            .query("werkorders")
+            .withIndex("by_datum_and_token", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier)
+                    .gte("afspraakDatum", vanafMs)
+                    .lte("afspraakDatum", totMs)
+            )
+            .order("asc")
+            .collect();
+
+        // Filter gearchiveerde orders
+        const actief = orders.filter((o) => !o.gearchiveerd);
+
+        // Verrijk met voertuig + klant
+        const verrijkt = await Promise.all(
+            actief.map(async (order) => {
+                const voertuig = await ctx.db.get(order.voertuigId);
+                const klant = await ctx.db.get(order.klantId);
+                return {
+                    ...order,
+                    voertuig: voertuig
+                        ? { kenteken: voertuig.kenteken, merk: voertuig.merk, model: voertuig.model }
+                        : null,
+                    klant: klant
+                        ? { voornaam: klant.voornaam, achternaam: klant.achternaam, telefoonnummer: klant.telefoonnummer }
+                        : null,
+                };
+            })
+        );
+
+        return verrijkt;
+    },
+});
+
+// ---------------------------------------------------------------------------
+// Eigenaar-only: archiveren
+// ---------------------------------------------------------------------------
+
+/**
+ * archiveerWerkorder — markeer een gesloten werkorder als gearchiveerd.
+ *
+ * Verbergt de order van het actieve Kanban-bord en de planningsagenda.
+ * Alleen de eigenaar kan archiveren.
+ */
+export const archiveerWerkorder = mutation({
+    args: {
+        werkorderId: v.id("werkorders"),
+    },
+    handler: async (ctx, args): Promise<{ succes: boolean }> => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+
+        const order = await ctx.db.get(args.werkorderId);
+        if (!order || order.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
+        }
+
+        await ctx.db.patch(args.werkorderId, { gearchiveerd: true });
+
+        await ctx.db.insert("werkorderLogs", {
+            werkorderId: args.werkorderId,
+            monteursId: profiel._id,
+            actie: "Werkorder gearchiveerd door eigenaar",
+            tijdstip: Date.now(),
+            tokenIdentifier: profiel.tokenIdentifier,
+        });
+
+        return { succes: true };
+    },
+});
+

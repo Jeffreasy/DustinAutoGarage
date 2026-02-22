@@ -1,20 +1,17 @@
 /**
  * src/components/WerkplaatsBordIsland.tsx
  *
- * Één React island dat LaventeConvexProvider + WerkplaatsBord
- * in DEZELFDE React root rendert.
- *
- * Waarom: Astro islands zijn onafhankelijke React roots.
- * Oplossing: één island met client:only="react" — zie DashboardIsland pattern.
+ * Island wrapper: LaventeConvexProvider + WerkplaatsModule in één React root.
+ * WerkplaatsModule dispatcht naar de juiste subview op basis van domeinRol.
  */
 
 import { LaventeConvexProvider } from "./LaventeConvexProvider";
-import WerkplaatsBord from "./WerkplaatsBord";
+import WerkplaatsModule from "./WerkplaatsModule";
 
 export default function WerkplaatsBordIsland() {
     return (
         <LaventeConvexProvider>
-            <WerkplaatsBord />
+            <WerkplaatsModule />
         </LaventeConvexProvider>
     );
 }
