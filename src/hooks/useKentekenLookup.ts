@@ -29,8 +29,16 @@ export interface RDWVoertuigInfo {
     merk: string;
     model: string;
     bouwjaar: number;
+    inrichting?: string;             // "hatchback", "sedan"
     brandstof: "Benzine" | "Diesel" | "EV" | "Hybride" | "LPG";
-    apkVervaldatum?: string; // "YYYY-MM-DD" of undefined
+    cilinderinhoud?: number;         // cc
+    vermogen?: number;               // kW
+    emissieklasse?: string;          // "Euro 6"
+    apkVervaldatum?: string;         // "YYYY-MM-DD"
+    kleur?: string;                  // Geregistreerde kleur
+    wok: boolean;                    // true = wacht op keuren
+    heeftRecall: boolean;            // true = openstaande terugroepactie
+    nap?: string;                    // "Logisch" | "Onlogisch"
 }
 
 export type KentekenStatus = "idle" | "loading" | "ok" | "notfound" | "error";

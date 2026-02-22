@@ -1,4 +1,4 @@
-# 03. Operations & Deployment Runbook
+![alt text](image.png)# 03. Operations & Deployment Runbook
 
 ## The Unified Worker
 To simplify orchestration, avoid multiple failing cron-jobs, and manage concurrency efficiently, LaventeCare Auth runs all background processes via a single compiled Go binary: `cmd/worker`.

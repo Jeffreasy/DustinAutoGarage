@@ -200,6 +200,58 @@ function NieuwVoertuigModal({ onSluit }: { onSluit: () => void }) {
                                     </button>
                                 </div>
                                 {rdwBadge() && <div style={{ marginTop: "var(--space-1)" }}>{rdwBadge()}</div>}
+
+                                {/* Garage signalen — alleen tonen bij succesvolle RDW lookup */}
+                                {rdwStatus === "ok" && rdwData && (
+                                    <div style={{ marginTop: "var(--space-2)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+
+                                        {/* Kritieke waarschuwingen */}
+                                        {rdwData.wok && (
+                                            <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "rgba(220,38,38,0.1)", border: "1px solid var(--color-error, #dc2626)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-error, #dc2626)", fontWeight: "var(--weight-semibold)" }}>
+                                                🚫 WOK — Wacht op keuren: dit voertuig mag de openbare weg niet op
+                                            </div>
+                                        )}
+                                        {rdwData.heeftRecall && (
+                                            <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "rgba(217,119,6,0.1)", border: "1px solid var(--color-warning, #d97706)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning, #d97706)", fontWeight: "var(--weight-semibold)" }}>
+                                                ⚠️ Openstaande terugroepactie (Recall)
+                                            </div>
+                                        )}
+                                        {rdwData.nap === "Onlogisch" && (
+                                            <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "rgba(217,119,6,0.1)", border: "1px solid var(--color-warning, #d97706)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning, #d97706)", fontWeight: "var(--weight-semibold)" }}>
+                                                🔢 Onlogische kilometerstand (NAP: verdacht)
+                                            </div>
+                                        )}
+
+                                        {/* Info chips */}
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+                                            {rdwData.kleur && (
+                                                <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>
+                                                    🎨 {rdwData.kleur}
+                                                </span>
+                                            )}
+                                            {rdwData.inrichting && (
+                                                <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>
+                                                    🚗 {rdwData.inrichting}
+                                                </span>
+                                            )}
+                                            {rdwData.cilinderinhoud ? (
+                                                <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>
+                                                    ⚙️ {rdwData.cilinderinhoud} cc
+                                                </span>
+                                            ) : null}
+                                            {rdwData.vermogen ? (
+                                                <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>
+                                                    ⚡ {rdwData.vermogen} kW
+                                                </span>
+                                            ) : null}
+                                            {rdwData.emissieklasse && (
+                                                <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>
+                                                    🌿 {rdwData.emissieklasse}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Voertuig data */}
