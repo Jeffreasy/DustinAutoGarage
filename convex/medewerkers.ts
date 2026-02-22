@@ -50,7 +50,22 @@ export const getMijnProfiel = query({
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) return null;
 
-        const profiel = await ctx.db
+        // Strategie 1: zoek op userId (= identity.subject) — snel en exact.
+        // Werkt voor records aangemaakt via ensureEigenaar (die identity.subject gebruikt)
+        const viaUserId = await ctx.db
+            .query("medewerkers")
+            .withIndex("by_userId", (q) =>
+                q.eq("userId", identity.subject)
+            )
+            .filter((q) => q.eq(q.field("actief"), true))
+            .unique();
+
+        if (viaUserId) return viaUserId;
+
+        // Strategie 2: fallback op tokenIdentifier — dekt records aangemaakt via
+        // registreerMedewerker (die tokenIdentifier gebruikt als primaire sleutel).
+        // Werkt ALLEEN correct in single-user-per-tenant setups (één record per token).
+        const viaToken = await ctx.db
             .query("medewerkers")
             .withIndex("by_token_identifier", (q) =>
                 q.eq("tokenIdentifier", identity.tokenIdentifier)
@@ -58,7 +73,7 @@ export const getMijnProfiel = query({
             .filter((q) => q.eq(q.field("actief"), true))
             .unique();
 
-        return profiel ?? null;
+        return viaToken ?? null;
     },
 });
 
@@ -71,16 +86,15 @@ export const getMijnProfiel = query({
 export const listMedewerkers = query({
     args: {},
     handler: async (ctx) => {
-        const identity = await getIdentity(ctx);
-        await requireDomainRole(ctx, "balie");
+        // requireDomainRole returns the current user's medewerker record
+        const profiel = await requireDomainRole(ctx, "balie");
 
-        // Haal alle medewerkers op voor deze tenant (ook inactieve)
+        // Use profiel.tokenIdentifier (the shared tenant namespace key) so we find
+        // ALL medewerkers in this tenant, not just the current user's own record.
         const medewerkers = await ctx.db
             .query("medewerkers")
             .withIndex("by_token_identifier", (q) =>
-                // Match op issuer prefix — alle records onder dezelfde issuer
-                // delen dezelfde tenant. We pakken de volledige tokenIdentifier prefix.
-                q.eq("tokenIdentifier", identity.tokenIdentifier)
+                q.eq("tokenIdentifier", profiel.tokenIdentifier)
             )
             .collect();
 

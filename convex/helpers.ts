@@ -86,19 +86,19 @@ export async function getDomeinProfiel(
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    // userId is the `sub` claim embedded in the tokenIdentifier after the pipe
-    // tokenIdentifier format: "<issuer>|<sub>"  →  sub = "<tenantId>:<userId>"
-    // We index by tokenIdentifier for exact match (tenant-isolated).
+    // Multi-user fix: look up by userId (sub claim) so each user finds THEIR record
+    // even when multiple medewerkers share the same tokenIdentifier (tenant namespace).
     const profiel = await ctx.db
         .query("medewerkers")
-        .withIndex("by_token_identifier", (q) =>
-            q.eq("tokenIdentifier", identity.tokenIdentifier)
+        .withIndex("by_userId", (q) =>
+            q.eq("userId", identity.subject)
         )
         .filter((q) => q.eq(q.field("actief"), true))
         .unique();
 
     return profiel ?? null;
 }
+
 
 /**
  * requireDomainRole — blokkeert toegang als de user de vereiste domeinrol niet heeft.

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔧 Dev Login — Dustin Garage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #090c10;
+            --surface: #0f1318;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #10b981;
+            --accent-2: #059669;
+            --muted: #6b7280;
+            --body: #9ca3af;
+            --heading: #f9fafb;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --mono: 'JetBrains Mono', monospace;
+            --sans: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--body);
+            min-height: 100vh;
+            padding: 24px 16px 48px;
+        }
+
+        /* ── Animated background grid ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ── */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo h1 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--heading);
+        }
+
+        .logo p {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .dev-badge {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 4px 10px;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 6px;
+            color: var(--warning);
+            letter-spacing: 0.05em;
+        }
+
+        /* ── Config bar ── */
+        .config-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .config-bar label {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .config-bar input {
+            flex: 1;
+            font-family: var(--mono);
+            font-size: 12px;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--heading);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .config-bar input:focus {
+            border-color: var(--accent);
+        }
+
+        /* ── Status banner ── */
+        #status-banner {
+            display: none;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            animation: slideIn 0.2s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        #status-banner.success {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        #status-banner.error {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        /* ── Section title ── */
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        /* ── Role grid ── */
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 32px;
+        }
+
+        .role-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--card-color, var(--accent));
+            opacity: 0.6;
+        }
+
+        .role-card:hover {
+            border-color: var(--card-color, var(--accent));
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .role-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .role-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--card-color-bg, rgba(16, 185, 129, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .role-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--heading);
+        }
+
+        .role-subtitle {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .role-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 4px;
+            letter-spacing: 0.04em;
+        }
+
+        .badge.lc {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .badge.garage {
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .creds {
+            font-family: var(--mono);
+            font-size: 11px;
+            line-height: 1.8;
+            color: var(--body);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .creds .label {
+            color: var(--muted);
+        }
+
+        .creds .val {
+            color: var(--heading);
+        }
+
+        .creds .pass {
+            color: var(--accent);
+        }
+
+        .btn-login-card {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-family: var(--sans);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--card-color, var(--accent));
+            color: #fff;
+            transition: opacity 0.15s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-login-card:hover:not(:disabled) {
+            opacity: 0.85;
+            transform: translateY(-1px);
+        }
+
+        .btn-login-card:active {
+            transform: none;
+        }
+
+        .btn-login-card:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* ── Credentials table ── */
+        .creds-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            font-family: var(--mono);
+        }
+
+        .creds-table th {
+            text-align: left;
+            padding: 8px 12px;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .creds-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--body);
+        }
+
+        .creds-table td:first-child {
+            color: var(--heading);
+            font-weight: 600;
+        }
+
+        .creds-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .creds-table .pw {
+            color: var(--accent);
+        }
+
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            font-size: 11px;
+            color: var(--muted);
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Spinner */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <div class="logo-icon">🔧</div>
+                <div>
+                    <h1>Dustin Auto Garage</h1>
+                    <p>Developer Login Panel</p>
+                </div>
+            </div>
+            <span class="dev-badge">⚠ DEV ONLY</span>
+        </header>
+
+        <!-- Config: app base URL -->
+        <div class="config-bar">
+            <label for="base-url">App URL</label>
+            <input id="base-url" type="text" value="http://localhost:4321" placeholder="https://your-app.com" />
+        </div>
+
+        <!-- Status banner -->
+        <div id="status-banner"></div>
+
+        <!-- Role cards -->
+        <p class="section-title">Klik om direct in te loggen</p>
+        <div class="role-grid" id="role-grid"></div>
+
+        <!-- Full credentials table -->
+        <p class="section-title">Alle testaccounts</p>
+        <div class="table-card">
+            <table class="creds-table">
+                <thead>
+                    <tr>
+                        <th>Rol (Garage)</th>
+                        <th>LaventeCare Rol</th>
+                        <th>E-mail</th>
+                        <th>Wachtwoord</th>
+                        <th>Toegang</th>
+                    </tr>
+                </thead>
+                <tbody id="creds-tbody"></tbody>
+            </table>
+        </div>
+
+        <footer>
+            Dev Login Panel · Dustin Auto Garage · Alleen zichtbaar in ontwikkelmodus
+        </footer>
+    </div>
+
+    <script>
+        // ── Dev accounts config ────────────────────────────────────────────────────
+        const ACCOUNTS = [
+            {
+                id: 'eigenaar',
+                icon: '👑',
+                name: 'Eigenaar',
+                subtitle: 'Volledige toegang',
+                lcRole: 'admin',
+                garageRole: 'eigenaar',
+                email: 'dev-eigenaar@garage.test',
+                password: 'Dev@eigenaar2026!',
+                color: '#f59e0b',
+                colorBg: 'rgba(245,158,11,0.1)',
+                access: 'Financiën, alles',
+            },
+            {
+                id: 'balie',
+                icon: '🖥️',
+                name: 'Balie',
+                subtitle: 'Receptie / planning',
+                lcRole: 'editor',
+                garageRole: 'balie',
+                email: 'dev-balie@garage.test',
+                password: 'Dev@balie2026!',
+                color: '#10b981',
+                colorBg: 'rgba(16,185,129,0.1)',
+                access: 'Klanten, voertuigen, RDW',
+            },
+            {
+                id: 'monteur',
+                icon: '🔩',
+                name: 'Monteur',
+                subtitle: 'Werkplaats',
+                lcRole: 'user',
+                garageRole: 'monteur',
+                email: 'dev-monteur@garage.test',
+                password: 'Dev@monteur2026!',
+                color: '#3b82f6',
+                colorBg: 'rgba(59,130,246,0.1)',
+                access: 'Werkorders, notities',
+            },
+            {
+                id: 'stagiair',
+                icon: '🎓',
+                name: 'Stagiair',
+                subtitle: 'Beperkt read-only',
+                lcRole: 'viewer',
+                garageRole: 'stagiair',
+                email: 'dev-stagiair@garage.test',
+                password: 'Dev@stagiair2026!',
+                color: '#8b5cf6',
+                colorBg: 'rgba(139,92,246,0.1)',
+                access: 'Alleen lezen',
+            },
+        ];
+
+        // ── Render role cards ─────────────────────────────────────────────────────
+        const grid = document.getElementById('role-grid');
+        const tbody = document.getElementById('creds-tbody');
+
+        ACCOUNTS.forEach(acc => {
+            // Card
+            const card = document.createElement('div');
+            card.className = 'role-card';
+            card.style.setProperty('--card-color', acc.color);
+            card.style.setProperty('--card-color-bg', acc.colorBg);
+
+            card.innerHTML = `
+        <div class="role-header">
+            <div class="role-icon">${acc.icon}</div>
+            <div>
+                <div class="role-name">${acc.name}</div>
+                <div class="role-subtitle">${acc.subtitle}</div>
+            </div>
+        </div>
+        <div class="role-badges">
+            <span class="badge lc">LC: ${acc.lcRole}</span>
+            <span class="badge garage">${acc.garageRole}</span>
+        </div>
+        <div class="creds">
+            <div><span class="label">email  </span><span class="val">${acc.email}</span></div>
+            <div><span class="label">pass   </span><span class="pass">${acc.password}</span></div>
+        </div>
+        <button class="btn-login-card" data-id="${acc.id}" style="background:${acc.color}">
+            🔑 Login als ${acc.name}
+        </button>
+    `;
+            grid.appendChild(card);
+
+            // Table row
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+        <td>${acc.icon} ${acc.name}</td>
+        <td>${acc.lcRole}</td>
+        <td>${acc.email}</td>
+        <td class="pw">${acc.password}</td>
+        <td>${acc.access}</td>
+    `;
+            tbody.appendChild(tr);
+        });
+
+        // ── Login logic ────────────────────────────────────────────────────────────
+        const banner = document.getElementById('status-banner');
+
+        function showBanner(type, msg) {
+            banner.className = type;
+            banner.innerHTML = (type === 'success' ? '✅ ' : '❌ ') + msg;
+            banner.style.display = 'flex';
+            if (type === 'success') {
+                setTimeout(() => banner.style.display = 'none', 4000);
+            }
+        }
+
+        function getBaseUrl() {
+            return document.getElementById('base-url').value.trim().replace(/\/$/, '');
+        }
+
+        // ── Config ─────────────────────────────────────────────────────────────────
+        const CONVEX_URL = 'https://rosy-seahorse-403.eu-west-1.convex.cloud';
+
+        // LaventeCare rol → garage domeinRol mapping
+        const LC_ROL_MAP = {
+            admin: 'eigenaar',
+            editor: 'balie',
+            user: 'monteur',
+            viewer: 'stagiair',
+        };
+
+        async function seedConvexMedewerker(base, acc, jwt) {
+            try {
+                const res = await fetch(`${CONVEX_URL}/api/mutation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwt}`,
+                    },
+                    body: JSON.stringify({
+                        path: 'devSeed:seedDevMedewerker',
+                        args: {
+                            naam: acc.name,
+                            domeinRol: acc.garageRole,
+                        },
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                return res.ok ? data : null;
+            } catch { return null; }
+        }
+
+        async function loginAs(acc) {
+            const base = getBaseUrl();
+            const btn = document.querySelector(`button[data-id="${acc.id}"]`);
+            const origHtml = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div> Inloggen…`;
+            banner.style.display = 'none';
+
+            try {
+                // Stap 1: Inloggen via BFF
+                const res = await fetch(`${base}/api/auth/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: acc.email, password: acc.password }),
+                });
+
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    showBanner('error', data.error ?? `Login mislukt (${res.status}). Account aangemaakt? Voer het seed script uit.`);
+                    return;
+                }
+
+                if (data.mfa_required) {
+                    showBanner('error', 'MFA vereist — schakel MFA uit voor dev accounts.');
+                    return;
+                }
+
+                // Stap 2: JWT ophalen voor Convex
+                btn.innerHTML = `<div class="spinner"></div> Convex seeden…`;
+                const tokenRes = await fetch(`${base}/api/auth/token`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const tokenData = await tokenRes.json().catch(() => ({}));
+                const jwt = tokenData.token ?? tokenData.access_token;
+
+                if (jwt) {
+                    const seedResult = await seedConvexMedewerker(base, acc, jwt);
+                    const actie = seedResult?.value?.action ?? seedResult?.action ?? '?';
+                    console.log(`[DevSeed] ${acc.email} → medewerker ${actie}`);
+
+                    // Als eigenaar: ook garage data seeden (idempotent)
+                    if (acc.id === 'eigenaar') {
+                        btn.innerHTML = `<div class="spinner"></div> Data seeden…`;
+                        try {
+                            const garageRes = await fetch(`${CONVEX_URL}/api/mutation`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${jwt}`,
+                                },
+                                body: JSON.stringify({
+                                    path: 'devSeed:seedGarageData',
+                                    args: {},
+                                }),
+                            });
+                            const garageData = await garageRes.json().catch(() => ({}));
+                            const r = garageData?.value ?? garageData;
+                            if (r?.skipped) {
+                                console.log('[DevSeed] Garage data bestaat al — skip');
+                            } else if (r?.seeded) {
+                                console.log(`[DevSeed] Aangemaakt: ${r.klanten} klanten, ${r.voertuigen} voertuigen, ${r.werkorders} werkorders`);
+                            }
+                        } catch (e) {
+                            console.warn('[DevSeed] Garage data seed mislukt:', e);
+                        }
+                    }
+                }
+
+                showBanner('success', `✅ Ingelogd als ${acc.name} — doorsturen naar app…`);
+                setTimeout(() => {
+                    window.location.href = `${base}/voertuigen`;
+                }, 600);
+
+            } catch (err) {
+                showBanner('error', `Verbinding mislukt: ${err.message}. Draait de dev server op ${base}?`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        // Event delegation
+        grid.addEventListener('click', e => {
+            const btn = e.target.closest('button[data-id]');
+            if (!btn) return;
+            const acc = ACCOUNTS.find(a => a.id === btn.dataset.id);
+            if (acc) loginAs(acc);
+        });
+    </script>
+</body>
+
+</html>
