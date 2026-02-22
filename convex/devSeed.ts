@@ -24,6 +24,22 @@ export const seedDevMedewerker = mutation({
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) throw new Error("UNAUTHENTICATED");
 
+        // Bepaal de correcte tenant tokenIdentifier:
+        // - eigenaar: eigen tokenIdentifier
+        // - anderen: eigenaar's tokenIdentifier als gedeeld tenant-anchor
+        let tenantTokenIdentifier = identity.tokenIdentifier;
+
+        if (domeinRol !== "eigenaar") {
+            const eigenaar = await ctx.db
+                .query("medewerkers")
+                .collect()
+                .then(all => all.find(m => m.domeinRol === "eigenaar" && m.actief));
+
+            if (eigenaar) {
+                tenantTokenIdentifier = eigenaar.tokenIdentifier;
+            }
+        }
+
         // Check of er al een record bestaat voor deze user (via userId)
         const bestaand = await ctx.db
             .query("medewerkers")
@@ -33,35 +49,26 @@ export const seedDevMedewerker = mutation({
             .first();
 
         if (bestaand) {
-            if (bestaand.domeinRol !== domeinRol || bestaand.naam !== naam) {
-                await ctx.db.patch(bestaand._id, { domeinRol, naam });
-                return { action: "updated", id: bestaand._id };
+            // Bouw een patch object met alle velden die mogelijk moeten worden gecorrigeerd.
+            // Kritiek: als het record een verkeerde tokenIdentifier heeft (aangemaakt vóór eigenaar
+            // bestond), dan corrigeren we die nu alsnog.
+            const updates: Record<string, unknown> = {};
+            if (bestaand.domeinRol !== domeinRol) updates.domeinRol = domeinRol;
+            if (bestaand.naam !== naam) updates.naam = naam;
+            if (bestaand.tokenIdentifier !== tenantTokenIdentifier) {
+                updates.tokenIdentifier = tenantTokenIdentifier;
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await ctx.db.patch(bestaand._id, updates);
+                return { action: "updated", id: bestaand._id, updates };
             }
             return { action: "skipped", id: bestaand._id };
         }
 
-        // Bepaal de gedeelde tokenIdentifier (tenant namespace key).
-        // Eigenaar maakt zijn eigen tokenIdentifier de anchor voor alle data.
-        // Andere rollen gebruiken de eigenaar's tokenIdentifier zodat ze dezelfde
-        // klanten/voertuigen/werkorders kunnen zien.
-        let tenantTokenIdentifier = identity.tokenIdentifier;
-
-        if (domeinRol !== "eigenaar") {
-            // Zoek de eigenaar op om hun tokenIdentifier als gedeeld anchor te gebruiken
-            const eigenaar = await ctx.db
-                .query("medewerkers")
-                .collect()
-                .then(all => all.find(m => m.domeinRol === "eigenaar" && m.actief));
-
-            if (eigenaar) {
-                tenantTokenIdentifier = eigenaar.tokenIdentifier;
-            }
-            // Als er nog geen eigenaar is, gebruik eigen tokenIdentifier als fallback
-        }
-
         const id = await ctx.db.insert("medewerkers", {
-            userId: identity.subject,           // individuele lookup via by_userId
-            tokenIdentifier: tenantTokenIdentifier,      // gedeelde tenant namespace voor data queries
+            userId: identity.subject,
+            tokenIdentifier: tenantTokenIdentifier,
             domeinRol,
             naam,
             actief: true,

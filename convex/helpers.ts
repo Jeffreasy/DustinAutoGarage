@@ -35,14 +35,15 @@ const DOMEIN_ROL_GEWICHT: Record<DomeinRol, number> = {
 /**
  * requireAuth — resolveert de TENANT tokenIdentifier voor de ingelogde gebruiker.
  *
- * ⚠️ KRITIEK: returnt NIET de raw JWT tokenIdentifier, maar de tokenIdentifier
- * uit het medewerkersdocument (= de eigenaar's token als tenant-namespace anchor).
+ * ⚠️ KRITIEK: altijd de eigenaar's tokenIdentifier retourneren als tenant-anchor.
  *
- * Dit zorgt voor correcte multi-user data-isolatie:
- *   - Eigenaar: eigen tokenIdentifier = tenant anchor
- *   - Balie/Monteur: eigenaar's tokenIdentifier (opgeslagen in hun medewerkersdocument)
+ * Strategie:
+ *   1. Vind het eigen medewerkersdocument via userId (identity.subject)
+ *   2. Als eigenaar → return eigen tokenIdentifier (= anchor zelf)
+ *   3. Als andere rol → zoek de eigenaar op en return díens tokenIdentifier
+ *   4. Fallback: raw JWT tokenIdentifier (cold-start, nog geen medewerkers)
  *
- * Alle voertuigen/klanten/werkorders queries filteren op deze tokenIdentifier.
+ * Dit is robuust: werkt ongeacht de opgeslagen tokenIdentifier in het medewerkerrecord.
  */
 export async function requireAuth(
     ctx: QueryCtx | MutationCtx
@@ -56,8 +57,8 @@ export async function requireAuth(
         );
     }
 
-    // Stap 1: probeer het medewerkersdocument op te halen via userId
-    const viaUserId = await ctx.db
+    // Stap 1: zoek eigen medewerkersdocument via userId
+    const mijnRecord = await ctx.db
         .query("medewerkers")
         .withIndex("by_userId", (q) =>
             q.eq("userId", identity.subject)
@@ -65,21 +66,26 @@ export async function requireAuth(
         .filter((q) => q.eq(q.field("actief"), true))
         .unique();
 
-    if (viaUserId) return viaUserId.tokenIdentifier;
+    // Stap 2: eigenaar IS de tenant anchor — return eigen tokenIdentifier
+    if (mijnRecord?.domeinRol === "eigenaar") {
+        return mijnRecord.tokenIdentifier;
+    }
 
-    // Stap 2: fallback via raw tokenIdentifier (voor eigenaar of cold-start)
-    const viaToken = await ctx.db
+    // Stap 3: andere rol (balie/monteur/stagiair) — zoek eigenaar op als anchor
+    // Dit werkt altijd, ONGEACHT wat er als tokenIdentifier is opgeslagen
+    const eigenaar = await ctx.db
         .query("medewerkers")
-        .withIndex("by_token_identifier", (q) =>
-            q.eq("tokenIdentifier", identity.tokenIdentifier)
+        .filter((q) =>
+            q.and(
+                q.eq(q.field("domeinRol"), "eigenaar"),
+                q.eq(q.field("actief"), true)
+            )
         )
-        .filter((q) => q.eq(q.field("actief"), true))
-        .unique();
+        .first();
 
-    if (viaToken) return viaToken.tokenIdentifier;
+    if (eigenaar) return eigenaar.tokenIdentifier;
 
-    // Stap 3: geen medewerkersdocument — gebruik de raw JWT als last resort
-    // (bijv. voor ensureEigenaar bij cold-start)
+    // Stap 4: geen eigenaar in DB (cold-start) — raw JWT als fallback
     return identity.tokenIdentifier;
 }
 
