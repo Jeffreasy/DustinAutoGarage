@@ -1,0 +1,59 @@
+---
+/**
+ * src/pages/klanten.astro
+ *
+ * Klanten module — rol-gebaseerde interface.
+ * Alle ingelogde medewerkers mogen binnen (rol-gating in KlantenModule).
+ */
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import KlantenIsland from "../components/KlantenIsland";
+
+const user = Astro.locals.user ?? null;
+if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
+---
+
+<BaseLayout
+    title="Klanten — Dustin Auto Garage"
+    description="Klantenbeheer — bekijk, zoek en beheer garage-klanten."
+>
+    <div class="klanten-pagina">
+        <div class="klanten-kop">
+            <h1>Klanten</h1>
+            <p class="kop-subtitel">
+                {
+                    user.role === "admin" || user.role === "editor"
+                        ? "Volledig klantbeheer inclusief intake, dossiers en AVG"
+                        : "Zoek en bekijk klantgegevens"
+                }
+            </p>
+        </div>
+        <KlantenIsland client:only="react" />
+    </div>
+</BaseLayout>
+
+<style>
+    .klanten-pagina {
+        padding: var(--space-5) var(--space-5) var(--space-8);
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+    }
+
+    .klanten-kop {
+        margin-bottom: var(--space-6);
+    }
+
+    .klanten-kop h1 {
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-bold);
+        color: var(--color-heading);
+        margin: 0 0 var(--space-1);
+        line-height: var(--leading-tight);
+    }
+
+    .kop-subtitel {
+        font-size: var(--text-sm);
+        color: var(--color-muted);
+        margin: 0;
+    }
+</style>

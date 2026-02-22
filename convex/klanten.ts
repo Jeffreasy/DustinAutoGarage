@@ -3,28 +3,27 @@
  *
  * Beveiligde Convex queries en mutaties voor de `klanten` tabel.
  *
- * Beveiligingscontract (identiek aan voertuigen.ts):
+ * Beveiligingscontract:
  *   - `requireAuth()` wordt als eerste aangeroepen in elke handler.
  *   - Alle DB-reads zijn gefilterd op `tokenIdentifier` (tenant-isolatie).
  *   - IDOR-bescherming: getById verifieert eigenaarschap vóór teruggave.
  *   - E-mailadres is uniek per tenant (gehandhaafd in create/update).
+ *
+ * Eigenaar-only endpoints vereisen `requireDomainRole(ctx, "eigenaar")`.
  */
 
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { vKlanttype, vKlantstatus } from "./validators";
-import { requireAuth } from "./helpers";
+import { requireAuth, requireDomainRole } from "./helpers";
 
 
 // ---------------------------------------------------------------------------
-// Queries
+// Queries — beschikbaar voor alle ingelogde medewerkers
 // ---------------------------------------------------------------------------
 
-/**
- * list — Alle klanten voor de huidige tenant.
- * Gesorteerd op aanmaakdatum (nieuwste eerst).
- */
+/** list — Alle klanten voor de huidige tenant, nieuwste eerst. */
 export const list = query({
     args: {},
     handler: async (ctx): Promise<Doc<"klanten">[]> => {
@@ -40,10 +39,7 @@ export const list = query({
     },
 });
 
-/**
- * getById — Eén klant op basis van ID.
- * Retourneert null als de klant niet bestaat of niet toebehoort aan de sessie.
- */
+/** getById — Eén klant op basis van ID. Retourneert null als niet gevonden/eigendom. */
 export const getById = query({
     args: { klantId: v.id("klanten") },
     handler: async (ctx, args): Promise<Doc<"klanten"> | null> => {
@@ -58,10 +54,7 @@ export const getById = query({
     },
 });
 
-/**
- * getByStatus — Gefilterde klanten op levenscyclus-status.
- * Handig voor rapporten: "Toon alle Prospect klanten" of "Alle Inactieve accounts".
- */
+/** getByStatus — Klanten gefilterd op levenscyclus-status. */
 export const getByStatus = query({
     args: { status: vKlantstatus },
     handler: async (ctx, args): Promise<Doc<"klanten">[]> => {
@@ -77,10 +70,7 @@ export const getByStatus = query({
     },
 });
 
-/**
- * zoek — Eenvoudige tekstzoekactie op achternaam of e-mailadres.
- * Haalt alle klanten op en filtert in-memory (acceptabel voor kleinere datasets).
- */
+/** zoek — Tekstzoekactie op naam, bedrijfsnaam of e-mailadres. */
 export const zoek = query({
     args: { term: v.string() },
     handler: async (ctx, args): Promise<Doc<"klanten">[]> => {
@@ -107,13 +97,104 @@ export const zoek = query({
 });
 
 // ---------------------------------------------------------------------------
-// Mutaties
+// Eigenaar-only queries
 // ---------------------------------------------------------------------------
 
 /**
- * create — Voeg een nieuwe klant toe.
- * Garandeert uniciteit van e-mailadres per tenant.
+ * lijstKlantenMetOmzet — alle klanten verrijkt met bezoekfrequentie.
+ * "Omzet" = aantal afgeronde bezoeken via onderhoudshistorie (optie B).
+ * Gesorteerd op meeste bezoeken bovenaan.
+ * Vereiste domeinrol: "eigenaar".
  */
+export const lijstKlantenMetOmzet = query({
+    args: {},
+    handler: async (ctx) => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+        const tokenIdentifier = profiel.tokenIdentifier;
+
+        const klanten = await ctx.db
+            .query("klanten")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier)
+            )
+            .collect();
+
+        const verrijkt = await Promise.all(
+            klanten.map(async (klant) => {
+                const voertuigen = await ctx.db
+                    .query("voertuigen")
+                    .withIndex("by_klant", (q) => q.eq("klantId", klant._id))
+                    .collect();
+
+                let aantalBezoeken = 0;
+                let laasteBezoekvDatum: number | null = null;
+
+                for (const voertuig of voertuigen) {
+                    const historie = await ctx.db
+                        .query("onderhoudshistorie")
+                        .withIndex("by_voertuig", (q) => q.eq("voertuigId", voertuig._id))
+                        .collect();
+                    aantalBezoeken += historie.length;
+                    for (const h of historie) {
+                        if (!laasteBezoekvDatum || h.datumUitgevoerd > laasteBezoekvDatum) {
+                            laasteBezoekvDatum = h.datumUitgevoerd;
+                        }
+                    }
+                }
+
+                return {
+                    ...klant,
+                    aantalBezoeken,
+                    laasteBezoekvDatum,
+                    aantalVoertuigen: voertuigen.length,
+                };
+            })
+        );
+
+        return verrijkt.sort((a, b) => b.aantalBezoeken - a.aantalBezoeken);
+    },
+});
+
+/**
+ * exportKlanten — CSV-ready export van alle klanten.
+ * Retourneert platte objecten; de client converteert naar CSV-download.
+ * Vereiste domeinrol: "eigenaar".
+ */
+export const exportKlanten = query({
+    args: {},
+    handler: async (ctx) => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+        const tokenIdentifier = profiel.tokenIdentifier;
+
+        const klanten = await ctx.db
+            .query("klanten")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier)
+            )
+            .collect();
+
+        return klanten.map((k) => ({
+            voornaam: k.voornaam,
+            achternaam: k.achternaam,
+            bedrijfsnaam: k.bedrijfsnaam ?? "",
+            klanttype: k.klanttype,
+            emailadres: k.emailadres,
+            telefoonnummer: k.telefoonnummer,
+            adres: k.adres,
+            postcode: k.postcode,
+            woonplaats: k.woonplaats,
+            status: k.status,
+            accepteertMarketing: k.accepteertMarketing ? "Ja" : "Nee",
+            klantSinds: new Date(k.klantSinds).toLocaleDateString("nl-NL"),
+        }));
+    },
+});
+
+// ---------------------------------------------------------------------------
+// Mutaties
+// ---------------------------------------------------------------------------
+
+/** create — Voeg een nieuwe klant toe. Garandeert e-mailuniciteit per tenant. */
 export const create = mutation({
     args: {
         klanttype: vKlanttype,
@@ -132,7 +213,6 @@ export const create = mutation({
     handler: async (ctx, args): Promise<Id<"klanten">> => {
         const tokenIdentifier = await requireAuth(ctx);
 
-        // E-mail uniciteit afdwingen binnen de tenant
         const bestaand = await ctx.db
             .query("klanten")
             .withIndex("by_email_and_token", (q) =>
@@ -156,11 +236,7 @@ export const create = mutation({
     },
 });
 
-/**
- * update — Wijzig klantgegevens.
- * Alleen de opgegeven velden worden bijgewerkt (patch semantiek).
- * E-mail-uniciteit wordt opnieuw gecontroleerd als het adres wijzigt.
- */
+/** update — Wijzig klantgegevens (patch semantiek). */
 export const update = mutation({
     args: {
         klantId: v.id("klanten"),
@@ -187,7 +263,6 @@ export const update = mutation({
 
         const { klantId, emailadres, ...rest } = args;
 
-        // Controleer uniciteit als e-mail wijzigt
         if (emailadres && emailadres.toLowerCase() !== klant.emailadres) {
             const conflictKlant = await ctx.db
                 .query("klanten")
@@ -209,9 +284,8 @@ export const update = mutation({
             ...(emailadres ? { emailadres: emailadres.toLowerCase() } : {}),
         };
 
-        // Verwijder undefined waarden voor een schone patch
         const cleanPatch = Object.fromEntries(
-            Object.entries(patch).filter(([, v]) => v !== undefined)
+            Object.entries(patch).filter(([, val]) => val !== undefined)
         );
 
         await ctx.db.patch(klantId, cleanPatch);
@@ -219,9 +293,33 @@ export const update = mutation({
 });
 
 /**
- * deactiveer — Zachte verwijdering: zet status op "Inactief".
- * Gebruik dit in plaats van een harde delete om historische data te bewaren.
+ * updateKlantBalieVelden — balie+ kan klantNotities + accepteertMarketing updaten.
+ * Losstaand van `update` voor een duidelijkere audit trail.
  */
+export const updateKlantBalieVelden = mutation({
+    args: {
+        klantId: v.id("klanten"),
+        klantNotities: v.optional(v.string()),
+        accepteertMarketing: v.optional(v.boolean()),
+    },
+    handler: async (ctx, args): Promise<{ succes: boolean }> => {
+        const profiel = await requireDomainRole(ctx, "balie");
+
+        const klant = await ctx.db.get(args.klantId);
+        if (!klant || klant.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Klant niet gevonden of geen toegang.");
+        }
+
+        const patch: Record<string, unknown> = {};
+        if (args.klantNotities !== undefined) patch.klantNotities = args.klantNotities;
+        if (args.accepteertMarketing !== undefined) patch.accepteertMarketing = args.accepteertMarketing;
+
+        await ctx.db.patch(args.klantId, patch);
+        return { succes: true };
+    },
+});
+
+/** deactiveer — Zachte verwijdering: zet status op "Inactief". */
 export const deactiveer = mutation({
     args: { klantId: v.id("klanten") },
     handler: async (ctx, args): Promise<void> => {
@@ -237,10 +335,8 @@ export const deactiveer = mutation({
 });
 
 /**
- * verwijder — Harde verwijdering van een klant en al zijn gekoppelde voertuigen.
- *
- * ⚠️  Gebruik alleen als de klant geen actief dossier meer heeft.
- *     Overweeg `deactiveer()` voor standaard gebruik.
+ * verwijder — Harde verwijdering van een klant en al zijn gekoppelde data.
+ * ⚠️  Cascade: voertuigen → onderhoudshistorie → werkorders → werkorderLogs
  */
 export const verwijder = mutation({
     args: { klantId: v.id("klanten") },
@@ -252,14 +348,12 @@ export const verwijder = mutation({
             throw new Error("FORBIDDEN: Klant niet gevonden of geen toegang.");
         }
 
-        // Verwijder gekoppelde voertuigen (cascade)
         const voertuigen = await ctx.db
             .query("voertuigen")
             .withIndex("by_klant", (q) => q.eq("klantId", args.klantId))
             .collect();
 
         for (const voertuig of voertuigen) {
-            // Cascade: onderhoudshistorie
             const historie = await ctx.db
                 .query("onderhoudshistorie")
                 .withIndex("by_voertuig", (q) => q.eq("voertuigId", voertuig._id))
@@ -268,8 +362,6 @@ export const verwijder = mutation({
                 await ctx.db.delete(entry._id);
             }
 
-            // 🔴 FIX #2: Cascade werkorders + werkorderLogs per voertuig.
-            // Voorkomt ghost records op het Werkplaatsbord na verwijdering van klant.
             const werkorders = await ctx.db
                 .query("werkorders")
                 .withIndex("by_voertuig", (q) => q.eq("voertuigId", voertuig._id))

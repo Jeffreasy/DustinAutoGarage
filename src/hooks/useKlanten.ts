@@ -5,34 +5,27 @@
  * Gebruikt de Convex queries uit convex/klanten.ts.
  */
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 
-/**
- * Haalt alle klanten op voor de huidige tenant-sessie.
- * @returns Array van klanten, of `undefined` tijdens laden.
- */
+// ---------------------------------------------------------------------------
+// Queries — beschikbaar voor alle ingelogde medewerkers
+// ---------------------------------------------------------------------------
+
+/** Haalt alle klanten op voor de huidige tenant. */
 export function useKlantenLijst(): Doc<"klanten">[] | undefined {
     return useQuery(api.klanten.list);
 }
 
-/**
- * Haalt klanten gefilterd op status op.
- * @param status - "Actief" | "Inactief" | "Prospect"
- */
+/** Haalt klanten gefilterd op status op. */
 export function useKlantenByStatus(
     status: "Actief" | "Inactief" | "Prospect"
 ): Doc<"klanten">[] | undefined {
     return useQuery(api.klanten.getByStatus, { status });
 }
 
-/**
- * Haalt één klant op op basis van zijn Convex ID.
- * Geef `null` mee als ID nog niet bekend is.
- *
- * @returns Klant object, `null` (niet gevonden), of `undefined` (laden)
- */
+/** Haalt één klant op op basis van zijn Convex ID. */
 export function useKlantById(
     klantId: Id<"klanten"> | null
 ): Doc<"klanten"> | null | undefined {
@@ -42,10 +35,50 @@ export function useKlantById(
     );
 }
 
-/**
- * Zoekt klanten op naam of e-mailadres.
- * @param term - Zoekterm (minimaal 2 tekens, anders lege array)
- */
+/** Zoekt klanten op naam of e-mailadres (minimaal 2 tekens). */
 export function useKlantenZoek(term: string): Doc<"klanten">[] | undefined {
     return useQuery(api.klanten.zoek, { term });
+}
+
+// ---------------------------------------------------------------------------
+// Eigenaar-only queries
+// ---------------------------------------------------------------------------
+
+/** Klanten met bezoekfrequentie — eigenaar only. */
+export function useKlantenMetOmzet() {
+    return useQuery(api.klanten.lijstKlantenMetOmzet);
+}
+
+/** CSV-ready export data — eigenaar only. */
+export function useExportKlanten() {
+    return useQuery(api.klanten.exportKlanten);
+}
+
+// ---------------------------------------------------------------------------
+// Mutaties
+// ---------------------------------------------------------------------------
+
+/** Maak een nieuwe klant aan (balie+). */
+export function useMaakKlantAan() {
+    return useMutation(api.klanten.create);
+}
+
+/** Pas klantgegevens aan (balie+, volledige update). */
+export function useUpdateKlant() {
+    return useMutation(api.klanten.update);
+}
+
+/** Pas alleen balie-velden aan (notities + AVG). */
+export function useUpdateKlantBalieVelden() {
+    return useMutation(api.klanten.updateKlantBalieVelden);
+}
+
+/** Zet klant op Inactief (zachte verwijdering). */
+export function useDeactiveerKlant() {
+    return useMutation(api.klanten.deactiveer);
+}
+
+/** Harde verwijdering van klant + cascade (eigenaar via UI gate). */
+export function useVerwijderKlant() {
+    return useMutation(api.klanten.verwijder);
 }

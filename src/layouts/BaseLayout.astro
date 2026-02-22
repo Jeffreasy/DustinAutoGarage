@@ -145,6 +145,18 @@ const isActief = (pad: string) =>
                             >
                                 🏭 Werkplaats
                             </a>
+                            <a
+                                href="/klanten"
+                                class:list={[
+                                    "nav-link",
+                                    {
+                                        "nav-link--actief":
+                                            isActief("/klanten"),
+                                    },
+                                ]}
+                            >
+                                👥 Klanten
+                            </a>
                             {isAdmin && (
                                 <a
                                     href="/medewerkers"
