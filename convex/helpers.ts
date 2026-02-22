@@ -33,10 +33,16 @@ const DOMEIN_ROL_GEWICHT: Record<DomeinRol, number> = {
 // ---------------------------------------------------------------------------
 
 /**
- * requireAuth — resolveert de tokenIdentifier van de ingelogde gebruiker.
- * Gooit UNAUTHORIZED als de sessie ontbreekt.
+ * requireAuth — resolveert de TENANT tokenIdentifier voor de ingelogde gebruiker.
  *
- * Gebruik als allereerste aanroep in elke beveiligde handler.
+ * ⚠️ KRITIEK: returnt NIET de raw JWT tokenIdentifier, maar de tokenIdentifier
+ * uit het medewerkersdocument (= de eigenaar's token als tenant-namespace anchor).
+ *
+ * Dit zorgt voor correcte multi-user data-isolatie:
+ *   - Eigenaar: eigen tokenIdentifier = tenant anchor
+ *   - Balie/Monteur: eigenaar's tokenIdentifier (opgeslagen in hun medewerkersdocument)
+ *
+ * Alle voertuigen/klanten/werkorders queries filteren op deze tokenIdentifier.
  */
 export async function requireAuth(
     ctx: QueryCtx | MutationCtx
@@ -50,13 +56,33 @@ export async function requireAuth(
         );
     }
 
+    // Stap 1: probeer het medewerkersdocument op te halen via userId
+    const viaUserId = await ctx.db
+        .query("medewerkers")
+        .withIndex("by_userId", (q) =>
+            q.eq("userId", identity.subject)
+        )
+        .filter((q) => q.eq(q.field("actief"), true))
+        .unique();
+
+    if (viaUserId) return viaUserId.tokenIdentifier;
+
+    // Stap 2: fallback via raw tokenIdentifier (voor eigenaar of cold-start)
+    const viaToken = await ctx.db
+        .query("medewerkers")
+        .withIndex("by_token_identifier", (q) =>
+            q.eq("tokenIdentifier", identity.tokenIdentifier)
+        )
+        .filter((q) => q.eq(q.field("actief"), true))
+        .unique();
+
+    if (viaToken) return viaToken.tokenIdentifier;
+
+    // Stap 3: geen medewerkersdocument — gebruik de raw JWT als last resort
+    // (bijv. voor ensureEigenaar bij cold-start)
     return identity.tokenIdentifier;
 }
 
-/**
- * getIdentity — geeft het volledige identity object terug.
- * Handig wanneer je zowel tokenIdentifier als subject nodig hebt.
- */
 export async function getIdentity(ctx: QueryCtx | MutationCtx) {
     const identity = await ctx.auth.getUserIdentity();
     if (identity === null) {
@@ -86,9 +112,8 @@ export async function getDomeinProfiel(
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    // Multi-user fix: look up by userId (sub claim) so each user finds THEIR record
-    // even when multiple medewerkers share the same tokenIdentifier (tenant namespace).
-    const profiel = await ctx.db
+    // Strategie 1: zoek op userId (snel, exact)
+    const viaUserId = await ctx.db
         .query("medewerkers")
         .withIndex("by_userId", (q) =>
             q.eq("userId", identity.subject)
@@ -96,8 +121,20 @@ export async function getDomeinProfiel(
         .filter((q) => q.eq(q.field("actief"), true))
         .unique();
 
-    return profiel ?? null;
+    if (viaUserId) return viaUserId;
+
+    // Strategie 2: fallback op tokenIdentifier (dekt records zonder userId)
+    const viaToken = await ctx.db
+        .query("medewerkers")
+        .withIndex("by_token_identifier", (q) =>
+            q.eq("tokenIdentifier", identity.tokenIdentifier)
+        )
+        .filter((q) => q.eq(q.field("actief"), true))
+        .unique();
+
+    return viaToken ?? null;
 }
+
 
 
 /**
