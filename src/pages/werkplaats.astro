@@ -4,10 +4,6 @@
  *
  * Werkplaatsbord — digitaal whiteboard van de garage.
  * Navigatie en uitloggen zitten in BaseLayout — geen dubbele header.
- *
- * Toegangslogica:
- *   Alle ingelogde medewerkers → toegang
- *   Niet ingelogd             → redirect naar /login
  */
 
 import BaseLayout from "../layouts/BaseLayout.astro";
@@ -21,12 +17,18 @@ if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
     title="Werkplaatsbord — Dustin Auto Garage"
     description="Digitaal werkplaatsbord — real-time overzicht van alle auto's en bruggen."
 >
-    <div class="werkplaats-wrapper">
-        <!-- Pagina-kop -->
-        <div class="page-kop">
-            <h1>Werkplaatsbord</h1>
-            <p class="pagina-ondertitel">
-                Real-time overzicht van alle werkorders en bruggen
+    <!--
+        BELANGRIJK: overflow-x moet NIET hidden zijn op deze wrapper — anders
+        kan het horizontaal scrollende Kanban-bord niet scrollen op mobiel/tablet.
+        De pagina-kop krijgt padding, het bord krijgt volledige breedte.
+    -->
+    <div class="werkplaats-pagina">
+        <!-- Pagina-kop: alleen tekst, geen nav (zit in BaseLayout) -->
+        <div class="werkplaats-kop">
+            <h1>🏭 Werkplaatsbord</h1>
+            <p class="kop-subtitel">
+                Real-time — alle wijzigingen zijn direct zichtbaar voor iedereen
+                in de garage
             </p>
         </div>
 
@@ -36,19 +38,27 @@ if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
 </BaseLayout>
 
 <style>
-    .werkplaats-wrapper {
+    /* Pagina wrapper — GEEN overflow hidden, anders scroll kapot op tablet */
+    .werkplaats-pagina {
         padding: var(--space-5) var(--space-5) 0;
-        max-width: var(--container-max, 1280px);
-        margin: 0 auto;
-        /* Bord heeft eigen horizontale scroll */
-        overflow-x: hidden;
+        max-width: 100%; /* Bord mag verder gaan dan de container-max */
+        box-sizing: border-box;
     }
 
-    .page-kop {
-        margin-bottom: var(--space-5);
+    /* Op bredere schermen een max container voor de kop, bord zelf scrollt */
+    @media (min-width: 1280px) {
+        .werkplaats-pagina {
+            padding: var(--space-6) var(--space-6) 0;
+        }
     }
 
-    .page-kop h1 {
+    /* Pagina-kop */
+    .werkplaats-kop {
+        max-width: 1280px;
+        margin: 0 auto var(--space-4);
+    }
+
+    .werkplaats-kop h1 {
         font-size: var(--text-2xl);
         font-weight: var(--weight-bold);
         color: var(--color-heading);
@@ -56,9 +66,19 @@ if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
         line-height: var(--leading-tight);
     }
 
-    .pagina-ondertitel {
+    .kop-subtitel {
         font-size: var(--text-sm);
         color: var(--color-muted);
         margin: 0;
+    }
+
+    /* Op mobiel iets compactere kop */
+    @media (max-width: 640px) {
+        .werkplaats-pagina {
+            padding: var(--space-4) var(--space-3) 0;
+        }
+        .werkplaats-kop h1 {
+            font-size: var(--text-xl);
+        }
     }
 </style>
