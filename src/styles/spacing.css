@@ -1,0 +1,525 @@
+/**
+ * src/styles/spacing.css
+ *
+ * Spacing utilities, layout helpers, en responsieve container stijlen.
+ * Gebaseerd op het 4px grid uit design-tokens.css.
+ */
+
+/* ============================================================
+   CONTAINER SYSTEEM
+   Responsive max-width containers voor elke breakpoint.
+   ============================================================ */
+
+.container {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+}
+
+/* Responsieve padding uitbreiding */
+@media (min-width: 640px) {
+    .container {
+        padding-inline: var(--space-6);
+    }
+}
+
+@media (min-width: 768px) {
+    .container {
+        padding-inline: var(--space-8);
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        max-width: 1024px;
+        padding-inline: var(--space-8);
+    }
+}
+
+@media (min-width: 1280px) {
+    .container {
+        max-width: 1280px;
+    }
+}
+
+@media (min-width: 1536px) {
+    .container {
+        max-width: 1440px;
+    }
+}
+
+/* Container varianten */
+.container-sm {
+    max-width: 640px;
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+}
+
+.container-md {
+    max-width: 768px;
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+}
+
+.container-lg {
+    max-width: 1024px;
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+}
+
+.container-xl {
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+}
+
+/* ============================================================
+   GRID SYSTEEM
+   Responsief grid met automatische kolommen.
+   ============================================================ */
+
+/* Auto-fill grids */
+.grid-auto-sm {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-4);
+}
+
+.grid-auto-md {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-4);
+}
+
+.grid-auto-lg {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: var(--space-6);
+}
+
+/* Vaste kolom-grids */
+.grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+}
+
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+}
+
+/* Responsieve grid-2: 1 kolom op mobiel, 2 op tablet+ */
+.grid-responsive-2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+    .grid-responsive-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Responsieve grid-3: 1 → 2 → 3 */
+.grid-responsive-3 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+    .grid-responsive-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .grid-responsive-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Responsieve grid-4: 1 → 2 → 4 */
+.grid-responsive-4 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+    .grid-responsive-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    .grid-responsive-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ============================================================
+   FLEX UTILITIES
+   ============================================================ */
+
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.flex-nowrap {
+    flex-wrap: nowrap;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-auto {
+    flex: auto;
+}
+
+.flex-none {
+    flex: none;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0;
+}
+
+.flex-grow-1 {
+    flex-grow: 1;
+}
+
+.items-start {
+    align-items: flex-start;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.items-end {
+    align-items: flex-end;
+}
+
+.items-stretch {
+    align-items: stretch;
+}
+
+.items-baseline {
+    align-items: baseline;
+}
+
+.justify-start {
+    justify-content: flex-start;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-end {
+    justify-content: flex-end;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.justify-around {
+    justify-content: space-around;
+}
+
+.justify-evenly {
+    justify-content: space-evenly;
+}
+
+/* Gap utilities */
+.gap-1 {
+    gap: var(--space-1);
+}
+
+.gap-2 {
+    gap: var(--space-2);
+}
+
+.gap-3 {
+    gap: var(--space-3);
+}
+
+.gap-4 {
+    gap: var(--space-4);
+}
+
+.gap-6 {
+    gap: var(--space-6);
+}
+
+.gap-8 {
+    gap: var(--space-8);
+}
+
+.gap-12 {
+    gap: var(--space-12);
+}
+
+/* ============================================================
+   SPACING UTILITIES (margin + padding)
+   ============================================================ */
+
+/* Padding */
+.p-0 {
+    padding: var(--space-0);
+}
+
+.p-1 {
+    padding: var(--space-1);
+}
+
+.p-2 {
+    padding: var(--space-2);
+}
+
+.p-3 {
+    padding: var(--space-3);
+}
+
+.p-4 {
+    padding: var(--space-4);
+}
+
+.p-5 {
+    padding: var(--space-5);
+}
+
+.p-6 {
+    padding: var(--space-6);
+}
+
+.p-8 {
+    padding: var(--space-8);
+}
+
+.px-2 {
+    padding-inline: var(--space-2);
+}
+
+.px-3 {
+    padding-inline: var(--space-3);
+}
+
+.px-4 {
+    padding-inline: var(--space-4);
+}
+
+.px-6 {
+    padding-inline: var(--space-6);
+}
+
+.px-8 {
+    padding-inline: var(--space-8);
+}
+
+.py-1 {
+    padding-block: var(--space-1);
+}
+
+.py-2 {
+    padding-block: var(--space-2);
+}
+
+.py-3 {
+    padding-block: var(--space-3);
+}
+
+.py-4 {
+    padding-block: var(--space-4);
+}
+
+.py-6 {
+    padding-block: var(--space-6);
+}
+
+.py-8 {
+    padding-block: var(--space-8);
+}
+
+.py-12 {
+    padding-block: var(--space-12);
+}
+
+.py-16 {
+    padding-block: var(--space-16);
+}
+
+/* Margin */
+.m-auto {
+    margin: auto;
+}
+
+.mx-auto {
+    margin-inline: auto;
+}
+
+.mt-2 {
+    margin-top: var(--space-2);
+}
+
+.mt-4 {
+    margin-top: var(--space-4);
+}
+
+.mt-6 {
+    margin-top: var(--space-6);
+}
+
+.mt-8 {
+    margin-top: var(--space-8);
+}
+
+.mb-2 {
+    margin-bottom: var(--space-2);
+}
+
+.mb-4 {
+    margin-bottom: var(--space-4);
+}
+
+.mb-6 {
+    margin-bottom: var(--space-6);
+}
+
+.mb-8 {
+    margin-bottom: var(--space-8);
+}
+
+/* ============================================================
+   DISPLAY & VISIBILITY
+   ============================================================ */
+
+.block {
+    display: block;
+}
+
+.inline {
+    display: inline;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+.inline-flex {
+    display: inline-flex;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Responsieve zichtbaarheid */
+.show-mobile {
+    display: block;
+}
+
+.hide-mobile {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .show-mobile {
+        display: none;
+    }
+
+    .hide-mobile {
+        display: block;
+    }
+}
+
+/* ============================================================
+   POSITIE & OVERFLOW
+   ============================================================ */
+
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.fixed {
+    position: fixed;
+}
+
+.sticky {
+    position: sticky;
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-auto {
+    overflow: auto;
+}
+
+.overflow-x-auto {
+    overflow-x: auto;
+}
+
+.inset-0 {
+    inset: 0;
+}
+
+.z-sticky {
+    z-index: var(--z-sticky);
+}
+
+.z-modal {
+    z-index: var(--z-modal);
+}
+
+/* ============================================================
+   SIZING UTILITIES
+   ============================================================ */
+
+.w-full {
+    width: 100%;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.min-h-screen {
+    min-height: 100svh;
+}
+
+.max-w-prose {
+    max-width: 65ch;
+}

@@ -5,176 +5,289 @@
  * Publieke login pagina — authenticeert via de lokale BFF proxy.
  * De proxy (/api/auth/login) stuurt het request door naar LaventeCare
  * en sanitizeert de Set-Cookie headers voor localhost.
+ *
+ * Design System: alle waarden bouwen op design-tokens.css.
  */
+
+import "../styles/design-tokens.css";
+import "../styles/typography.css";
+import "../styles/components.css";
 ---
 
 <!doctype html>
-<html lang="nl">
+<html lang="nl" data-theme="dark">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Inloggen — Dustin Auto Garage</title>
+
+        <!-- Anti-flash: zet theme VOOR eerste paint -->
+        <script is:inline>
+            (function () {
+                var stored = localStorage.getItem("theme");
+                var preferred = window.matchMedia(
+                    "(prefers-color-scheme: light)",
+                ).matches
+                    ? "light"
+                    : "dark";
+                var theme =
+                    stored === "light" || stored === "dark"
+                        ? stored
+                        : preferred;
+                document.documentElement.setAttribute("data-theme", theme);
+            })();
+        </script>
+
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;700&display=swap"
             rel="stylesheet"
         />
-        <style>
-            *,
-            *::before,
-            *::after {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
 
+        <style>
             body {
-                font-family: "Inter", system-ui, sans-serif;
-                background: #0a0f1a;
-                color: #94a3b8;
-                min-height: 100vh;
+                font-family: var(--font-sans);
+                background-color: var(--color-bg);
+                color: var(--color-body);
+                min-height: 100svh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                padding: var(--space-4);
+                transition:
+                    background-color var(--transition-slow),
+                    color var(--transition-slow);
             }
 
-            .card {
-                background: #0f1729;
-                border: 1px solid #1e2d4a;
-                border-radius: 0.75rem;
-                padding: 2.5rem;
+            .login-card {
+                background: var(--glass-bg);
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                border: 1px solid var(--glass-border);
+                border-radius: var(--radius-2xl);
+                padding: var(--space-8) var(--space-8);
                 width: 100%;
-                max-width: 400px;
+                max-width: var(--card-max-width-sm);
+                box-shadow: var(--glass-shadow), var(--shadow-xl);
+                position: relative;
+                overflow: hidden;
             }
 
-            .logo {
-                font-size: 1.25rem;
-                font-weight: 700;
-                color: #f0f6ff;
-                margin-bottom: 0.25rem;
+            /* Top glare accent lijn */
+            .login-card::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    var(--color-border-luminous) 30%,
+                    var(--color-accent) 50%,
+                    var(--color-border-luminous) 70%,
+                    transparent 100%
+                );
+                pointer-events: none;
             }
-            .subtitle {
-                font-size: 0.875rem;
-                color: #64748b;
-                margin-bottom: 2rem;
+
+            .login-logo {
+                font-size: var(--text-lg);
+                font-weight: var(--weight-bold);
+                color: var(--color-heading);
+                margin-bottom: var(--space-1);
+                display: flex;
+                align-items: center;
+                gap: var(--space-2);
+            }
+
+            .login-subtitle {
+                font-size: var(--text-sm);
+                color: var(--color-muted);
+                margin-bottom: var(--space-6);
+            }
+
+            .form-group {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-1);
+                margin-bottom: var(--space-4);
             }
 
             label {
-                display: block;
-                font-size: 0.8rem;
-                font-weight: 500;
-                color: #94a3b8;
-                margin-bottom: 0.35rem;
-            }
-            input {
-                width: 100%;
-                padding: 0.6rem 0.875rem;
-                background: #162039;
-                border: 1px solid #1e2d4a;
-                border-radius: 0.5rem;
-                color: #f0f6ff;
-                font-size: 0.9rem;
-                font-family: inherit;
-                margin-bottom: 1.25rem;
-                transition: border-color 0.15s;
-            }
-            input:focus {
-                outline: none;
-                border-color: #14b8a6;
+                font-size: var(--text-xs);
+                font-weight: var(--weight-medium);
+                color: var(--color-body);
+                letter-spacing: var(--tracking-wide);
+                text-transform: uppercase;
             }
 
-            button {
+            input[type="email"],
+            input[type="password"],
+            input[type="text"] {
                 width: 100%;
-                padding: 0.7rem;
-                background: #14b8a6;
-                color: #0a0f1a;
-                font-weight: 600;
-                font-size: 0.9rem;
-                font-family: inherit;
-                border: none;
-                border-radius: 0.5rem;
+                padding: var(--space-2) var(--space-3);
+                background: var(--glass-bg-subtle);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid var(--glass-border);
+                border-radius: var(--radius-md);
+                color: var(--color-heading);
+                font-size: var(--text-sm);
+                font-family: var(--font-sans);
+                min-height: var(--control-height);
+                transition:
+                    border-color var(--transition-fast),
+                    box-shadow var(--transition-fast),
+                    background-color var(--transition-fast);
+                outline: none;
+            }
+
+            input::placeholder {
+                color: var(--color-muted);
+            }
+
+            input:hover:not(:disabled) {
+                border-color: var(--color-border-hover);
+            }
+
+            input:focus {
+                border-color: var(--color-border-focus);
+                box-shadow: var(--focus-ring);
+                background: var(--color-surface);
+            }
+
+            .btn-login {
+                width: 100%;
+                padding: var(--space-3) var(--space-4);
+                background: var(--gradient-accent);
+                color: var(--color-on-accent);
+                font-weight: var(--weight-semibold);
+                font-size: var(--text-sm);
+                font-family: var(--font-sans);
+                border: 1px solid transparent;
+                border-radius: var(--radius-md);
                 cursor: pointer;
-                transition: background 0.15s;
+                min-height: var(--control-height);
+                box-shadow: var(--shadow-glow-sm);
+                transition:
+                    background var(--transition-fast),
+                    box-shadow var(--transition-fast),
+                    transform var(--transition-fast);
             }
-            button:hover {
-                background: #0d9488;
+
+            .btn-login:hover:not(:disabled) {
+                background: var(--gradient-accent-hover);
+                box-shadow: var(--shadow-glow);
+                transform: translateY(-1px);
             }
-            button:disabled {
-                opacity: 0.6;
+
+            .btn-login:active {
+                transform: translateY(0);
+                box-shadow: var(--shadow-glow-sm);
+            }
+
+            .btn-login:disabled {
+                opacity: 0.5;
                 cursor: not-allowed;
             }
 
-            .error {
+            .error-box {
                 display: none;
-                background: #1a0a0a;
-                border: 1px solid #7f1d1d;
-                color: #f87171;
-                border-radius: 0.5rem;
-                padding: 0.75rem;
-                font-size: 0.8rem;
-                margin-bottom: 1rem;
+                background: var(--color-error-bg);
+                border: 1px solid var(--color-error-border);
+                color: var(--color-error);
+                border-radius: var(--radius-md);
+                padding: var(--space-3) var(--space-4);
+                font-size: var(--text-sm);
+                margin-bottom: var(--space-4);
             }
-            .error.visible {
+
+            .error-box.visible {
                 display: block;
+            }
+
+            .mfa-hint {
+                font-size: var(--text-sm);
+                color: var(--color-muted);
+                margin-bottom: var(--space-4);
+                line-height: var(--leading-relaxed);
+            }
+
+            .mfa-spacing {
+                margin-bottom: var(--space-4);
             }
         </style>
     </head>
 
     <body>
-        <div class="card">
-            <p class="logo">🔧 Dustin Auto Garage</p>
-            <p class="subtitle">Log in op uw werkplaatsportaal</p>
+        <div class="login-card">
+            <p class="login-logo">🔧 Dustin Auto Garage</p>
+            <p class="login-subtitle">Log in op uw werkplaatsportaal</p>
 
-            <div id="error-box" class="error" role="alert"></div>
+            <div id="error-box" class="error-box" role="alert"></div>
 
             <form id="login-form" novalidate>
-                <label for="email">E-mailadres</label>
-                <input
-                    id="email"
-                    type="email"
-                    name="email"
-                    placeholder="jan@jansen.nl"
-                    autocomplete="email"
-                    required
-                />
+                <div class="form-group">
+                    <label for="email">E-mailadres</label>
+                    <input
+                        id="email"
+                        type="email"
+                        name="email"
+                        placeholder="jan@jansen.nl"
+                        autocomplete="email"
+                        required
+                    />
+                </div>
 
-                <label for="password">Wachtwoord</label>
-                <input
-                    id="password"
-                    type="password"
-                    name="password"
-                    placeholder="••••••••"
-                    autocomplete="current-password"
-                    required
-                />
+                <div class="form-group">
+                    <label for="password">Wachtwoord</label>
+                    <input
+                        id="password"
+                        type="password"
+                        name="password"
+                        placeholder="••••••••"
+                        autocomplete="current-password"
+                        required
+                    />
+                </div>
 
-                <button type="submit" id="submit-btn">Inloggen</button>
+                <button type="submit" id="submit-btn" class="btn-login"
+                    >Inloggen</button
+                >
             </form>
 
             <!-- MFA stap — verborgen tot backend mfa_required stuurt -->
             <div id="mfa-step" style="display:none">
-                <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:1rem;">
+                <p class="mfa-hint">
                     Voor uw veiligheid is verificatie vereist.<br />
                     Klik op de knop om een code naar uw e-mailadres te sturen.
                 </p>
                 <button
                     type="button"
                     id="send-code-btn"
-                    style="margin-bottom:1.25rem;"
+                    class="btn-login mfa-spacing"
                 >
                     Stuur verificatiecode
                 </button>
-                <label for="mfa-code">Verificatiecode</label>
-                <input
-                    id="mfa-code"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="6"
-                    placeholder="123456"
-                    autocomplete="one-time-code"
-                />
-                <button type="button" id="mfa-submit-btn">Verifiëren</button>
+
+                <div class="form-group">
+                    <label for="mfa-code">Verificatiecode</label>
+                    <input
+                        id="mfa-code"
+                        type="text"
+                        inputmode="numeric"
+                        maxlength="6"
+                        placeholder="123456"
+                        autocomplete="one-time-code"
+                    />
+                </div>
+
+                <button type="button" id="mfa-submit-btn" class="btn-login"
+                    >Verifiëren</button
+                >
             </div>
         </div>
 
@@ -194,7 +307,7 @@
             // ── Stap 1: Inloggen (e-mail + wachtwoord) ───────────────────────
             form.addEventListener("submit", async (e) => {
                 e.preventDefault();
-                if (mfaRequired) return; // Guard: ignore als we al in MFA-stap zitten
+                if (mfaRequired) return;
 
                 btn.disabled = true;
                 btn.textContent = "Bezig…";
@@ -220,16 +333,13 @@
                         return;
                     }
 
-                    // MFA vereist (admin/editor zonder TOTP ingesteld)?
                     if (data.mfa_required) {
                         mfaRequired = true;
-                        // Toon MFA-stap, verberg wachtwoord-formulier
                         form.style.display = "none";
                         mfaStep.style.display = "block";
                         return;
                     }
 
-                    // Volledig ingelogd
                     window.location.href = "/dashboard";
                 } catch {
                     err.textContent =

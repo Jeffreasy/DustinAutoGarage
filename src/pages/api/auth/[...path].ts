@@ -41,6 +41,12 @@ export const ALL: APIRoute = async ({ request, params }) => {
     // Zorg dat de backend weet dat dit een proxied request is
     forwardHeaders.set("X-Forwarded-For", request.headers.get("x-real-ip") ?? "127.0.0.1");
 
+    // Forceer ongecomprimeerde response van de backend: .text() decompreseert weliswaar,
+    // maar sommige Node-versies lekken Content-Encoding headers (br/gzip) door naar de browser
+    // waarna de browser probeert dubbel te decomprimeren → ERR_CONTENT_DECODING_FAILED.
+    // Door 'identity' te vragen sturen we nooit gecomprimeerd.
+    forwardHeaders.set("Accept-Encoding", "identity");
+
     // Tenant-context: verplicht voor LaventeCare RLS middleware
     if (TENANT_ID) {
         forwardHeaders.set("X-Tenant-ID", TENANT_ID);
@@ -62,14 +68,23 @@ export const ALL: APIRoute = async ({ request, params }) => {
     // ── Response headers verwerken ───────────────────────────────────────────
     const responseHeaders = new Headers();
 
+    // Kopieer alle headers behalve Set-Cookie en transfer-encoding
     for (const [key, value] of backendResponse.headers.entries()) {
-        // Set-Cookie sanitizen voor localhost development
-        if (key.toLowerCase() === "set-cookie") {
-            const sanitized = sanitizeCookieForDev(value);
-            responseHeaders.append("Set-Cookie", sanitized);
-        } else if (key.toLowerCase() !== "transfer-encoding") {
+        const lkey = key.toLowerCase();
+        // Sla ook content-encoding over: .text() decompreseert volledig,
+        // waardoor de browser anders probeert dubbel te decomprimeren (ERR_CONTENT_DECODING_FAILED)
+        if (lkey !== "set-cookie" && lkey !== "transfer-encoding" && lkey !== "content-encoding") {
             responseHeaders.set(key, value);
         }
+    }
+
+    // Set-Cookie apart verwerken via getSetCookie() — headers.entries() collapst
+    // meerdere cookies tot één kommagescheiden string (Node fetch bug), wat de
+    // cookie-attributen (bijv. Expires=Thu, 01 Jan...) kapot maakt.
+    const setCookies = backendResponse.headers.getSetCookie?.() ?? [];
+    for (const cookie of setCookies) {
+        const sanitized = sanitizeCookieForDev(cookie);
+        responseHeaders.append("Set-Cookie", sanitized);
     }
 
     // ── Response body bufferen (Anti-Gravity: voorkomt hangende streams) ─────

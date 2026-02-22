@@ -1,43 +1,25 @@
 /**
  * convex/voertuigen.ts
  *
- * Beveiligde Convex queries en mutaties voor `voertuigen` en `onderhoudshistorie`.
+ * Beveiligde Convex queries en mutaties voor de `voertuigen` tabel.
  *
  * Beveiligingscontract:
  *   - `requireAuth()` wordt als eerste aangeroepen in elke handler.
  *   - Alle DB-reads zijn gefilterd op `tokenIdentifier` (tenant-isolatie).
- *   - IDOR-bescherming: getById verifieert altijd de eigenaar vóór teruggave.
+ *   - IDOR-bescherming: getById verifieert eigenaarschap vóór teruggave.
+ *
+ * Onderhoudshistorie queries/mutaties → zie onderhoudshistorie.ts
  */
 
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { vBrandstof } from "./validators";
+import { requireAuth } from "./helpers";
+
 
 // ---------------------------------------------------------------------------
-// Interne hulpfunctie
-// ---------------------------------------------------------------------------
-
-/**
- * Resolveert de tokenIdentifier van de ingelogde gebruiker.
- * Gooit een duidelijke foutmelding als de sessie ontbreekt.
- * Accepteert zowel QueryCtx als MutationCtx (beide hebben .auth).
- */
-async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<string> {
-    const identity = await ctx.auth.getUserIdentity();
-
-    if (identity === null) {
-        throw new Error(
-            "UNAUTHORIZED: Deze operatie vereist een actieve LaventeCare-sessie. " +
-            "Zorg dat de Convex client een geldig RS256 JWT heeft ontvangen via GET /api/v1/auth/token."
-        );
-    }
-
-    return identity.tokenIdentifier;
-}
-
-// ---------------------------------------------------------------------------
-// Queries — voertuigen
+// Queries
 // ---------------------------------------------------------------------------
 
 /**
@@ -61,8 +43,7 @@ export const list = query({
 
 /**
  * getById — Eén voertuig op basis van ID.
- * Retourneert null als het voertuig niet bestaat of niet toebehoort
- * aan de sessie (IDOR-bescherming).
+ * Retourneert null als het voertuig niet bestaat of niet toebehoort aan de sessie.
  */
 export const getById = query({
     args: { voertuigId: v.id("voertuigen") },
@@ -101,6 +82,10 @@ export const getByKlant = query({
 
 /**
  * getBijnaVerlopenApk — Voertuigen waarvan de APK binnen X dagen verloopt.
+ *
+ * Optimalisatie: gebruikt de gecorrigeerde index ["tokenIdentifier", "apkVervaldatum"]
+ * zodat eerst tenant-isolatie wordt toegepast via een index-equality check, en
+ * vervolgens een efficiënte range-scan op APK-datum. Geen in-memory filter meer.
  */
 export const getBijnaVerlopenApk = query({
     args: {
@@ -112,24 +97,21 @@ export const getBijnaVerlopenApk = query({
         const nu = Date.now();
         const grens = nu + dagen * 24 * 60 * 60 * 1000;
 
-        const alleVoertuigen = await ctx.db
+        // Directe index range-scan: tenant-filter + datum-bereik in één query
+        return ctx.db
             .query("voertuigen")
-            .withIndex("by_token_identifier", (q) =>
-                q.eq("tokenIdentifier", tokenIdentifier)
+            .withIndex("by_apk_and_token", (q) =>
+                q
+                    .eq("tokenIdentifier", tokenIdentifier)
+                    .gt("apkVervaldatum", nu)
+                    .lte("apkVervaldatum", grens)
             )
             .collect();
-
-        return alleVoertuigen.filter(
-            (voertuig) =>
-                voertuig.apkVervaldatum !== undefined &&
-                voertuig.apkVervaldatum > nu &&
-                voertuig.apkVervaldatum <= grens
-        );
     },
 });
 
 // ---------------------------------------------------------------------------
-// Mutaties — voertuigen
+// Mutaties
 // ---------------------------------------------------------------------------
 
 /**
@@ -142,13 +124,7 @@ export const create = mutation({
         merk: v.string(),
         model: v.string(),
         bouwjaar: v.number(),
-        brandstof: v.union(
-            v.literal("Benzine"),
-            v.literal("Diesel"),
-            v.literal("Hybride"),
-            v.literal("EV"),
-            v.literal("LPG")
-        ),
+        brandstof: vBrandstof,
         vin: v.optional(v.string()),
         meldcode: v.optional(v.string()),
         kilometerstand: v.optional(v.number()),
@@ -174,6 +150,41 @@ export const create = mutation({
 });
 
 /**
+ * update — Wijzig voertuiggegevens (patch semantiek).
+ */
+export const update = mutation({
+    args: {
+        voertuigId: v.id("voertuigen"),
+        kenteken: v.optional(v.string()),
+        merk: v.optional(v.string()),
+        model: v.optional(v.string()),
+        bouwjaar: v.optional(v.number()),
+        brandstof: v.optional(vBrandstof),
+        vin: v.optional(v.string()),
+        meldcode: v.optional(v.string()),
+        kilometerstand: v.optional(v.number()),
+        apkVervaldatum: v.optional(v.number()),
+        voertuigNotities: v.optional(v.string()),
+    },
+    handler: async (ctx, args): Promise<void> => {
+        const tokenIdentifier = await requireAuth(ctx);
+
+        const voertuig = await ctx.db.get(args.voertuigId);
+        if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {
+            throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
+        }
+
+        const { voertuigId, ...patch } = args;
+
+        const cleanPatch = Object.fromEntries(
+            Object.entries(patch).filter(([, val]) => val !== undefined)
+        );
+
+        await ctx.db.patch(voertuigId, cleanPatch);
+    },
+});
+
+/**
  * updateKilometerstand — Snel een nieuwe kilometerstand registreren.
  */
 export const updateKilometerstand = mutation({
@@ -195,58 +206,15 @@ export const updateKilometerstand = mutation({
     },
 });
 
-// ---------------------------------------------------------------------------
-// Queries — onderhoudshistorie
-// ---------------------------------------------------------------------------
-
 /**
- * getHistorie — Volledig dossier van alle werkzaamheden voor één voertuig.
+ * verwijder — Verwijder een voertuig en alle bijbehorende onderhoudshistorie.
+ *
+ * ⚠️ Cascade verwijdering — onomkeerbaar.
+ *    Overweeg eerst het voertuig los te koppelen van de klant in de UI.
  */
-export const getHistorie = query({
+export const verwijder = mutation({
     args: { voertuigId: v.id("voertuigen") },
-    handler: async (ctx, args): Promise<Doc<"onderhoudshistorie">[]> => {
-        const tokenIdentifier = await requireAuth(ctx);
-
-        const voertuig = await ctx.db.get(args.voertuigId);
-        if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {
-            return [];
-        }
-
-        return ctx.db
-            .query("onderhoudshistorie")
-            .withIndex("by_voertuig", (q) => q.eq("voertuigId", args.voertuigId))
-            .order("desc")
-            .collect();
-    },
-});
-
-// ---------------------------------------------------------------------------
-// Mutaties — onderhoudshistorie
-// ---------------------------------------------------------------------------
-
-/**
- * registreerOnderhoud — Voeg een nieuwe onderhoudsbeurt toe aan het dossier.
- * Synchroniseert automatisch de kilometerstand op het voertuig.
- */
-export const registreerOnderhoud = mutation({
-    args: {
-        voertuigId: v.id("voertuigen"),
-        datumUitgevoerd: v.number(),
-        typeWerk: v.union(
-            v.literal("Grote Beurt"),
-            v.literal("Kleine Beurt"),
-            v.literal("APK"),
-            v.literal("Reparatie"),
-            v.literal("Bandenwisseling"),
-            v.literal("Schadeherstel"),
-            v.literal("Diagnostiek"),
-            v.literal("Overig")
-        ),
-        kmStandOnderhoud: v.number(),
-        documentUrl: v.optional(v.string()),
-        werkNotities: v.optional(v.string()),
-    },
-    handler: async (ctx, args): Promise<Id<"onderhoudshistorie">> => {
+    handler: async (ctx, args): Promise<void> => {
         const tokenIdentifier = await requireAuth(ctx);
 
         const voertuig = await ctx.db.get(args.voertuigId);
@@ -254,20 +222,36 @@ export const registreerOnderhoud = mutation({
             throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
         }
 
-        // Houd kilometerstand altijd actueel op het voertuig zelf
-        if (
-            voertuig.kilometerstand === undefined ||
-            args.kmStandOnderhoud > voertuig.kilometerstand
-        ) {
-            await ctx.db.patch(args.voertuigId, {
-                kilometerstand: args.kmStandOnderhoud,
-            });
+        // Cascade: verwijder gekoppelde onderhoudshistorie
+        const historie = await ctx.db
+            .query("onderhoudshistorie")
+            .withIndex("by_voertuig", (q) => q.eq("voertuigId", args.voertuigId))
+            .collect();
+
+        for (const entry of historie) {
+            await ctx.db.delete(entry._id);
         }
 
-        return ctx.db.insert("onderhoudshistorie", {
-            ...args,
-            tokenIdentifier,
-            aangemaaktOp: Date.now(),
-        });
+        // 🔴 FIX #2: Cascade werkorders + werkorderLogs verwijderen.
+        // Zonder deze fix blijven werkorders met een verwijderd voertuigId staan
+        // → kaartje toont "Voertuig onbekend" op het bord (ghost record).
+        const werkorders = await ctx.db
+            .query("werkorders")
+            .withIndex("by_voertuig", (q) => q.eq("voertuigId", args.voertuigId))
+            .collect();
+
+        for (const order of werkorders) {
+            // Verwijder ook de logs van deze werkorder
+            const logs = await ctx.db
+                .query("werkorderLogs")
+                .withIndex("by_werkorder", (q) => q.eq("werkorderId", order._id))
+                .collect();
+            for (const log of logs) {
+                await ctx.db.delete(log._id);
+            }
+            await ctx.db.delete(order._id);
+        }
+
+        await ctx.db.delete(args.voertuigId);
     },
 });

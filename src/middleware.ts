@@ -16,7 +16,7 @@
 import { defineMiddleware } from "astro:middleware";
 
 /** Routes die GEEN auth-check vereisen */
-const PUBLIC_PATHS = ["/", "/login", "/favicon.svg", "/favicon.ico"];
+const PUBLIC_PATHS = ["/", "/login", "/logout", "/favicon.svg", "/favicon.ico"];
 
 /** Alle paden die beginnen met deze prefixes zijn ook publiek */
 const PUBLIC_PREFIXES = ["/_astro/", "/api/"];

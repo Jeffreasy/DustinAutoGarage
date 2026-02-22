@@ -1,0 +1,83 @@
+/**
+ * src/hooks/useVoertuigen.ts
+ *
+ * Custom React hooks voor de `voertuigen` tabel.
+ *
+ * Data-logica is hiermee volledig losgekoppeld van UI-componenten:
+ *   - Componenten importeren de hook en renderen de data
+ *   - Queries worden op één plek gedefinieerd (DRY)
+ *   - Unit-testbaar los van de component tree
+ *
+ * Vereisten:
+ *   - Moet binnen een `<LaventeConvexProvider>` gebruikt worden
+ *     (Convex auth context vereist)
+ */
+
+import { useQuery, useConvexAuth } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Doc } from "../../convex/_generated/dataModel";
+
+// ---------------------------------------------------------------------------
+// Hook: voertuigenlijst
+// ---------------------------------------------------------------------------
+
+/**
+ * Haalt alle voertuigen op voor de huidige tenant-sessie.
+ * Wacht op Convex auth voordat de query verstuurd wordt.
+ *
+ * @returns Array van voertuigen (nieuwste eerst), of `undefined` tijdens laden.
+ */
+export function useVoertuigenLijst(): Doc<"voertuigen">[] | undefined {
+    const { isAuthenticated } = useConvexAuth();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const results = useQuery(api.voertuigen.list, isAuthenticated ? {} : "skip" as any);
+    return results;
+}
+
+// ---------------------------------------------------------------------------
+// Hook: APK-waarschuwingen
+// ---------------------------------------------------------------------------
+
+/**
+ * Haalt alle voertuigen op waarvan de APK binnen `dagenVooruit` dagen verloopt.
+ * Standaard: 30 dagen.
+ *
+ * @param dagenVooruit - Kijkvenster in dagen (default: 30)
+ * @returns Gefilterde array van voertuigen, of `undefined` tijdens laden.
+ *
+ * @example
+ * const waarschuwingen = useApkWaarschuwingen(14);
+ * if (waarschuwingen?.length) return <ApkAlert items={waarschuwingen} />;
+ */
+export function useApkWaarschuwingen(
+    dagenVooruit: number = 30
+): Doc<"voertuigen">[] | undefined {
+    const { isAuthenticated } = useConvexAuth();
+    return useQuery(
+        api.voertuigen.getBijnaVerlopenApk,
+        isAuthenticated ? { dagenVooruit } : "skip"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Hook: voertuig op ID
+// ---------------------------------------------------------------------------
+
+/**
+ * Haalt één voertuig op op basis van zijn Convex ID.
+ * Retourneert `null` als het voertuig niet bestaat of niet toebehoort aan
+ * de sessie (IDOR-bescherming zit in de Convex query).
+ *
+ * Geef `null` mee als ID nog niet bekend is — de query wordt dan overgeslagen.
+ *
+ * @param voertuigId - Convex ID van het voertuig, of `null` om query te skippen
+ * @returns Voertuig object, `null` (niet gevonden), of `undefined` (laden)
+ */
+export function useVoertuigById(
+    voertuigId: Doc<"voertuigen">["_id"] | null
+): Doc<"voertuigen"> | null | undefined {
+    return useQuery(
+        api.voertuigen.getById,
+        voertuigId ? { voertuigId } : "skip"
+    );
+}

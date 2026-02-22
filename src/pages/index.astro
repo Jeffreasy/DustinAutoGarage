@@ -6,24 +6,46 @@
  * Geguard door Astro Middleware: als je al ingelogd bent (user in locals)
  * word je direct doorgestuurd naar het dashboard, anders naar /login.
  */
+
+import "../styles/design-tokens.css";
+import "../styles/typography.css";
 ---
 
 <!doctype html>
-<html lang="nl">
+<html lang="nl" data-theme="dark">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Dustin Auto Garage</title>
         <meta http-equiv="refresh" content="0; url=/dashboard" />
+        <script is:inline>
+            (function () {
+                var stored = localStorage.getItem("theme");
+                var preferred = window.matchMedia(
+                    "(prefers-color-scheme: light)",
+                ).matches
+                    ? "light"
+                    : "dark";
+                document.documentElement.setAttribute(
+                    "data-theme",
+                    stored === "light" || stored === "dark"
+                        ? stored
+                        : preferred,
+                );
+            })();
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500&display=swap"
+            rel="stylesheet"
+        />
         <style>
             body {
-                background: #0a0f1a;
-                color: #64748b;
-                font-family: system-ui, sans-serif;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                min-height: 100vh;
+                min-height: 100svh;
                 margin: 0;
             }
         </style>

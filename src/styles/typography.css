@@ -1,0 +1,354 @@
+/**
+ * src/styles/typography.css
+ *
+ * Typografie-systeem — globale tekst-stijlen op basis van design tokens.
+ * Bouw altijd voort op de tokens uit design-tokens.css.
+ */
+
+/* ============================================================
+   BASIS RESET & BODY
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--color-bg);
+    background-image:
+        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(20, 184, 166, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(13, 148, 136, 0.06) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 30% at 50% 50%, rgba(20, 184, 166, 0.03) 0%, transparent 70%);
+    background-size: 200% 200%;
+    animation: meshDrift 20s ease-in-out infinite;
+    color: var(--color-body);
+    min-height: 100svh;
+    transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body {
+        animation: none;
+    }
+}
+
+/* ============================================================
+   KOPPEN
+   ============================================================ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--color-heading);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+}
+
+h1 {
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+}
+
+h2 {
+    font-size: var(--text-2xl);
+}
+
+h3 {
+    font-size: var(--text-xl);
+}
+
+h4 {
+    font-size: var(--text-lg);
+}
+
+h5 {
+    font-size: var(--text-base);
+}
+
+h6 {
+    font-size: var(--text-sm);
+}
+
+/* Responsieve schaling */
+@media (min-width: 640px) {
+    h1 {
+        font-size: var(--text-4xl);
+    }
+
+    h2 {
+        font-size: var(--text-3xl);
+    }
+
+    h3 {
+        font-size: var(--text-2xl);
+    }
+}
+
+/* ============================================================
+   PARAGRAFEN & INLINE ELEMENTEN
+   ============================================================ */
+
+p {
+    color: var(--color-body);
+    line-height: var(--leading-relaxed);
+}
+
+p+p {
+    margin-top: var(--space-4);
+}
+
+strong,
+b {
+    font-weight: var(--weight-semibold);
+    color: var(--color-heading);
+}
+
+em,
+i {
+    font-style: italic;
+}
+
+small {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+}
+
+/* ============================================================
+   LINKS
+   ============================================================ */
+
+a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-accent-hover);
+}
+
+a:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+}
+
+/* ============================================================
+   CODE & MONOSPACE
+   ============================================================ */
+
+code,
+kbd,
+samp,
+pre {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+code {
+    color: var(--color-accent);
+    background: var(--color-accent-dim);
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius-xs);
+}
+
+pre {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    overflow-x: auto;
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+}
+
+pre code {
+    background: transparent;
+    padding: 0;
+    color: var(--color-heading);
+}
+
+/* Kentekenplaat-specifieke stijl */
+.kenteken {
+    font-family: var(--font-mono);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   LIJSTEN
+   ============================================================ */
+
+ul,
+ol {
+    padding-left: var(--space-6);
+    color: var(--color-body);
+}
+
+li {
+    line-height: var(--leading-relaxed);
+}
+
+li+li {
+    margin-top: var(--space-1);
+}
+
+/* Unstyled lijst utility */
+ul.list-none,
+ol.list-none {
+    list-style: none;
+    padding-left: 0;
+}
+
+/* ============================================================
+   HORIZONTALE LIJN
+   ============================================================ */
+
+hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: var(--space-6) 0;
+}
+
+/* ============================================================
+   TYPOGRAFISCHE UTILITY KLASSEN
+   ============================================================ */
+
+.text-xs {
+    font-size: var(--text-xs);
+}
+
+.text-sm {
+    font-size: var(--text-sm);
+}
+
+.text-base {
+    font-size: var(--text-base);
+}
+
+.text-lg {
+    font-size: var(--text-lg);
+}
+
+.text-xl {
+    font-size: var(--text-xl);
+}
+
+.text-2xl {
+    font-size: var(--text-2xl);
+}
+
+.text-3xl {
+    font-size: var(--text-3xl);
+}
+
+.font-normal {
+    font-weight: var(--weight-normal);
+}
+
+.font-medium {
+    font-weight: var(--weight-medium);
+}
+
+.font-semibold {
+    font-weight: var(--weight-semibold);
+}
+
+.font-bold {
+    font-weight: var(--weight-bold);
+}
+
+.text-heading {
+    color: var(--color-heading);
+}
+
+.text-body {
+    color: var(--color-body);
+}
+
+.text-muted {
+    color: var(--color-muted);
+}
+
+.text-accent {
+    color: var(--color-accent);
+}
+
+.text-success {
+    color: var(--color-success);
+}
+
+.text-warning {
+    color: var(--color-warning);
+}
+
+.text-error {
+    color: var(--color-error);
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.uppercase {
+    text-transform: uppercase;
+}
+
+.lowercase {
+    text-transform: lowercase;
+}
+
+.capitalize {
+    text-transform: capitalize;
+}
+
+.leading-tight {
+    line-height: var(--leading-tight);
+}
+
+.leading-normal {
+    line-height: var(--leading-normal);
+}
+
+.leading-relaxed {
+    line-height: var(--leading-relaxed);
+}
+
+.tracking-wide {
+    letter-spacing: var(--tracking-wide);
+}
+
+.tracking-wider {
+    letter-spacing: var(--tracking-wider);
+}
+
+.tracking-widest {
+    letter-spacing: var(--tracking-widest);
+}

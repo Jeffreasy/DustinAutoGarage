@@ -2,113 +2,169 @@
 /**
  * src/layouts/BaseLayout.astro
  *
- * Basis page layout voor alle Auto Garage pagina's.
- * Laadt Google Fonts (Inter) en stelt globale CSS custom properties in.
+ * Root layout voor alle pagina's.
+ * Laadt het volledige design system in de correcte volgorde.
+ *
+ * Props:
+ *   title       — paginatitel (wordt in <title> gezet)
+ *   description — meta-description (SEO)
+ *   showHeader  — toon de standaard site-header (default: true)
+ *   headerSlot  — custom header content (laat showHeader op false)
  */
+
+import ThemeToggle from "../components/ThemeToggle.astro";
+
+// Design system — Vite verwerkt en bundelt deze bestanden automatisch
+import "../styles/design-tokens.css";
+import "../styles/typography.css";
+import "../styles/spacing.css";
+import "../styles/components.css";
+import "../styles/utilities.css";
 
 export interface Props {
     title: string;
     description?: string;
+    showHeader?: boolean;
 }
 
-const { title, description = "Auto Garage — Klanten- en voertuigbeheer" } =
-    Astro.props;
+const {
+    title,
+    description = "Dustin Auto Garage — Professioneel klanten- en voertuigbeheer",
+    showHeader = true,
+} = Astro.props;
+
+const user = Astro.locals.user;
 ---
 
 <!doctype html>
-<html lang="nl">
+<html lang="nl" data-theme="dark">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="description" content={description} />
-        <title>{title}</title>
+        <meta name="theme-color" content="#07090f" id="meta-theme-color" />
+        <title>{title} — Dustin Auto Garage</title>
 
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-        <!-- Google Fonts: Inter -->
+        <!-- Anti-flash theme script: uitgevoerd VOOR de eerste render -->
+        <script is:inline>
+            (function () {
+                var stored = localStorage.getItem("theme");
+                var preferred = window.matchMedia("(prefers-color-scheme: light)").matches
+                    ? "light"
+                    : "dark";
+                var theme = (stored === "light" || stored === "dark") ? stored : preferred;
+                document.documentElement.setAttribute("data-theme", theme);
+
+                // Meta theme-color synchroon aanpassen
+                var meta = document.getElementById("meta-theme-color");
+                if (meta) {
+                    meta.setAttribute(
+                        "content",
+                        theme === "light" ? "#f8fafc" : "#07090f"
+                    );
+                }
+            })();
+        </script>
+
+        <!--
+            Google Fonts — Inter (UI) + JetBrains Mono (kentekens/code)
+            Preconnect voor minimale latency.
+        -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;700&display=swap"
             rel="stylesheet"
         />
+
+        <!-- Design System wordt geïnjecteerd door Vite via frontmatter imports -->
     </head>
 
     <body>
-        <slot />
+        <!-- Site Header -->
+        {showHeader && (
+            <header class="site-header no-print" role="banner">
+                <div class="site-header-inner">
+                    <!-- Logo / Brand -->
+                    <a href="/dashboard" class="site-logo" aria-label="Dustin Auto Garage — Dashboard">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                            style="color: var(--color-accent);"
+                        >
+                            <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
+                            <circle cx="6.5" cy="16.5" r="2.5" />
+                            <circle cx="16.5" cy="16.5" r="2.5" />
+                        </svg>
+                        <span>Dustin Auto Garage</span>
+                    </a>
+
+                    <!-- Navigatie — verborgen op mobiel (toekomstige hamburger menu) -->
+                    <nav class="site-nav hide-mobile" aria-label="Hoofdnavigatie">
+                        <a href="/dashboard" class="nav-link">Dashboard</a>
+                        <a href="/klanten" class="nav-link">Klanten</a>
+                        <a href="/voertuigen" class="nav-link">Voertuigen</a>
+                    </nav>
+
+                    <!-- Acties -->
+                    <div class="flex items-center gap-2">
+                        {user && (
+                            <span class="text-sm text-muted hide-mobile">
+                                {user.full_name}
+                            </span>
+                        )}
+
+                        <!-- Theme toggle -->
+                        <ThemeToggle />
+
+                        <!-- Uitloggen -->
+                        {user && (
+                            <a href="/logout" class="btn btn-ghost btn-sm no-print">
+                                Uitloggen
+                            </a>
+                        )}
+                    </div>
+                </div>
+            </header>
+        )}
+
+        <!-- Page content via slot -->
+        <main role="main" id="main-content" class="page-main">
+            <div class="container">
+                <slot />
+            </div>
+        </main>
+
+        <!-- Skip-link voor toetsenbordgebruikers -->
+        <a href="#main-content" class="sr-only focus-ring" style="position:fixed;top:var(--space-2);left:var(--space-2);z-index:var(--z-toast);background:var(--color-accent);color:var(--color-on-accent);padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-weight:var(--weight-medium);">
+            Ga naar inhoud
+        </a>
+
+        <!-- Theme-toggle meta-theme-color sync na DOM load -->
+        <script>
+            // Sync meta theme-color on toggle (ThemeToggle.astro writes data-theme)
+            const metaTheme = document.getElementById("meta-theme-color") as HTMLMetaElement | null;
+            const observer = new MutationObserver(() => {
+                const theme = document.documentElement.getAttribute("data-theme");
+                if (metaTheme) {
+                    metaTheme.content = theme === "light" ? "#f8fafc" : "#07090f";
+                }
+            });
+            observer.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ["data-theme"],
+            });
+        </script>
     </body>
 </html>
-
-<style is:global>
-    /* ── Design tokens ─────────────────────────────────────────────────────── */
-    :root {
-        /* Palette */
-        --color-bg: #0a0f1a;
-        --color-surface: #0f1729;
-        --color-surface-2: #162039;
-        --color-border: #1e2d4a;
-        --color-heading: #f0f6ff;
-        --color-body: #94a3b8;
-        --color-muted: #64748b;
-
-        /* Accent — Teal (geen paars per design rules) */
-        --color-accent: #14b8a6;
-        --color-accent-hover: #0d9488;
-        --color-accent-dim: rgba(20, 184, 166, 0.12);
-
-        /* States */
-        --color-error-bg: #1a0a0a;
-        --color-error-border: #7f1d1d;
-        --color-error-text: #f87171;
-        --color-success-text: #4ade80;
-
-        /* Typography */
-        --font-sans: "Inter", system-ui, sans-serif;
-
-        /* Spacing */
-        --radius-md: 0.5rem;
-        --radius-lg: 0.75rem;
-    }
-
-    /* ── Reset ──────────────────────────────────────────────────────────────── */
-    *,
-    *::before,
-    *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    html {
-        font-family: var(--font-sans);
-        font-size: 16px;
-        -webkit-font-smoothing: antialiased;
-    }
-
-    body {
-        background: var(--color-bg);
-        color: var(--color-body);
-        min-height: 100vh;
-    }
-
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        color: var(--color-heading);
-        font-weight: 600;
-        line-height: 1.3;
-    }
-
-    a {
-        color: var(--color-accent);
-        text-decoration: none;
-    }
-
-    a:hover {
-        color: var(--color-accent-hover);
-    }
-</style>

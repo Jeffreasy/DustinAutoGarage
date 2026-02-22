@@ -21,3 +21,11 @@ popular-pegasi/
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ── AI Kit (lokale agent-configuratie — niet committen) ───────────────────────
+.agent/
+
+# ── Binaire assets in docs (te groot voor git) ────────────────────────────────
+BackendDocumentation/*.png
+BackendDocumentation/*.jpg
+BackendDocumentation/*.gif

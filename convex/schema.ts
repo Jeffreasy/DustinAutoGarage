@@ -1,7 +1,7 @@
 /**
  * convex/schema.ts
  *
- * Auto Garage — volledig databaseschema (3 tabellen)
+ * Auto Garage — volledig databaseschema (4 tabellen)
  *
  * Multi-Tenant Isolatiestrategie:
  *   Elk record draagt een `tokenIdentifier` afkomstig van
@@ -13,45 +13,16 @@
  * Relaties:
  *   klanten  1 ──< N  voertuigen          (voertuigen.klantId)
  *   voertuigen 1 ──< N  onderhoudshistorie  (onderhoudshistorie.voertuigId)
+ *
+ * Split-Role strategie:
+ *   medewerkers  koppelt LaventeCare userId aan een garage-specifieke domeinRol.
+ *   Identity (wie mag inloggen) = LaventeCare. Domein (wat mag je) = medewerkers-tabel.
  */
 
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-
-// ---------------------------------------------------------------------------
-// Gedeelde validators (DRY)
-// ---------------------------------------------------------------------------
-
-/** Klanttype: Particulier of Zakelijk */
-const klanttype = v.union(v.literal("Particulier"), v.literal("Zakelijk"));
-
-/** Klantstatus levenscyclus */
-const klantstatus = v.union(
-    v.literal("Actief"),
-    v.literal("Inactief"),
-    v.literal("Prospect")
-);
-
-/** Brandstoftype */
-const brandstof = v.union(
-    v.literal("Benzine"),
-    v.literal("Diesel"),
-    v.literal("Hybride"),
-    v.literal("EV"),
-    v.literal("LPG")
-);
-
-/** Soort uitgevoerd werk bij onderhoudsbeurt */
-const typeWerk = v.union(
-    v.literal("Grote Beurt"),
-    v.literal("Kleine Beurt"),
-    v.literal("APK"),
-    v.literal("Reparatie"),
-    v.literal("Bandenwisseling"),
-    v.literal("Schadeherstel"),
-    v.literal("Diagnostiek"),
-    v.literal("Overig")
-);
+// Enum-validators worden gecentraliseerd beheerd in validators.ts
+import { vKlanttype, vKlantstatus, vBrandstof, vTypeWerk, vDomeinRol, vWerkplekType, vWerkorderStatus } from "./validators";
 
 // ---------------------------------------------------------------------------
 // Schema-definitie
@@ -59,12 +30,52 @@ const typeWerk = v.union(
 
 export default defineSchema({
     // ──────────────────────────────────────────────────────────────────────────
+    // Tabel 0: medewerkers  (Split-Role — Domain Layer)
+    //   Koppelt een LaventeCare userId aan een garage-specifieke domeinRol.
+    //   Identity (wie mag inloggen) = LaventeCare.
+    //   Domein (wat mag je in de app) = dit record.
+    // ──────────────────────────────────────────────────────────────────────────
+    medewerkers: defineTable({
+        /**
+         * LaventeCare userId: de `sub` claim uit het JWT.
+         * Wordt gezet door `registreerMedewerker` na een succesvolle invite.
+         */
+        userId: v.string(),
+
+        /**
+         * OIDC tokenIdentifier: `getUserIdentity().tokenIdentifier`
+         * Formaat: "<issuer>|<tenantId>:<userId>"
+         * Gebruikt voor multi-tenant isolatie bij queries.
+         */
+        tokenIdentifier: v.string(),
+
+        /** Garage-specifieke functie — zie validators.ts voor hiërarchie. */
+        domeinRol: vDomeinRol,
+
+        /** Weergavenaam — vult over van LaventeCare full_name bij invite. */
+        naam: v.string(),
+
+        /**
+         * Zachte deactivatie: actief=false verbergt de medewerker in de UI
+         * en blokkeert domain-rol access, maar behoudt de audit trail.
+         */
+        actief: v.boolean(),
+
+        /** Aanmaaktijdstip (ms since epoch). */
+        aangemaaktOp: v.number(),
+    })
+        // Snelle lookup per gebruiker (identity bridge in useRol hook)
+        .index("by_userId", ["userId"])
+        // Tenant-geïsoleerde lijst van alle medewerkers
+        .index("by_token_identifier", ["tokenIdentifier"]),
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Tabel 1: klanten
     //   Persoons- en bedrijfsgegevens. Eén rij per klant.
     // ──────────────────────────────────────────────────────────────────────────
     klanten: defineTable({
         /** Particulier of Zakelijk */
-        klanttype,
+        klanttype: vKlanttype,
 
         // ── Persoonsinformatie ─────────────────────────────────────────────────
         voornaam: v.string(),
@@ -90,7 +101,7 @@ export default defineSchema({
         accepteertMarketing: v.boolean(),
 
         // ── Status & lifecycle ────────────────────────────────────────────────
-        status: klantstatus,
+        status: vKlantstatus,
 
         /** Tijdstip van eerste registratie (ms since epoch). */
         klantSinds: v.number(),
@@ -106,8 +117,10 @@ export default defineSchema({
         tokenIdentifier: v.string(),
     })
         .index("by_token_identifier", ["tokenIdentifier"])
-        .index("by_email_and_token", ["emailadres", "tokenIdentifier"])
-        .index("by_status_and_token", ["status", "tokenIdentifier"]),
+        // Index: eerst tenant-filter, dan email-lookup — zelfde redenering als by_apk_and_token.
+        .index("by_email_and_token", ["tokenIdentifier", "emailadres"])
+        // Index: eerst tenant-filter, dan status-filter.
+        .index("by_status_and_token", ["tokenIdentifier", "status"]),
 
     // ──────────────────────────────────────────────────────────────────────────
     // Tabel 2: voertuigen
@@ -139,7 +152,7 @@ export default defineSchema({
         /** Jaar van eerste toelating, bijv. 2018. */
         bouwjaar: v.number(),
 
-        brandstof,
+        brandstof: vBrandstof,
 
         /** Laatste bekende kilometerstand. */
         kilometerstand: v.optional(v.number()),
@@ -162,7 +175,10 @@ export default defineSchema({
         .index("by_klant", ["klantId"])
         .index("by_token_identifier", ["tokenIdentifier"])
         .index("by_kenteken_and_token", ["kenteken", "tokenIdentifier"])
-        .index("by_apk_and_token", ["apkVervaldatum", "tokenIdentifier"]),
+        // Index: eerst tenant-filter (tokenIdentifier), dan range-scan op APK-datum.
+        // Dit is efficiënter dan by_apk_and_token met datumveld eerst,
+        // want we willen altijd tenant-geïsoleerd zoeken.
+        .index("by_apk_and_token", ["tokenIdentifier", "apkVervaldatum"]),
 
     // ──────────────────────────────────────────────────────────────────────────
     // Tabel 3: onderhoudshistorie
@@ -176,7 +192,7 @@ export default defineSchema({
         /** Datum van uitvoering (ms since epoch). */
         datumUitgevoerd: v.number(),
 
-        typeWerk,
+        typeWerk: vTypeWerk,
 
         /** Kilometerstand op het moment van uitvoering. */
         kmStandOnderhoud: v.number(),
@@ -198,5 +214,125 @@ export default defineSchema({
     })
         .index("by_voertuig", ["voertuigId"])
         .index("by_token_identifier", ["tokenIdentifier"])
-        .index("by_datum_and_token", ["datumUitgevoerd", "tokenIdentifier"]),
+        // Index: eerst tenant-filter, dan datum-range — zelfde redenering als by_apk_and_token.
+        .index("by_datum_and_token", ["tokenIdentifier", "datumUitgevoerd"]),
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Tabel 4: werkplekken  (Werkplaatsbord — Kolommen)
+    //   Fysieke locaties in de garage. Eén rij = één kolom op het bord.
+    //   Voorbeelden: "Brug 1", "Brug 2", "Uitlijnbrug".
+    //   De impliciete "Buiten/Wachtend" kolom heeft géén werkplek-record;
+    //   werkorders zonder werkplekId worden daar weergegeven.
+    // ──────────────────────────────────────────────────────────────────────────
+    werkplekken: defineTable({
+        /** Weergavenaam: "Brug 1", "Uitlijnbrug", etc. */
+        naam: v.string(),
+
+        /** Fysiek type — bepaalt icoon en kleur in de UI. */
+        type: vWerkplekType,
+
+        /**
+         * Kolomvolgorde op het bord (links → rechts, oplopend).
+         * "Buiten" = impliciete kolom 0 (geen record nodig).
+         * "Klaar voor ophalen" = impliciete laatste kolom (status-filter).
+         */
+        volgorde: v.number(),
+
+        /** Multi-tenant isolatie. */
+        tokenIdentifier: v.string(),
+    })
+        .index("by_token_identifier", ["tokenIdentifier"])
+        // Sorteren op volgorde, gefilterd per tenant.
+        .index("by_token_and_volgorde", ["tokenIdentifier", "volgorde"]),
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Tabel 5: werkorders  (Werkplaatsbord — Kaartjes)
+    //   Eén actieve klus per auto per dag. Dit is het hart van het bord.
+    //   Relaties: voertuigen ──< werkorders >── werkplekken
+    // ──────────────────────────────────────────────────────────────────────────
+    werkorders: defineTable({
+        /** FK → voertuigen._id (de auto die binnen is). */
+        voertuigId: v.id("voertuigen"),
+
+        /** FK → klanten._id (snelle access voor telefoonnummer bij bellen). */
+        klantId: v.id("klanten"),
+
+        /**
+         * FK → werkplekken._id (waar staat de auto nú?).
+         * null = auto staat nog "Buiten" / wacht op een plek.
+         */
+        werkplekId: v.optional(v.id("werkplekken")),
+
+        /**
+         * FK → medewerkers._id (wie is ermee bezig?).
+         * null = nog niet toegewezen.
+         */
+        monteursId: v.optional(v.id("medewerkers")),
+
+        /**
+         * De klacht / taakomschrijving.
+         * Dit is het meest gelezen veld op het kaartje: "Rammelt linksvoor".
+         */
+        klacht: v.string(),
+
+        /** Huidige lifecycle-status — zie validators.ts voor transitie-diagram. */
+        status: vWerkorderStatus,
+
+        /** Datum van de afspraak (ms since epoch). */
+        afspraakDatum: v.number(),
+
+        /** Multi-tenant isolatie. */
+        tokenIdentifier: v.string(),
+
+        /** Aanmaaktijdstip (ms since epoch). */
+        aangemaaktOp: v.number(),
+    })
+        .index("by_token_identifier", ["tokenIdentifier"])
+        // Ophalen van alle orders per werkplek (= één kolom op het bord).
+        .index("by_werkplek", ["werkplekId"])
+        // 🔴 FIX: ontbrekende index — nodig voor cascade-delete bij verwijder voertuig.
+        .index("by_voertuig", ["voertuigId"])
+        // Tenant-filter + status-filter (bijv. alle "Klaar" orders).
+        .index("by_status_and_token", ["tokenIdentifier", "status"])
+        // Tenant-filter + datum-range (orders van vandaag).
+        .index("by_datum_and_token", ["tokenIdentifier", "afspraakDatum"]),
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Tabel 6: werkorderLogs  (Audit Trail — Fase 2)
+    //   Chronologisch logboek per werkorder.
+    //   Elke verplaatsing of statuswijziging schrijft een logregel.
+    //   Monteurs kunnen ook vrije notities toevoegen ("Onderdeel besteld bij...").
+    // ──────────────────────────────────────────────────────────────────────────
+    werkorderLogs: defineTable({
+        /** FK → werkorders._id */
+        werkorderId: v.id("werkorders"),
+
+        /**
+         * FK → medewerkers._id (wie heeft deze actie uitgevoerd?).
+         * Altijd gevuld — elke actie is traceerbaar.
+         */
+        monteursId: v.id("medewerkers"),
+
+        /**
+         * Omschrijving van de actie, auto-gegenereerd of handmatig.
+         * Bijv. "Verplaatst naar Brug 2" of "Status gewijzigd naar Wacht op onderdelen".
+         */
+        actie: v.string(),
+
+        /**
+         * Optionele vrije notitie van de monteur.
+         * Bijv. "Draagarmrubber stuk — onderdeel besteld bij Van der Berg".
+         */
+        notitie: v.optional(v.string()),
+
+        /** Tijdstip van de actie (ms since epoch). */
+        tijdstip: v.number(),
+
+        /** Multi-tenant isolatie. */
+        tokenIdentifier: v.string(),
+    })
+        // Alle logs per werkorder ophalen (voor het logboek-panel).
+        .index("by_werkorder", ["werkorderId"])
+        // Tenant-brede audit-query.
+        .index("by_token_identifier", ["tokenIdentifier"]),
 });

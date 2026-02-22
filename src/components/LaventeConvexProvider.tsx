@@ -6,21 +6,15 @@
  * Security Contract ("Anti-Gravity Protocol"):
  *   ✅  Tokens are NEVER written to localStorage or sessionStorage.
  *   ✅  The JWT lives exclusively in React state (heap memory).
- *   ✅  The token is fetched via GET /api/v1/auth/token with
- *       `credentials: "include"` — the HttpOnly session cookie is forwarded
- *       automatically by the browser. No token is ever visible to JS in the
- *       cookie jar either.
- *   ✅  If the fetch fails (401, network error), no Convex session is started
- *       and the user is redirected to /login.
+ *   ✅  The token is fetched via the `fetchConvexToken()` helper in
+ *       src/lib/auth.ts which uses `credentials: "include"` — the
+ *       HttpOnly session cookie is forwarded automatically.
+ *   ✅  On 401 the user is redirected via `redirectToLogin()`.
  *
  * Usage in an Astro page:
  *   <LaventeConvexProvider client:load>
  *     <VoertuigenList />
  *   </LaventeConvexProvider>
- *
- * Required env vars (Astro / Vite):
- *   PUBLIC_API_URL       — LaventeCare Go backend, e.g. https://auth.laventecare.nl
- *   PUBLIC_CONVEX_URL    — Convex deployment URL
  */
 
 import {
@@ -33,14 +27,13 @@ import {
     type ReactNode,
 } from "react";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
+import { config } from "../lib/config";
+import { fetchConvexToken, redirectToLogin } from "../lib/auth";
+import { ApiError } from "../lib/api";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface TokenFetchResponse {
-    token: string;
-}
 
 type AuthState =
     | { status: "loading" }
@@ -56,9 +49,7 @@ interface LaventeAuthContextValue {
 // Convex client (module-level singleton — one instance per page load)
 // ---------------------------------------------------------------------------
 
-const convexClient = new ConvexReactClient(
-    import.meta.env.PUBLIC_CONVEX_URL as string
-);
+const convexClient = new ConvexReactClient(config.convexUrl);
 
 // ---------------------------------------------------------------------------
 // Internal auth context (consumed by the Convex provider adapter)
@@ -113,11 +104,9 @@ interface LaventeConvexProviderProps {
 /**
  * LaventeConvexProvider
  *
- * Mounts as a React Island.  On first render it immediately executes the
- * satellite token fetch, then hands the JWT off to Convex's auth layer.
- *
- * The component owns the full loading / error / ready state machine so that
- * child components receive a stable, authenticated Convex client.
+ * Mounts as a React Island. On first render it immediately executes the
+ * satellite token fetch via `fetchConvexToken()` (auth.ts), then hands
+ * the JWT off to Convex's auth layer.
  */
 export function LaventeConvexProvider({
     children,
@@ -128,48 +117,31 @@ export function LaventeConvexProvider({
     useEffect(() => {
         let cancelled = false;
 
-        async function fetchToken(): Promise<void> {
+        async function initSession(): Promise<void> {
             try {
-                const response = await fetch(`/api/auth/token`, {
-                    method: "GET",
-                    credentials: "include", // ← Anti-Gravity Rule: forward HttpOnly cookie
-                    headers: {
-                        Accept: "application/json",
-                    },
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        // Geen actieve sessie — redirect naar login.
-                        window.location.href = "/login?expired=true";
-                        return;
-                    }
-                    throw new Error(
-                        `Token endpoint returned ${response.status}: ${response.statusText}`
-                    );
-                }
-
-                const data = (await response.json()) as TokenFetchResponse;
-
-                if (!data.token || typeof data.token !== "string") {
-                    throw new Error(
-                        "Malformed token response: expected { token: string }"
-                    );
-                }
+                const token = await fetchConvexToken();
 
                 if (!cancelled) {
-                    setAuthState({ status: "ready", token: data.token });
+                    setAuthState({ status: "ready", token });
                 }
             } catch (err) {
-                if (!cancelled) {
-                    const message =
-                        err instanceof Error ? err.message : "Unknown error during token fetch";
-                    setAuthState({ status: "error", message });
+                if (cancelled) return;
+
+                // Sessie verlopen of ongeldig → stuur door naar login
+                if (err instanceof ApiError && err.status === 401) {
+                    redirectToLogin("sessie_verlopen");
                 }
+
+                const message =
+                    err instanceof Error
+                        ? err.message
+                        : "Onbekende fout tijdens sessie-validatie";
+
+                setAuthState({ status: "error", message });
             }
         }
 
-        void fetchToken();
+        void initSession();
 
         return () => {
             cancelled = true;
@@ -187,22 +159,23 @@ export function LaventeConvexProvider({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    minHeight: "200px",
-                    gap: "0.75rem",
-                    color: "var(--color-muted, #6b7280)",
+                    minHeight: "var(--space-24)",
+                    gap: "var(--space-3)",
+                    color: "var(--color-muted)",
                     fontFamily: "inherit",
                 }}
             >
                 <span
                     aria-hidden="true"
                     style={{
-                        width: 20,
-                        height: 20,
+                        width: "var(--spinner-size)",
+                        height: "var(--spinner-size)",
                         border: "2px solid currentColor",
                         borderTopColor: "transparent",
-                        borderRadius: "50%",
+                        borderRadius: "var(--radius-full)",
                         display: "inline-block",
-                        animation: "lc-spin 0.8s linear infinite",
+                        animation: "lc-spin var(--transition-slow) linear infinite",
+                        flexShrink: 0,
                     }}
                 />
                 <span>Sessie valideren…</span>
@@ -217,11 +190,11 @@ export function LaventeConvexProvider({
             <div
                 role="alert"
                 style={{
-                    padding: "1rem 1.5rem",
-                    borderRadius: "0.5rem",
-                    background: "var(--color-error-bg, #fef2f2)",
-                    color: "var(--color-error-text, #b91c1c)",
-                    border: "1px solid var(--color-error-border, #fecaca)",
+                    padding: "var(--space-4) var(--space-5)",
+                    borderRadius: "var(--radius-md)",
+                    background: "var(--color-error-bg)",
+                    color: "var(--color-error)",
+                    border: "1px solid var(--color-error-border)",
                     fontFamily: "inherit",
                 }}
             >

@@ -1,0 +1,103 @@
+---
+/**
+ * src/pages/medewerkers.astro
+ *
+ * Medewerkers Beheer — server-side bewaakt (editor+ identity rol).
+ *
+ * Toegangslogica:
+ *   LaventeCare identity "editor" of "admin" → toegang
+ *   LaventeCare identity "user" of "viewer"  → redirect naar /dashboard
+ *
+ * Binnen de pagina maakt de MedewerkersIsland verdere onderscheid op
+ * basis van de Convex domein-rol (eigenaar vs balie voor destructieve acties).
+ */
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import MedewerkersIsland from "../components/MedewerkersIsland";
+
+// ── Server-Side Guard ──────────────────────────────────────────────────────
+const user = Astro.locals.user ?? null;
+
+if (!user) {
+    return Astro.redirect("/login?reden=sessie_verlopen");
+}
+
+// Alleen editor en admin hebben identity-rechten om medewerkers te beheren
+const heeftToegang = user.role === "editor" || user.role === "admin";
+if (!heeftToegang) {
+    return Astro.redirect("/dashboard?reden=onvoldoende_rechten");
+}
+---
+
+<BaseLayout
+    title="Medewerkers — Dustin Auto Garage"
+    description="Beheer medewerkers, uitnodigingen en domeinrollen."
+>
+    <!-- Pagina header -->
+    <header class="page-header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1>Medewerkers</h1>
+                    <p class="header-subtitle">
+                        Beheer garage-medewerkers en hun domein-rollen
+                    </p>
+                </div>
+                <nav class="header-nav">
+                    <a href="/dashboard" class="btn btn-ghost btn-sm"
+                        >← Dashboard</a
+                    >
+                    <a href="/logout" class="btn btn-ghost btn-sm">Uitloggen</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- React Island: real-time medewerkers lijst + invite flow -->
+    <main class="container page-main">
+        <MedewerkersIsland client:only="react" identityRole={user.role} />
+    </main>
+</BaseLayout>
+
+<style>
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    .page-header {
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
+        padding: var(--space-5) 0;
+        margin-bottom: var(--space-6);
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+    }
+
+    .page-header h1 {
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-bold);
+        color: var(--color-heading);
+        margin: 0;
+        line-height: var(--leading-tight);
+    }
+
+    .header-subtitle {
+        font-size: var(--text-sm);
+        color: var(--color-muted);
+        margin-top: var(--space-1);
+    }
+
+    .header-nav {
+        display: flex;
+        gap: var(--space-2);
+        align-items: center;
+    }
+
+    /* ── Main ────────────────────────────────────────────────────────────────── */
+    .page-main {
+        padding-block: var(--space-6);
+    }
+</style>
