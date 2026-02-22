@@ -403,3 +403,99 @@ export const seedGarageData = mutation({
         };
     },
 });
+
+// ── 3. Debug: inspect tokens (DEV ONLY) ────────────────────────────────────
+
+import { query as convexQuery } from "./_generated/server";
+
+export const debugTokens = convexQuery({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+
+        const medewerkers = await ctx.db.query("medewerkers").collect();
+        const voertuigen = await ctx.db.query("voertuigen").collect();
+        const voertuigTokens = [...new Set(voertuigen.map((v) => v.tokenIdentifier))];
+
+        return {
+            mySubject: identity?.subject ?? null,
+            myTokenIdentifier: identity?.tokenIdentifier ?? null,
+            medewerkers: medewerkers.map((m) => ({
+                naam: m.naam,
+                domeinRol: m.domeinRol,
+                userId: m.userId,
+                tokenIdentifier: m.tokenIdentifier,
+                actief: m.actief,
+            })),
+            voertuigenCount: voertuigen.length,
+            voertuigenTokens: voertuigTokens,
+        };
+    },
+});
+
+/**
+ * fixTenantTokens — DEV ONLY
+ *
+ * Probleem: meerdere eigenaar-records in DB, de verkeerde eigenaar wordt als
+ * tenant-anchor gepakt door requireAuth. Dit repareert de data:
+ *
+ *   1. Zoek de eigenaar wiens tokenIdentifier overeenkomt met de voertuigen data
+ *   2. Patch alle balie/monteur/stagiair records naar die tokenIdentifier
+ *   3. Verwijder "ghost" eigenaar-records die geen data hebben
+ */
+import { mutation as convexMutation } from "./_generated/server";
+
+export const fixTenantTokens = convexMutation({
+    args: {},
+    handler: async (ctx) => {
+        const medewerkers = await ctx.db.query("medewerkers").collect();
+        const voertuigen = await ctx.db.query("voertuigen").collect();
+
+        if (voertuigen.length === 0) {
+            return { error: "Geen voertuigen in DB — run seedGarageData eerst als eigenaar" };
+        }
+
+        // Welke tokenIdentifier hebben de voertuigen?
+        const dataToken = voertuigen[0].tokenIdentifier;
+
+        // Vind de eigenaar die DEZE tokenIdentifier heeft (de correcte anchor)
+        const correcteEigenaar = medewerkers.find(
+            (m) => m.domeinRol === "eigenaar" && m.tokenIdentifier === dataToken
+        );
+
+        if (!correcteEigenaar) {
+            return {
+                error: "Geen eigenaar gevonden wiens tokenIdentifier overeenkomt met de voertuigen",
+                dataToken,
+                eigenaars: medewerkers.filter((m) => m.domeinRol === "eigenaar").map((m) => ({
+                    naam: m.naam, tokenIdentifier: m.tokenIdentifier
+                })),
+            };
+        }
+
+        const patches: string[] = [];
+        const deletions: string[] = [];
+
+        for (const m of medewerkers) {
+            if (m._id === correcteEigenaar._id) continue; // correcte eigenaar overslaan
+
+            if (m.domeinRol === "eigenaar") {
+                // Ghost eigenaar-record: verwijder het
+                await ctx.db.delete(m._id);
+                deletions.push(`${m.naam} (${m.userId})`);
+            } else if (m.tokenIdentifier !== dataToken) {
+                // Balie/monteur/stagiair met verkeerde tokenIdentifier: repareer
+                await ctx.db.patch(m._id, { tokenIdentifier: dataToken });
+                patches.push(`${m.naam} (${m.domeinRol})`);
+            }
+        }
+
+        return {
+            fixed: true,
+            correcteEigenaar: correcteEigenaar.naam,
+            dataToken,
+            gepatch: patches,
+            verwijderd: deletions,
+        };
+    },
+});
