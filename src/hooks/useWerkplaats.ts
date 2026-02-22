@@ -113,3 +113,7 @@ export function useVoegLogToe() {
 export function useSeedDefaultWerkplekken() {
     return useMutation(api.werkplekken.seedDefaultWerkplekken);
 }
+
+export function useSluitWerkorderAf() {
+    return useMutation(api.werkorders.sluitWerkorderAf);
+}
