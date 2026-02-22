@@ -11,12 +11,15 @@
  *   - Km-stand bijwerken inline
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { useVoertuigenLijst, useApkWaarschuwingen } from "../../hooks/useVoertuigen";
 import ScannerSlot from "./scanner/ScannerSlot";
+import { useKentekenLookup } from "../../hooks/useKentekenLookup";
+import type { KentekenStatus } from "../../hooks/useKentekenLookup";
+
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,6 +61,35 @@ function NieuwVoertuigModal({ onSluit }: { onSluit: () => void }) {
     const [bezig, setBezig] = useState(false);
     const [fout, setFout] = useState<string | null>(null);
 
+    // ── RDW auto-fill via useKentekenLookup ────────────────────────────────
+    const rdw = useKentekenLookup(form.kenteken);
+    const rdwStatus: KentekenStatus = rdw.status;
+
+    // Auto-fill via useEffect zodra RDW data binnenkomt
+    const rdwData = rdw.data;
+    useEffect(() => {
+        if (rdwStatus !== "ok" || !rdwData) return;
+        setForm((f) => ({
+            ...f,
+            merk: f.merk || rdwData.merk,
+            model: f.model || rdwData.model,
+            bouwjaar: f.bouwjaar === new Date().getFullYear() ? rdwData.bouwjaar : f.bouwjaar,
+            brandstof: rdwData.brandstof,
+            apkVervaldatum: f.apkVervaldatum || (rdwData.apkVervaldatum ?? ""),
+        }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rdwStatus, rdwData]);
+
+    // Handmatige lookup knop — reset + trigger via kenteken trim
+    function handleRdwLookup() {
+        rdw.reset();
+        // Kleine toggle om de hook opnieuw te triggeren na reset
+        const k = form.kenteken.trim();
+        setForm((f) => ({ ...f, kenteken: k + " " }));
+        setTimeout(() => setForm((f) => ({ ...f, kenteken: f.kenteken.trim() })), 20);
+    }
+
+    // ── Save ─────────────────────────────────────────────────────────────────
     async function handleOpslaan(e: React.FormEvent) {
         e.preventDefault();
         if (!gekozenKlantId) { setFout("Kies eerst een klant."); return; }
@@ -97,6 +129,14 @@ function NieuwVoertuigModal({ onSluit }: { onSluit: () => void }) {
         </div>
     );
 
+    // RDW badge
+    const rdwBadge = () => {
+        if (rdwStatus === "ok") return <span style={{ fontSize: "var(--text-xs)", color: "var(--color-success, #16a34a)", fontWeight: "var(--weight-semibold)" }}>✓ Gevonden</span>;
+        if (rdwStatus === "notfound") return <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error, #dc2626)" }}>✗ Niet gevonden</span>;
+        if (rdwStatus === "error") return <span style={{ fontSize: "var(--text-xs)", color: "var(--color-warning, #d97706)" }}>⚠ Probeer opnieuw</span>;
+        return null;
+    };
+
     return (
         <div onClick={onSluit} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "var(--space-4)" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "560px", background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", overflow: "hidden", boxShadow: "var(--shadow-xl)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
@@ -132,9 +172,38 @@ function NieuwVoertuigModal({ onSluit }: { onSluit: () => void }) {
                                 <button type="button" onClick={() => { setGekozenKlantId(null); setGekozenKlantNaam(""); }} className="btn btn-ghost btn-sm" style={{ fontSize: "var(--text-xs)" }}>Wijzig</button>
                             </div>
 
+                            {/* Kenteken + RDW lookup */}
+                            <div>
+                                <label style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
+                                    Kenteken <span style={{ color: "var(--color-error)" }}>*</span>
+                                </label>
+                                <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                                    <input
+                                        type="text"
+                                        value={form.kenteken}
+                                        onChange={(e) => { setForm((f) => ({ ...f, kenteken: e.target.value })); rdw.reset(); }}
+                                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleRdwLookup())}
+                                        placeholder="GH-446-V"
+                                        required
+                                        style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}
+                                        aria-label="Kenteken"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleRdwLookup}
+                                        disabled={rdwStatus === "loading" || !form.kenteken.trim()}
+                                        className="btn btn-secondary"
+                                        style={{ minHeight: "44px", whiteSpace: "nowrap", flexShrink: 0 }}
+                                        aria-label="Kenteken opzoeken via RDW"
+                                    >
+                                        {rdwStatus === "loading" ? "⏳" : "🔍 Ophalen"}
+                                    </button>
+                                </div>
+                                {rdwBadge() && <div style={{ marginTop: "var(--space-1)" }}>{rdwBadge()}</div>}
+                            </div>
+
                             {/* Voertuig data */}
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                {field("Kenteken", "kenteken", "text", true)}
                                 {field("Bouwjaar", "bouwjaar", "number", true)}
                                 {field("Merk", "merk", "text", true)}
                                 {field("Model", "model", "text", true)}
