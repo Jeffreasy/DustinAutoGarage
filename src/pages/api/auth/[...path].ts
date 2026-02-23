@@ -10,11 +10,10 @@
  *   2. Cookies: HttpOnly cookies met SameSite=None;Secure werken niet op HTTP
  *      localhost. De proxy sanitizeert de Set-Cookie headers voor dev.
  *
- * Wat de proxy doet:
- *   - Stuurt het request volledig door (method, headers, body)
- *   - Pakt de Set-Cookie response headers
- *   - Sanitizeert voor localhost: verwijdert Secure, Domain; zet SameSite=Lax
- *   - Buffeert de response volledig voor betrouwbare streaming (Anti-Gravity pattern)
+ * CORS fix (productie):
+ *   De proxy schrijft ZELF de juiste Access-Control-* headers op basis van de
+ *   echte request origin. NOOIT upstream CORS headers doorsturen — die bevatten
+ *   de LaventeCare origin, niet de Vercel app origin, en blokkeren cookies.
  */
 
 import type { APIRoute } from "astro";
@@ -23,9 +22,57 @@ const API_URL = import.meta.env.API_URL as string;
 const TENANT_ID = import.meta.env.TENANT_ID as string;
 const IS_DEV = import.meta.env.DEV;
 
+// Headers die NOOIT van de upstream doorgestuurd worden naar de browser.
+// CORS headers moeten altijd door de BFF zelf worden gezet op basis van de
+// echte request origin — nooit van de upstream kopiëren.
+const STRIP_RESPONSE_HEADERS = new Set([
+    "set-cookie",
+    "transfer-encoding",
+    "content-encoding",
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
+    "access-control-allow-methods",
+    "access-control-allow-headers",
+    "access-control-expose-headers",
+    "access-control-max-age",
+]);
+
 export const ALL: APIRoute = async ({ request, params }) => {
     const path = params.path ?? "";
     const targetUrl = `${API_URL}/api/v1/auth/${path}`;
+
+    // ── Bepaal de correcte CORS origin voor deze response ───────────────────
+    // Gebruik de request origin als die er is; val terug op de PUBLIC_SITE_URL.
+    const requestOrigin = request.headers.get("origin") ?? "";
+    const siteUrl = import.meta.env.SITE ?? (import.meta.env.PUBLIC_SITE_URL as string | undefined) ?? "";
+
+    // Lijst van toegestane origins (dev + productie Vercel URL)
+    const allowedOrigins = [
+        "http://localhost:4321",
+        "http://localhost:3000",
+        ...(siteUrl ? [siteUrl.replace(/\/$/, "")] : []),
+    ].filter(Boolean);
+
+    const corsOrigin = allowedOrigins.includes(requestOrigin)
+        ? requestOrigin
+        : (allowedOrigins[0] ?? requestOrigin);
+
+    // ── Preflight OPTIONS afhandelen ─────────────────────────────────────────
+    // Astro/Vercel kan preflight requests krijgen; we handelen ze direct af
+    // zonder de LaventeCare backend te raken.
+    if (request.method === "OPTIONS") {
+        return new Response(null, {
+            status: 204,
+            headers: {
+                "Access-Control-Allow-Origin": corsOrigin,
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Tenant-ID",
+                "Access-Control-Max-Age": "86400",
+                "Vary": "Origin",
+            },
+        });
+    }
 
     // ── Request headers doorgeven ───────────────────────────────────────────
     const forwardHeaders = new Headers();
@@ -44,7 +91,6 @@ export const ALL: APIRoute = async ({ request, params }) => {
     // Forceer ongecomprimeerde response van de backend: .text() decompreseert weliswaar,
     // maar sommige Node-versies lekken Content-Encoding headers (br/gzip) door naar de browser
     // waarna de browser probeert dubbel te decomprimeren → ERR_CONTENT_DECODING_FAILED.
-    // Door 'identity' te vragen sturen we nooit gecomprimeerd.
     forwardHeaders.set("Accept-Encoding", "identity");
 
     // Tenant-context: verplicht voor LaventeCare RLS middleware
@@ -68,15 +114,20 @@ export const ALL: APIRoute = async ({ request, params }) => {
     // ── Response headers verwerken ───────────────────────────────────────────
     const responseHeaders = new Headers();
 
-    // Kopieer alle headers behalve Set-Cookie en transfer-encoding
+    // Kopieer alle headers BEHALVE de gestriplijst.
+    // Sla ook content-encoding over: .text() decompreseert volledig,
+    // waardoor de browser anders probeert dubbel te decomprimeren.
     for (const [key, value] of backendResponse.headers.entries()) {
-        const lkey = key.toLowerCase();
-        // Sla ook content-encoding over: .text() decompreseert volledig,
-        // waardoor de browser anders probeert dubbel te decomprimeren (ERR_CONTENT_DECODING_FAILED)
-        if (lkey !== "set-cookie" && lkey !== "transfer-encoding" && lkey !== "content-encoding") {
+        if (!STRIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
             responseHeaders.set(key, value);
         }
     }
+
+    // Schrijf eigen CORS headers — altijd gebaseerd op de request origin,
+    // NOOIT upstream headers doorsturen.
+    responseHeaders.set("Access-Control-Allow-Origin", corsOrigin);
+    responseHeaders.set("Access-Control-Allow-Credentials", "true");
+    responseHeaders.set("Vary", "Origin");
 
     // Set-Cookie apart verwerken via getSetCookie() — headers.entries() collapst
     // meerdere cookies tot één kommagescheiden string (Node fetch bug), wat de
