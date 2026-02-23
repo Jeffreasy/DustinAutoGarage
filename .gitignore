@@ -13,7 +13,11 @@ convex/_generated/
 # ── Environment (bevat secrets — nooit committen) ─────────────────────────────
 .env
 .env.local
+.env.*.local
 .env.production
+
+# ── Vercel CLI cache ───────────────────────────────────────────────────────────
+.vercel/
 
 # ── Tijdelijk create-astro spoor ──────────────────────────────────────────────
 popular-pegasi/

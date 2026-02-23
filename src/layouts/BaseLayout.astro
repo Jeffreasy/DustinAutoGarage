@@ -83,6 +83,14 @@ const isActief = (pad: string) =>
     </head>
 
     <body>
+        <!-- Skip-link moet EERSTE element in body zijn voor screenreaders -->
+        <a
+            href="#main-content"
+            class="skip-link sr-only focus-ring"
+        >
+            Ga naar inhoud
+        </a>
+
         <!-- ── Navigatiebalk (ENIGE nav in de app) ───────────────────────── -->
         <header class="site-header no-print" role="banner">
             <div class="site-header-inner">
@@ -114,7 +122,7 @@ const isActief = (pad: string) =>
                     <span>Dustin Auto Garage</span>
                 </a>
 
-                <!-- Navigatielinks — zichtbaar als ingelogd -->
+                <!-- Navigatielinks — zichtbaar als ingelogd (desktop only) -->
                 {
                     user && (
                         <nav
@@ -143,7 +151,7 @@ const isActief = (pad: string) =>
                                     },
                                 ]}
                             >
-                                🏭 Werkplaats
+                                <span aria-hidden="true">🏭</span> Werkplaats
                             </a>
                             <a
                                 href="/klanten"
@@ -155,7 +163,7 @@ const isActief = (pad: string) =>
                                     },
                                 ]}
                             >
-                                👥 Klanten
+                                <span aria-hidden="true">👥</span> Klanten
                             </a>
                             <a
                                 href="/voertuigen"
@@ -167,7 +175,7 @@ const isActief = (pad: string) =>
                                     },
                                 ]}
                             >
-                                🚗 Voertuigen
+                                <span aria-hidden="true">🚗</span> Voertuigen
                             </a>
                             <a
                                 href="/onderhoud"
@@ -179,7 +187,7 @@ const isActief = (pad: string) =>
                                     },
                                 ]}
                             >
-                                🔧 Onderhoud
+                                <span aria-hidden="true">🔧</span> Onderhoud
                             </a>
                             {isAdmin && (
                                 <a
@@ -192,7 +200,8 @@ const isActief = (pad: string) =>
                                         },
                                     ]}
                                 >
-                                    👥 Medewerkers
+                                    <span aria-hidden="true">👥</span>{" "}
+                                    Medewerkers
                                 </a>
                             )}
                         </nav>
@@ -216,16 +225,207 @@ const isActief = (pad: string) =>
                         user && (
                             <a
                                 href="/logout"
-                                class="btn btn-ghost btn-sm no-print"
+                                class="btn btn-ghost btn-sm no-print hide-mobile"
                                 aria-label="Uitloggen"
                             >
                                 Uitloggen
                             </a>
                         )
                     }
+
+                    <!-- Hamburger toggle — uitsluitend mobiel zichtbaar -->
+                    {
+                        user && (
+                            <button
+                                id="mobile-menu-toggle"
+                                class="mobile-menu-btn show-mobile"
+                                aria-label="Menu openen"
+                                aria-expanded="false"
+                                aria-controls="mobile-menu"
+                                type="button"
+                            >
+                                <span class="hamburger-line"></span>
+                                <span class="hamburger-line"></span>
+                                <span class="hamburger-line"></span>
+                            </button>
+                        )
+                    }
                 </div>
             </div>
         </header>
+
+        <!-- ── Mobile menu drawer ────────────────────────────────────────── -->
+        {
+            user && (
+                <div
+                    id="mobile-menu"
+                    class="mobile-menu"
+                    aria-hidden="true"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Navigatiemenu"
+                >
+                    <!-- Backdrop / overlay -->
+                    <div class="mobile-menu-backdrop" id="mobile-menu-backdrop" />
+
+                    <!-- Drawer panel -->
+                    <div class="mobile-menu-panel">
+                        <!-- Drawer header -->
+                        <div class="mobile-menu-header">
+                            <span class="mobile-menu-title">Menu</span>
+                            <button
+                                id="mobile-menu-close"
+                                class="mobile-menu-close"
+                                aria-label="Menu sluiten"
+                                type="button"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Gebruikersinfo -->
+                        {user && (
+                            <div class="mobile-menu-user">
+                                <span class="mobile-user-name">
+                                    {user.full_name ?? user.email}
+                                </span>
+                                <span class="mobile-user-email">
+                                    {user.email}
+                                </span>
+                            </div>
+                        )}
+
+                        <!-- Navigatielinks -->
+                        <nav
+                            class="mobile-nav"
+                            aria-label="Mobiele navigatie"
+                        >
+                            <a
+                                href="/dashboard"
+                                class:list={[
+                                    "mobile-nav-link",
+                                    {
+                                        "mobile-nav-link--actief":
+                                            isActief("/dashboard"),
+                                    },
+                                ]}
+                            >
+                                <span aria-hidden="true">📊</span>
+                                Dashboard
+                            </a>
+                            <a
+                                href="/werkplaats"
+                                class:list={[
+                                    "mobile-nav-link",
+                                    {
+                                        "mobile-nav-link--actief":
+                                            isActief("/werkplaats"),
+                                    },
+                                ]}
+                            >
+                                <span aria-hidden="true">🏭</span>
+                                Werkplaats
+                            </a>
+                            <a
+                                href="/klanten"
+                                class:list={[
+                                    "mobile-nav-link",
+                                    {
+                                        "mobile-nav-link--actief":
+                                            isActief("/klanten"),
+                                    },
+                                ]}
+                            >
+                                <span aria-hidden="true">👥</span>
+                                Klanten
+                            </a>
+                            <a
+                                href="/voertuigen"
+                                class:list={[
+                                    "mobile-nav-link",
+                                    {
+                                        "mobile-nav-link--actief":
+                                            isActief("/voertuigen"),
+                                    },
+                                ]}
+                            >
+                                <span aria-hidden="true">🚗</span>
+                                Voertuigen
+                            </a>
+                            <a
+                                href="/onderhoud"
+                                class:list={[
+                                    "mobile-nav-link",
+                                    {
+                                        "mobile-nav-link--actief":
+                                            isActief("/onderhoud"),
+                                    },
+                                ]}
+                            >
+                                <span aria-hidden="true">🔧</span>
+                                Onderhoud
+                            </a>
+                            {isAdmin && (
+                                <a
+                                    href="/medewerkers"
+                                    class:list={[
+                                        "mobile-nav-link",
+                                        {
+                                            "mobile-nav-link--actief":
+                                                isActief("/medewerkers"),
+                                        },
+                                    ]}
+                                >
+                                    <span aria-hidden="true">🛡️</span>
+                                    Medewerkers
+                                </a>
+                            )}
+                        </nav>
+
+                        <!-- Uitloggen onderaan drawer -->
+                        <div class="mobile-menu-footer">
+                            <a
+                                href="/logout"
+                                class="mobile-logout-btn"
+                                aria-label="Uitloggen"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                    <polyline points="16 17 21 12 16 7" />
+                                    <line x1="21" y1="12" x2="9" y2="12" />
+                                </svg>
+                                Uitloggen
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )
+        }
 
         <!-- ── Page content ─────────────────────────────────────────────── -->
         <main role="main" id="main-content" class="page-main">
@@ -245,17 +445,62 @@ const isActief = (pad: string) =>
                 {
                     user && (
                         <nav class="footer-nav" aria-label="Footernavigatie">
-                            <a href="/dashboard" class="footer-link">
+                            <a
+                                href="/dashboard"
+                                class:list={[
+                                    "footer-link",
+                                    { "footer-link--actief": isActief("/dashboard") },
+                                ]}
+                            >
                                 Dashboard
                             </a>
-                            <a href="/werkplaats" class="footer-link">
+                            <a
+                                href="/werkplaats"
+                                class:list={[
+                                    "footer-link",
+                                    { "footer-link--actief": isActief("/werkplaats") },
+                                ]}
+                            >
                                 Werkplaats
                             </a>
-                            <a href="/onderhoud" class="footer-link">
+                            <a
+                                href="/klanten"
+                                class:list={[
+                                    "footer-link",
+                                    { "footer-link--actief": isActief("/klanten") },
+                                ]}
+                            >
+                                Klanten
+                            </a>
+                            <a
+                                href="/voertuigen"
+                                class:list={[
+                                    "footer-link",
+                                    { "footer-link--actief": isActief("/voertuigen") },
+                                ]}
+                            >
+                                Voertuigen
+                            </a>
+                            <a
+                                href="/onderhoud"
+                                class:list={[
+                                    "footer-link",
+                                    { "footer-link--actief": isActief("/onderhoud") },
+                                ]}
+                            >
                                 Onderhoud
                             </a>
                             {isAdmin && (
-                                <a href="/medewerkers" class="footer-link">
+                                <a
+                                    href="/medewerkers"
+                                    class:list={[
+                                        "footer-link",
+                                        {
+                                            "footer-link--actief":
+                                                isActief("/medewerkers"),
+                                        },
+                                    ]}
+                                >
                                     Medewerkers
                                 </a>
                             )}
@@ -268,15 +513,6 @@ const isActief = (pad: string) =>
                 </p>
             </div>
         </footer>
-
-        <!-- Skip-link voor toetsenbordgebruikers -->
-        <a
-            href="#main-content"
-            class="sr-only focus-ring"
-            style="position:fixed;top:var(--space-2);left:var(--space-2);z-index:9999;background:var(--color-accent);color:var(--color-on-accent);padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-weight:var(--weight-medium);"
-        >
-            Ga naar inhoud
-        </a>
 
         <!-- Theme-toggle meta-sync -->
         <script>
@@ -295,10 +531,78 @@ const isActief = (pad: string) =>
                 attributeFilter: ["data-theme"],
             });
         </script>
+
+        <!-- Mobile menu logic -->
+        <script>
+            (function () {
+                const toggle = document.getElementById("mobile-menu-toggle");
+                const menu = document.getElementById("mobile-menu");
+                const closeBtn = document.getElementById("mobile-menu-close");
+                const backdrop = document.getElementById("mobile-menu-backdrop");
+
+                if (!toggle || !menu) return;
+
+                function openMenu() {
+                    menu!.setAttribute("aria-hidden", "false");
+                    menu!.classList.add("mobile-menu--open");
+                    toggle!.setAttribute("aria-expanded", "true");
+                    toggle!.setAttribute("aria-label", "Menu sluiten");
+                    toggle!.classList.add("is-open");
+                    document.body.style.overflow = "hidden";
+                    // Focus eerste link in menu
+                    const firstLink = menu!.querySelector<HTMLElement>(".mobile-nav-link");
+                    if (firstLink) setTimeout(() => firstLink.focus(), 50);
+                }
+
+                function closeMenu() {
+                    menu!.setAttribute("aria-hidden", "true");
+                    menu!.classList.remove("mobile-menu--open");
+                    toggle!.setAttribute("aria-expanded", "false");
+                    toggle!.setAttribute("aria-label", "Menu openen");
+                    toggle!.classList.remove("is-open");
+                    document.body.style.overflow = "";
+                    toggle!.focus();
+                }
+
+                toggle.addEventListener("click", () => {
+                    const isOpen = menu.getAttribute("aria-hidden") === "false";
+                    isOpen ? closeMenu() : openMenu();
+                });
+
+                closeBtn?.addEventListener("click", closeMenu);
+                backdrop?.addEventListener("click", closeMenu);
+
+                // Escape key
+                document.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape" && menu.getAttribute("aria-hidden") === "false") {
+                        closeMenu();
+                    }
+                });
+
+                // Sluit menu bij navigatie (zelfde pagina reload of link click)
+                menu.querySelectorAll(".mobile-nav-link").forEach((link) => {
+                    link.addEventListener("click", closeMenu);
+                });
+            })();
+        </script>
     </body>
 </html>
 
 <style>
+    /* ── Skip-link ────────────────────────────────────────────────────────── */
+    .skip-link {
+        position: fixed;
+        top: var(--space-2);
+        left: var(--space-2);
+        z-index: 9999;
+        background: var(--color-accent);
+        color: var(--color-on-accent);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-md);
+        font-weight: var(--weight-medium);
+        text-decoration: none;
+    }
+
     /* ── Site-header ──────────────────────────────────────────────────────── */
     .site-header {
         position: sticky;
@@ -337,7 +641,7 @@ const isActief = (pad: string) =>
         opacity: 0.8;
     }
 
-    /* ── Navigatielinks ──────────────────────────────────────────────────── */
+    /* ── Navigatielinks (desktop) ────────────────────────────────────────── */
     .site-nav {
         display: flex;
         align-items: center;
@@ -385,10 +689,218 @@ const isActief = (pad: string) =>
         white-space: nowrap;
     }
 
-    /* ── Responsive ─────────────────────────────────────────────────────── */
+    /* ── Hamburger knop ──────────────────────────────────────────────────── */
+    .mobile-menu-btn {
+        display: none; /* standaard verborgen, show-mobile toont het */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        width: 40px;
+        height: 40px;
+        padding: var(--space-2);
+        background: transparent;
+        border: 1px solid var(--glass-border, var(--color-border));
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        color: var(--color-heading);
+        transition: background var(--transition-base), border-color var(--transition-base);
+        flex-shrink: 0;
+    }
+    .mobile-menu-btn:hover {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+    }
+
+    .hamburger-line {
+        display: block;
+        width: 18px;
+        height: 2px;
+        background: currentColor;
+        border-radius: 2px;
+        transition: transform 0.25s ease, opacity 0.25s ease;
+        transform-origin: center;
+    }
+
+    /* Hamburger → X animatie */
+    .mobile-menu-btn.is-open .hamburger-line:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+    .mobile-menu-btn.is-open .hamburger-line:nth-child(2) {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+    .mobile-menu-btn.is-open .hamburger-line:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    /* ── Mobile menu drawer ──────────────────────────────────────────────── */
+    .mobile-menu {
+        display: none; /* verborgen op desktop */
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-modal, 200);
+        pointer-events: none;
+    }
+    .mobile-menu[aria-hidden="false"] {
+        pointer-events: auto;
+    }
+
+    .mobile-menu-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .mobile-menu--open .mobile-menu-backdrop {
+        opacity: 1;
+    }
+
+    .mobile-menu-panel {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(300px, 85vw);
+        background: var(--color-surface);
+        border-left: 1px solid var(--glass-border, var(--color-border));
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+        overflow-y: auto;
+    }
+    .mobile-menu--open .mobile-menu-panel {
+        transform: translateX(0);
+    }
+
+    .mobile-menu-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+    }
+
+    .mobile-menu-title {
+        font-size: var(--text-base);
+        font-weight: var(--weight-semibold);
+        color: var(--color-heading);
+    }
+
+    .mobile-menu-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: none;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        color: var(--color-muted);
+        transition: background var(--transition-base), color var(--transition-base);
+    }
+    .mobile-menu-close:hover {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+        color: var(--color-heading);
+    }
+
+    /* Gebruikersinfo in drawer */
+    .mobile-menu-user {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+    }
+    .mobile-user-name {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-semibold);
+        color: var(--color-heading);
+    }
+    .mobile-user-email {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Navigatielinks in drawer */
+    .mobile-nav {
+        display: flex;
+        flex-direction: column;
+        padding: var(--space-3) var(--space-3);
+        flex: 1;
+        gap: var(--space-1);
+    }
+
+    .mobile-nav-link {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-3);
+        border-radius: var(--radius-md);
+        font-size: var(--text-base);
+        font-weight: var(--weight-medium);
+        color: var(--color-muted);
+        text-decoration: none;
+        transition:
+            color var(--transition-base),
+            background var(--transition-base);
+    }
+    .mobile-nav-link:hover {
+        color: var(--color-heading);
+        background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+    }
+    .mobile-nav-link--actief {
+        color: var(--color-heading);
+        background: var(--glass-bg, rgba(255, 255, 255, 0.08));
+        font-weight: var(--weight-semibold);
+    }
+
+    /* Uitloggen onderaan drawer */
+    .mobile-menu-footer {
+        padding: var(--space-4) var(--space-4);
+        border-top: 1px solid var(--color-border);
+        flex-shrink: 0;
+    }
+    .mobile-logout-btn {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        width: 100%;
+        padding: var(--space-3) var(--space-3);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        color: var(--color-muted);
+        text-decoration: none;
+        transition: background var(--transition-base), color var(--transition-base);
+    }
+    .mobile-logout-btn:hover {
+        background: rgba(239, 68, 68, 0.08);
+        color: #ef4444;
+    }
+
+    /* ── Responsive helpers ──────────────────────────────────────────────── */
     @media (max-width: 640px) {
         .hide-mobile {
             display: none !important;
+        }
+        .show-mobile {
+            display: flex !important;
+        }
+        .mobile-menu-btn {
+            display: flex;
+        }
+        .mobile-menu {
+            display: block;
         }
         .site-header-inner {
             padding: 0 var(--space-4);
@@ -447,6 +959,10 @@ const isActief = (pad: string) =>
     }
     .footer-link:hover {
         color: var(--color-heading);
+    }
+    .footer-link--actief {
+        color: var(--color-heading);
+        font-weight: var(--weight-semibold);
     }
 
     .footer-copy {

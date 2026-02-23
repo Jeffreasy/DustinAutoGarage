@@ -10,14 +10,22 @@
  *
  * Role-gating via Split-Role strategie:
  *   useRol() → bepaalt client-side welke acties zichtbaar zijn.
- *   Monteurs en stagiairs zien voertuigendata maar geen schrijfacties.
+ *
+ * Rol-matrix voor actieknoppen:
+ *   stagair      → READ only, geen knoppen
+ *   monteur      → READ only, geen knoppen
+ *   balie        → + Voertuig toevoegen, + Klant toevoegen
+ *   eigenaar     → + Voertuig toevoegen, + Klant toevoegen, ↓ Exporteer
  *
  * Design System: alle waarden bouwen op design-tokens.css.
  * Gebruik uitsluitend var(--token) voor stijlen — geen hardcoded waarden.
  */
 
+import { useState } from "react";
 import { useVoertuigenLijst, useApkWaarschuwingen } from "../hooks/useVoertuigen";
 import { useRol } from "../hooks/useRol";
+import NieuwVoertuigModal from "./modals/NieuwVoertuigModal";
+import NieuweKlantModal from "./modals/NieuweKlantModal";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -39,6 +47,10 @@ export default function VoertuigenDashboard() {
     const voertuigen = useVoertuigenLijst();
     const apkWaarschuwingen = useApkWaarschuwingen(30);
     const { isBalie, isEigenaar, domeinRol, isLoading: rolLaden } = useRol();
+
+    // Modal state
+    const [toonVoertuigModal, setToonVoertuigModal] = useState(false);
+    const [toonKlantModal, setToonKlantModal] = useState(false);
 
     // ── Loading state ─────────────────────────────────────────────────────
     if (voertuigen === undefined || apkWaarschuwingen === undefined) {
@@ -71,31 +83,36 @@ export default function VoertuigenDashboard() {
                 </div>
             )}
 
-            {/* Schrijfacties: alleen voor balie+ */}
+            {/* ── Snelacties: alleen voor balie-rol en hoger ── */}
             {isBalie && (
-                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center" }}>
+                    {/* + Voertuig toevoegen */}
                     <button
                         className="btn btn-primary btn-sm"
                         id="voertuig-toevoegen-btn"
                         aria-label="Voertuig toevoegen"
-                        disabled
+                        onClick={() => setToonVoertuigModal(true)}
                     >
                         + Voertuig toevoegen
                     </button>
+
+                    {/* + Klant toevoegen */}
                     <button
                         className="btn btn-ghost btn-sm"
                         id="klant-toevoegen-btn"
                         aria-label="Klant toevoegen"
-                        disabled
+                        onClick={() => setToonKlantModal(true)}
                     >
                         + Klant toevoegen
                     </button>
+
+                    {/* Exporteer — alleen eigenaar */}
                     {isEigenaar && (
                         <button
                             className="btn btn-ghost btn-sm"
                             id="exporteer-btn"
-                            aria-label="Exporteer klantdata"
-                            disabled
+                            aria-label="Exporteer klantdata als CSV"
+                            onClick={handleExporteer}
                         >
                             ↓ Exporteer klantdata
                         </button>
@@ -257,6 +274,24 @@ export default function VoertuigenDashboard() {
                     </div>
                 )}
             </section>
+
+            {/* ── Modals ── */}
+            {toonVoertuigModal && (
+                <NieuwVoertuigModal onSluit={() => setToonVoertuigModal(false)} />
+            )}
+            {toonKlantModal && (
+                <NieuweKlantModal onSluit={() => setToonKlantModal(false)} />
+            )}
         </div>
     );
+}
+
+// ---------------------------------------------------------------------------
+// Exporteer handler (eigenaar only)
+// ---------------------------------------------------------------------------
+
+function handleExporteer() {
+    // Exporteer is nog niet geïmplementeerd in de backend.
+    // Toon een professionele melding tot de export-API beschikbaar is.
+    alert("Export-functionaliteit wordt binnenkort beschikbaar gesteld.");
 }
