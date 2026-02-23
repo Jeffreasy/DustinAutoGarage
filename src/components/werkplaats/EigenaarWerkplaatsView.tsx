@@ -2,16 +2,15 @@
  * src/components/werkplaats/EigenaarWerkplaatsView.tsx
  *
  * Eigenaar / Admin weergave: het volledige Kanban-bord plus
- * een archiveer-knop op kaartjes met status "Klaar".
- *
- * De eigenaar heeft dezelfde live view als de monteur, maar
- * kan gesloten werkorders archiveren om het bord schoon te houden.
+ * een archiveer-knop op kaartjes met status "Klaar"
+ * en de WerkplekkenBeheer sectie voor beheer van garage-locaties.
  */
 
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import WerkplaatsBord from "../WerkplaatsBord";
+import WerkplekkenBeheer from "./WerkplekkenBeheer";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 function ArchivePanel() {
@@ -81,8 +80,23 @@ function ArchivePanel() {
 }
 
 export default function EigenaarWerkplaatsView() {
+    const [toonWerkplekken, setToonWerkplekken] = useState(false);
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+            {/* Werkplekken-beheer toggle */}
+            <div>
+                <button
+                    onClick={() => setToonWerkplekken((v) => !v)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ minHeight: "40px" }}
+                >
+                    {toonWerkplekken ? "▲ Werkplekken verbergen" : "🏗️ Werkplekken beheren"}
+                </button>
+            </div>
+
+            {toonWerkplekken && <WerkplekkenBeheer />}
+
             {/* Archiveer-paneel — alleen zichtbaar als er "Klaar" orders zijn */}
             <ArchivePanel />
 

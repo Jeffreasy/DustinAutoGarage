@@ -10,6 +10,7 @@
  * Rol-gating:
  *   Lezen     → alle medewerkers (monteur+)
  *   Aanmaken  → balie+ (receptionist configureert de garage)
+ *   Hernoemen / Verplaatsen / Verwijderen → eigenaar only
  *   Seed      → balie+ (eenmalig bij eerste gebruik)
  */
 
@@ -64,6 +65,105 @@ export const maakWerkplekAan = mutation({
             volgorde: args.volgorde,
             tokenIdentifier: profiel.tokenIdentifier,
         });
+    },
+});
+
+/**
+ * voegWerkplekToe — voegt een werkplek toe met automatische volgorde.
+ * Alias voor maakWerkplekAan die de max-volgorde + 1 berekent.
+ * Vereist de rol "eigenaar".
+ */
+export const voegWerkplekToe = mutation({
+    args: {
+        naam: v.string(),
+        type: vWerkplekType,
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+
+        const bestaande = await ctx.db
+            .query("werkplekken")
+            .withIndex("by_token_and_volgorde", (q) =>
+                q.eq("tokenIdentifier", profiel.tokenIdentifier)
+            )
+            .order("desc")
+            .first();
+
+        const volgorde = bestaande ? bestaande.volgorde + 1 : 1;
+
+        return ctx.db.insert("werkplekken", {
+            naam: args.naam,
+            type: args.type,
+            volgorde,
+            tokenIdentifier: profiel.tokenIdentifier,
+        });
+    },
+});
+
+/**
+ * hernoemWerkplek — wijzig naam en/of type van een bestaande werkplek.
+ * Vereist de rol "eigenaar".
+ */
+export const hernoemWerkplek = mutation({
+    args: {
+        werkplekId: v.id("werkplekken"),
+        naam: v.string(),
+        type: vWerkplekType,
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+
+        const werkplek = await ctx.db.get(args.werkplekId);
+        if (!werkplek || werkplek.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Werkplek niet gevonden of geen toegang.");
+        }
+
+        await ctx.db.patch(args.werkplekId, { naam: args.naam, type: args.type });
+        return { succes: true };
+    },
+});
+
+/**
+ * verplaatsWerkplek — wissel de volgorde van een werkplek met de buur.
+ * Richting: "omhoog" (volgorde -1) of "omlaag" (volgorde +1).
+ * Vereist de rol "eigenaar".
+ */
+export const verplaatsWerkplek = mutation({
+    args: {
+        werkplekId: v.id("werkplekken"),
+        richting: v.union(v.literal("omhoog"), v.literal("omlaag")),
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+
+        const werkplek = await ctx.db.get(args.werkplekId);
+        if (!werkplek || werkplek.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Werkplek niet gevonden of geen toegang.");
+        }
+
+        // Haal alle werkplekken op gesorteerd op volgorde
+        const alleWerkplekken = await ctx.db
+            .query("werkplekken")
+            .withIndex("by_token_and_volgorde", (q) =>
+                q.eq("tokenIdentifier", profiel.tokenIdentifier)
+            )
+            .order("asc")
+            .collect();
+
+        const huidigIndex = alleWerkplekken.findIndex((w) => w._id === args.werkplekId);
+        const burenIndex = args.richting === "omhoog" ? huidigIndex - 1 : huidigIndex + 1;
+
+        if (burenIndex < 0 || burenIndex >= alleWerkplekken.length) {
+            return { succes: false, reden: "Al op het uiterste" };
+        }
+
+        const buur = alleWerkplekken[burenIndex];
+
+        // Wissel volgordes
+        await ctx.db.patch(args.werkplekId, { volgorde: buur.volgorde });
+        await ctx.db.patch(buur._id, { volgorde: werkplek.volgorde });
+
+        return { succes: true };
     },
 });
 

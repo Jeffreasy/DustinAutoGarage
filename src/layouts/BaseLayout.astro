@@ -169,6 +169,18 @@ const isActief = (pad: string) =>
                             >
                                 🚗 Voertuigen
                             </a>
+                            <a
+                                href="/onderhoud"
+                                class:list={[
+                                    "nav-link",
+                                    {
+                                        "nav-link--actief":
+                                            isActief("/onderhoud"),
+                                    },
+                                ]}
+                            >
+                                🔧 Onderhoud
+                            </a>
                             {isAdmin && (
                                 <a
                                     href="/medewerkers"
@@ -238,6 +250,9 @@ const isActief = (pad: string) =>
                             </a>
                             <a href="/werkplaats" class="footer-link">
                                 Werkplaats
+                            </a>
+                            <a href="/onderhoud" class="footer-link">
+                                Onderhoud
                             </a>
                             {isAdmin && (
                                 <a href="/medewerkers" class="footer-link">

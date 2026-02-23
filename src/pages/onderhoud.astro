@@ -1,0 +1,59 @@
+---
+/**
+ * src/pages/onderhoud.astro
+ *
+ * Onderhoudshistorie module — rol-gebaseerde interface.
+ * Alle ingelogde medewerkers mogen binnen (rol-gating in OnderhoudshistorieModule).
+ */
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import OnderhoudshistorieIsland from "../components/OnderhoudshistorieIsland";
+
+const user = Astro.locals.user ?? null;
+if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
+---
+
+<BaseLayout
+    title="Onderhoud — Dustin Auto Garage"
+    description="Onderhoudshistorie — bekijk, registreer en beheer onderhoudsbeurten per voertuig."
+>
+    <div class="onderhoud-pagina">
+        <div class="onderhoud-kop">
+            <h1>Onderhoud</h1>
+            <p class="kop-subtitel">
+                {
+                    user.role === "admin" || user.role === "editor"
+                        ? "Volledig onderhoudsbeheer — dossiers per voertuig, beurten registreren en statistieken"
+                        : "Zoek en bekijk onderhoudsdossiers per voertuig"
+                }
+            </p>
+        </div>
+        <OnderhoudshistorieIsland client:only="react" />
+    </div>
+</BaseLayout>
+
+<style>
+    .onderhoud-pagina {
+        padding: var(--space-5) var(--space-5) var(--space-8);
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+    }
+
+    .onderhoud-kop {
+        margin-bottom: var(--space-6);
+    }
+
+    .onderhoud-kop h1 {
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-bold);
+        color: var(--color-heading);
+        margin: 0 0 var(--space-1);
+        line-height: var(--leading-tight);
+    }
+
+    .kop-subtitel {
+        font-size: var(--text-sm);
+        color: var(--color-muted);
+        margin: 0;
+    }
+</style>

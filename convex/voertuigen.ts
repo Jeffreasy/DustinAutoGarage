@@ -110,6 +110,30 @@ export const getBijnaVerlopenApk = query({
     },
 });
 
+/**
+ * zoekOpKenteken — Zoek voertuigen op (gedeeltelijk) kenteken.
+ * Minimaal 2 tekens vereist; client-side filtering op lowercase match.
+ * Gebruikt door de onderhoud-modules en voertuig-selectie forms.
+ */
+export const zoekOpKenteken = query({
+    args: { term: v.string() },
+    handler: async (ctx, args): Promise<Doc<"voertuigen">[]> => {
+        const tokenIdentifier = await requireAuth(ctx);
+        const term = args.term.toUpperCase().replace(/[\s-]/g, "");
+
+        const alleVoertuigen = await ctx.db
+            .query("voertuigen")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier)
+            )
+            .collect();
+
+        return alleVoertuigen.filter((v) =>
+            v.kenteken.toUpperCase().replace(/[\s-]/g, "").includes(term)
+        );
+    },
+});
+
 // ---------------------------------------------------------------------------
 // Mutaties
 // ---------------------------------------------------------------------------
@@ -233,15 +257,12 @@ export const verwijder = mutation({
         }
 
         // 🔴 FIX #2: Cascade werkorders + werkorderLogs verwijderen.
-        // Zonder deze fix blijven werkorders met een verwijderd voertuigId staan
-        // → kaartje toont "Voertuig onbekend" op het bord (ghost record).
         const werkorders = await ctx.db
             .query("werkorders")
             .withIndex("by_voertuig", (q) => q.eq("voertuigId", args.voertuigId))
             .collect();
 
         for (const order of werkorders) {
-            // Verwijder ook de logs van deze werkorder
             const logs = await ctx.db
                 .query("werkorderLogs")
                 .withIndex("by_werkorder", (q) => q.eq("werkorderId", order._id))

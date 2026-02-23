@@ -4,15 +4,15 @@
  * Rol-dispatcher voor de Werkplaats pagina.
  * Leest domeinRol en rendert de passende subview.
  *
- *   monteur / stagiair  →  WerkplaatsBord  (bestaand, ongewijzigd)
+ *   monteur / stagiair  →  MonteurWerkplaatsView  (Kanban, read-focus)
  *   balie               →  BalieWerkplaatsView  (planningslijst + Kanban)
- *   eigenaar            →  EigenaarWerkplaatsView  (Kanban + archief-knop)
+ *   eigenaar            →  EigenaarWerkplaatsView  (Kanban + archief + werkplekken)
  */
 
 import { useRol } from "../hooks/useRol";
-import WerkplaatsBord from "./WerkplaatsBord";
 import BalieWerkplaatsView from "./werkplaats/BalieWerkplaatsView";
 import EigenaarWerkplaatsView from "./werkplaats/EigenaarWerkplaatsView";
+import MonteurWerkplaatsView from "./werkplaats/MonteurWerkplaatsView";
 
 export default function WerkplaatsModule() {
     const { domeinRol, isLoading } = useRol();
@@ -27,6 +27,6 @@ export default function WerkplaatsModule() {
 
     if (domeinRol === "eigenaar") return <EigenaarWerkplaatsView />;
     if (domeinRol === "balie") return <BalieWerkplaatsView />;
-    // monteur, stagiair, onbekend → standaard Kanban
-    return <WerkplaatsBord />;
+    // monteur, stagiair, onbekend → Kanban via MonteurWerkplaatsView
+    return <MonteurWerkplaatsView />;
 }
