@@ -14,6 +14,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { useVoertuigHistorie, useRecenteOnderhoudsbeurten } from "../../hooks/useOnderhoud";
+import BeurtenOverzichtModal from "../modals/BeurtenOverzichtModal";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -249,12 +250,18 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
 export default function EigenaarOnderhoudView() {
     const [geselecteerd, setGeselecteerd] = useState<Doc<"voertuigen"> | null>(null);
     const [zoek, setZoek] = useState("");
+    const [toonBeurtenModal, setToonBeurtenModal] = useState(false);
     const resultaten = useQuery(api.voertuigen.zoekOpKenteken, zoek.length >= 2 ? { term: zoek } : "skip");
     const recenteBeurten = useRecenteOnderhoudsbeurten(20);
 
     if (geselecteerd) {
         return <EigenaarDossier voertuig={geselecteerd} onTerug={() => { setGeselecteerd(null); setZoek(""); }} />;
     }
+
+    // Bereken snel statistieken voor de badge onder de knop
+    const totaalBeurten = recenteBeurten?.length ?? 0;
+    const groteBeurten = recenteBeurten?.filter((b) => b.typeWerk === "Grote Beurt").length ?? 0;
+    const kleineBeurten = recenteBeurten?.filter((b) => b.typeWerk === "Kleine Beurt").length ?? 0;
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
@@ -263,7 +270,31 @@ export default function EigenaarOnderhoudView() {
                 <h2 style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)" }}>
                     📊 Garage statistieken
                 </h2>
-                <KPIBlokken beurten={recenteBeurten} />
+
+                <button
+                    id="beurten-overzicht-btn"
+                    onClick={() => setToonBeurtenModal(true)}
+                    className="btn btn-primary"
+                    aria-label="Open beurten overzicht"
+                    style={{
+                        minHeight: "56px",
+                        minWidth: "220px",
+                        display: "inline-flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-3) var(--space-5)",
+                    }}
+                >
+                    <span style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-bold)" }}>
+                        🔧 Beurten overzicht
+                    </span>
+                    {recenteBeurten !== undefined && (
+                        <span style={{ fontSize: "var(--text-xs)", opacity: 0.85, fontWeight: "var(--weight-normal)" }}>
+                            {totaalBeurten} totaal · {groteBeurten} groot · {kleineBeurten} klein
+                        </span>
+                    )}
+                </button>
             </section>
 
             {/* Zoekbalk */}
@@ -318,6 +349,11 @@ export default function EigenaarOnderhoudView() {
                         </div>
                     )}
                 </section>
+            )}
+
+            {/* Beurten overzicht modal */}
+            {toonBeurtenModal && (
+                <BeurtenOverzichtModal onSluit={() => setToonBeurtenModal(false)} />
             )}
         </div>
     );
