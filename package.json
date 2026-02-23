@@ -9,7 +9,7 @@
         "astro": "astro",
         "convex:dev": "convex dev",
         "convex:deploy": "convex deploy",
-        "vercel-build": "npx convex deploy --cmd 'astro build'"
+        "vercel-build": "astro build"
     },
     "dependencies": {
         "@astrojs/check": "^0.9.6",
