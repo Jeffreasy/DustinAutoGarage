@@ -14,24 +14,8 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { useVoertuigHistorie, useRecenteOnderhoudsbeurten } from "../../hooks/useOnderhoud";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-type TypeWerk =
-    | "Grote Beurt" | "Kleine Beurt" | "APK" | "Reparatie"
-    | "Bandenwisseling" | "Schadeherstel" | "Diagnostiek" | "Overig";
-
-const TYPE_ICOON: Record<TypeWerk, string> = {
-    "Grote Beurt": "🔧", "Kleine Beurt": "🪛", "APK": "📋",
-    "Reparatie": "🔨", "Bandenwisseling": "🔄", "Schadeherstel": "🚗",
-    "Diagnostiek": "🔍", "Overig": "📦",
-};
-
-function formatDatum(ms: number) {
-    return new Date(ms).toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
+import { TYPE_ICOON, formatDatum } from "./utils";
+import type { TypeWerk } from "./utils";
 
 // ---------------------------------------------------------------------------
 // Dossier (read-only voor monteur)
@@ -167,9 +151,13 @@ export default function MonteurOnderhoudView() {
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                             {recenteBeurten.map((b) => (
-                                <div key={b._id} className="card" style={{ padding: "var(--space-3) var(--space-4)", display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+                                <div key={b._id} className="card" style={{ padding: "var(--space-3) var(--space-4)", display: "flex", gap: "var(--space-3)", alignItems: "center", flexWrap: "wrap" }}>
                                     <span>{TYPE_ICOON[b.typeWerk as TypeWerk] ?? "🔧"}</span>
                                     <span style={{ fontWeight: "var(--weight-medium)", fontSize: "var(--text-sm)", color: "var(--color-heading)", flex: 1 }}>{b.typeWerk}</span>
+                                    {/* voertuigId als referentie — toekomstige uitbreiding: JOIN op kenteken */}
+                                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}>
+                                        #{String(b.voertuigId).slice(-6)}
+                                    </span>
                                     <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{formatDatum(b.datumUitgevoerd)}</span>
                                     <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{b.kmStandOnderhoud.toLocaleString("nl-NL")} km</span>
                                 </div>

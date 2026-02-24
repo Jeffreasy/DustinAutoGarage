@@ -18,8 +18,11 @@ function ArchivePanel() {
     const werkorders = useQuery(api.werkorders.lijstWerkordersVoorBord);
     const [bezig, setBezig] = useState<Id<"werkorders"> | null>(null);
 
+    // Filter op Afgerond — sluitWerkorderAf zet status naar Afgerond (niet Klaar)
+    // Klaar = klaar voor ophalen (balie > afsluiten knop nog niet ingedrukt)
+    // Afgerond = definitief gesloten, klaar voor archivering
     const klaarOrders = werkorders?.filter(
-        (o) => o.status === "Klaar" && !o.gearchiveerd
+        (o) => o.status === "Afgerond" && !o.gearchiveerd
     ) ?? [];
 
     if (klaarOrders.length === 0) return null;
@@ -36,10 +39,10 @@ function ArchivePanel() {
     return (
         <section className="card" style={{ padding: "var(--space-4)", borderColor: "var(--color-success-border, #86efac)" }}>
             <p className="card-title" style={{ marginBottom: "var(--space-3)" }}>
-                🗄️ Klaar voor archivering ({klaarOrders.length})
+                🏆 Afgerond — klaar voor archivering ({klaarOrders.length})
             </p>
             <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginBottom: "var(--space-4)" }}>
-                Archiveer werkorders die volledig zijn afgehandeld. Ze verdwijnen van het bord maar blijven in de historiek.
+                Archiveer afgeronde werkorders — ze verdwijnen van het bord maar blijven bewaard in de historiek.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                 {klaarOrders.map((order) => (

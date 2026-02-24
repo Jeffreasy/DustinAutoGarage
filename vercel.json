@@ -4,6 +4,6 @@
     "outputDirectory": "dist",
     "installCommand": "npm install",
     "regions": [
-        "iad1"
+        "fra1"
     ]
 }

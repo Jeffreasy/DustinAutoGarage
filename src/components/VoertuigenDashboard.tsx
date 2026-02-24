@@ -24,8 +24,10 @@
 import { useState } from "react";
 import { useVoertuigenLijst, useApkWaarschuwingen } from "../hooks/useVoertuigen";
 import { useRol } from "../hooks/useRol";
+import type { Doc } from "../../convex/_generated/dataModel";
 import NieuwVoertuigModal from "./modals/NieuwVoertuigModal";
 import NieuweKlantModal from "./modals/NieuweKlantModal";
+import VoertuigDetailPanel from "./modals/VoertuigDetailPanel";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -51,6 +53,7 @@ export default function VoertuigenDashboard() {
     // Modal state
     const [toonVoertuigModal, setToonVoertuigModal] = useState(false);
     const [toonKlantModal, setToonKlantModal] = useState(false);
+    const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
 
     // ── Loading state ─────────────────────────────────────────────────────
     if (voertuigen === undefined || apkWaarschuwingen === undefined) {
@@ -178,6 +181,11 @@ export default function VoertuigenDashboard() {
                         {voertuigen.map((v) => (
                             <div
                                 key={v._id}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Bekijk details van ${v.kenteken}`}
+                                onClick={() => setGeselecteerdVoertuig(v)}
+                                onKeyDown={(e) => e.key === "Enter" && setGeselecteerdVoertuig(v)}
                                 style={{
                                     padding: "var(--space-5)",
                                     borderRadius: "var(--radius-xl)",
@@ -190,7 +198,7 @@ export default function VoertuigenDashboard() {
                                     gap: "var(--space-2)",
                                     boxShadow: "var(--glass-shadow)",
                                     transition: "border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base)",
-                                    cursor: "default",
+                                    cursor: "pointer",
                                     position: "relative",
                                     overflow: "hidden",
                                 }}
@@ -281,6 +289,9 @@ export default function VoertuigenDashboard() {
             )}
             {toonKlantModal && (
                 <NieuweKlantModal onSluit={() => setToonKlantModal(false)} />
+            )}
+            {geselecteerdVoertuig && (
+                <VoertuigDetailPanel voertuig={geselecteerdVoertuig} onSluit={() => setGeselecteerdVoertuig(null)} />
             )}
         </div>
     );

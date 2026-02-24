@@ -21,11 +21,7 @@ if (!user) return Astro.redirect("/login?reden=sessie_verlopen");
         <div class="onderhoud-kop">
             <h1>Onderhoud</h1>
             <p class="kop-subtitel">
-                {
-                    user.role === "admin" || user.role === "editor"
-                        ? "Volledig onderhoudsbeheer — dossiers per voertuig, beurten registreren en statistieken"
-                        : "Zoek en bekijk onderhoudsdossiers per voertuig"
-                }
+                Bekijk, registreer en beheer onderhoudsbeurten per voertuig.
             </p>
         </div>
         <OnderhoudshistorieIsland client:only="react" />

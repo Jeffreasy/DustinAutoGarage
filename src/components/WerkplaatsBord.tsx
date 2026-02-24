@@ -211,10 +211,15 @@ export default function WerkplaatsBord() {
     }
 
     // Groepeer werkorders per kolom
-    const wachtend = werkorders.filter((o) => !o.werkplekId && o.status !== "Klaar");
-    const klaar = werkorders.filter((o) => o.status === "Klaar");
+    // Gearchiveerd + Afgerond + Geannuleerd verschijnen niet op het actieve bord
+    const actief = werkorders.filter((o) => !o.gearchiveerd && o.status !== "Afgerond" && o.status !== "Geannuleerd");
+
+    const gepland = actief.filter((o) => o.status === "Gepland");
+    const aanwezig = actief.filter((o) => o.status === "Aanwezig");
+    const wachtend = actief.filter((o) => !o.werkplekId && o.status === "Wachtend");
+    const klaar = actief.filter((o) => o.status === "Klaar");
     const perWerkplek = (plekId: Id<"werkplekken">) =>
-        werkorders.filter((o) => o.werkplekId === plekId && o.status !== "Klaar");
+        actief.filter((o) => o.werkplekId === plekId && o.status !== "Klaar");
 
     return (
         <div>
@@ -245,7 +250,31 @@ export default function WerkplaatsBord() {
                 paddingBottom: "var(--space-4)",
                 alignItems: "flex-start",
             }}>
-                {/* Kolom 1: Wachtend (Buiten) */}
+                {/* Kolom 0: Gepland (auto's met afspraak, nog niet aanwezig) */}
+                {gepland.length > 0 && (
+                    <WerkplekKolom
+                        naam="Gepland"
+                        type="Overig"
+                        orders={gepland}
+                        werkplekken={werkplekken}
+                        domeinRol={domeinRol}
+                        onOpenLogboek={setLogboekOrderId}
+                    />
+                )}
+
+                {/* Kolom 0b: Aanwezig (auto staat op terrein, nog niet op brug) */}
+                {aanwezig.length > 0 && (
+                    <WerkplekKolom
+                        naam="Aanwezig"
+                        type="Buiten"
+                        orders={aanwezig}
+                        werkplekken={werkplekken}
+                        domeinRol={domeinRol}
+                        onOpenLogboek={setLogboekOrderId}
+                    />
+                )}
+
+                {/* Kolom 1: Wachtend (Buiten / wacht op brug) */}
                 <WerkplekKolom
                     naam="Wachtend / Buiten"
                     type="Buiten"

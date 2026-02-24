@@ -13,21 +13,15 @@
 
 import { useState, useMemo } from "react";
 import { useRecenteOnderhoudsbeurten } from "../../hooks/useOnderhoud";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import ModalShell from "./ModalShell";
+
 
 // ---------------------------------------------------------------------------
 // Types & helpers
 // ---------------------------------------------------------------------------
 
-type TypeWerk =
-    | "Grote Beurt" | "Kleine Beurt" | "APK" | "Reparatie"
-    | "Bandenwisseling" | "Schadeherstel" | "Diagnostiek" | "Overig";
-
-const TYPE_ICOON: Record<string, string> = {
-    "Grote Beurt": "🔧", "Kleine Beurt": "🪛", "APK": "📋",
-    "Reparatie": "🔨", "Bandenwisseling": "🔄", "Schadeherstel": "🚗",
-    "Diagnostiek": "🔍", "Overig": "📦",
-};
+import { TYPE_ICOON } from "../onderhoud/utils";
+import type { TypeWerk } from "../onderhoud/utils";
 
 const TYPE_BADGE_KLEUR: Record<string, string> = {
     "Grote Beurt": "var(--color-error, #dc2626)",
@@ -131,219 +125,193 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
     };
 
     return (
-        <div
-            onClick={onSluit}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Beurten overzicht"
-            style={{
-                position: "fixed", inset: 0,
-                background: "rgba(0,0,0,0.65)",
-                backdropFilter: "blur(6px)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                zIndex: 9999, padding: "var(--space-4)",
-            }}
-        >
-            <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                    width: "100%", maxWidth: "900px",
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-xl)",
-                    boxShadow: "var(--shadow-xl)",
-                    maxHeight: "90vh",
-                    display: "flex", flexDirection: "column",
-                    overflow: "hidden",
-                }}
-            >
-                {/* ── Header ─────────────────────────────────────────────── */}
-                <div style={{
-                    padding: "var(--space-4) var(--space-5)",
-                    borderBottom: "1px solid var(--color-border)",
-                    display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                    gap: "var(--space-4)", flexShrink: 0,
-                }}>
-                    <div>
-                        <h2 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)" }}>
-                            🔧 Beurten overzicht
-                        </h2>
-                        {stats && (
-                            <p style={{ margin: "4px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                                {stats.totaal} totaal
-                                {" · "}<span style={{ color: "var(--color-error)" }}>{stats.groteBeurten} grote</span>
-                                {" · "}<span style={{ color: "var(--color-success, #16a34a)" }}>{stats.kleineBeurten} kleine</span>
-                                {" · "}<span style={{ color: "var(--color-primary, #2563eb)" }}>{stats.apkDezeMaand} APK deze maand</span>
-                            </p>
-                        )}
-                    </div>
-                    <button
-                        onClick={onSluit}
-                        className="btn btn-ghost btn-sm"
-                        style={{ minHeight: "40px", flexShrink: 0 }}
-                        aria-label="Sluiten"
-                    >
-                        ✕
-                    </button>
-                </div>
-
-                {/* ── Filter balk ────────────────────────────────────────── */}
-                <div style={{
-                    padding: "var(--space-3) var(--space-5)",
-                    borderBottom: "1px solid var(--color-border)",
-                    display: "flex", gap: "var(--space-2)", flexWrap: "wrap",
-                    alignItems: "center", flexShrink: 0,
-                    background: "var(--glass-bg-subtle)",
-                }}>
-                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontWeight: "var(--weight-medium)", marginRight: "var(--space-1)" }}>
-                        Filter:
-                    </span>
-                    {["Alle", ...beschikbareTypes].map((type) => (
-                        <button
-                            key={type}
-                            onClick={() => setFilterType(type)}
-                            className={`btn btn-sm ${filterType === type ? "btn-primary" : "btn-ghost"}`}
-                            style={{ minHeight: "32px", fontSize: "var(--text-xs)", gap: "4px" }}
-                        >
-                            {type !== "Alle" && (TYPE_ICOON[type] ?? "🔧")} {type}
-                        </button>
-                    ))}
-                    <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                        {gesorteerd.length} {gesorteerd.length === 1 ? "beurt" : "beurten"}
-                    </span>
-                </div>
-
-                {/* ── Tabel ──────────────────────────────────────────────── */}
-                <div style={{ overflowY: "auto", flex: 1 }}>
-                    {beurten === undefined ? (
-                        <div style={{ padding: "var(--space-12)", textAlign: "center", color: "var(--color-muted)" }}>
-                            <p style={{ fontSize: "var(--text-2xl)", marginBottom: "var(--space-2)" }}>⏳</p>
-                            <p style={{ fontSize: "var(--text-sm)" }}>Beurten laden…</p>
-                        </div>
-                    ) : gesorteerd.length === 0 ? (
-                        <div style={{ padding: "var(--space-12)", textAlign: "center", color: "var(--color-muted)" }}>
-                            <p style={{ fontSize: "var(--text-2xl)", marginBottom: "var(--space-2)" }}>📋</p>
-                            <p style={{ fontSize: "var(--text-sm)" }}>
-                                {filterType === "Alle" ? "Nog geen beurten geregistreerd." : `Geen "${filterType}" beurten gevonden.`}
-                            </p>
-                        </div>
-                    ) : (
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                            <thead>
-                                <tr>
-                                    <th style={thStyle}>#</th>
-                                    <th
-                                        style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
-                                        onClick={() => toggleSort("type")}
-                                    >
-                                        Type werk{sortPijl("type")}
-                                    </th>
-                                    <th
-                                        style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
-                                        onClick={() => toggleSort("datum")}
-                                    >
-                                        Datum{sortPijl("datum")}
-                                    </th>
-                                    <th
-                                        style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
-                                        onClick={() => toggleSort("km")}
-                                    >
-                                        Kilometerstand{sortPijl("km")}
-                                    </th>
-                                    <th style={thStyle}>Notities</th>
-                                    <th style={thStyle}>Document</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {gesorteerd.map((beurt, idx) => (
-                                    <tr
-                                        key={beurt._id}
-                                        style={{
-                                            background: idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle, rgba(255,255,255,0.02))",
-                                            transition: "background 0.15s",
-                                        }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = "var(--glass-bg)")}
-                                        onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle, rgba(255,255,255,0.02))")}
-                                    >
-                                        {/* Rijnummer */}
-                                        <td style={{ ...tdStyle, color: "var(--color-muted)", fontSize: "var(--text-xs)", width: "40px" }}>
-                                            {idx + 1}
-                                        </td>
-
-                                        {/* Type werk + icoon */}
-                                        <td style={tdStyle}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                                                <span style={{ fontSize: "var(--text-base)" }}>
-                                                    {TYPE_ICOON[beurt.typeWerk] ?? "🔧"}
-                                                </span>
-                                                <span
-                                                    style={{
-                                                        fontWeight: "var(--weight-semibold)",
-                                                        color: TYPE_BADGE_KLEUR[beurt.typeWerk] ?? "var(--color-body)",
-                                                        fontSize: "var(--text-xs)",
-                                                        whiteSpace: "nowrap",
-                                                    }}
-                                                >
-                                                    {beurt.typeWerk}
-                                                </span>
-                                            </div>
-                                        </td>
-
-                                        {/* Datum */}
-                                        <td style={{ ...tdStyle, fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>
-                                            {formatDatum(beurt.datumUitgevoerd)}
-                                        </td>
-
-                                        {/* Kilometerstand */}
-                                        <td style={{ ...tdStyle, fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>
-                                            {beurt.kmStandOnderhoud.toLocaleString("nl-NL")} km
-                                        </td>
-
-                                        {/* Notities */}
-                                        <td style={{ ...tdStyle, maxWidth: "260px" }}>
-                                            {beurt.werkNotities ? (
-                                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                                                    {beurt.werkNotities}
-                                                </span>
-                                            ) : (
-                                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-border)" }}>—</span>
-                                            )}
-                                        </td>
-
-                                        {/* Document link */}
-                                        <td style={tdStyle}>
-                                            {beurt.documentUrl ? (
-                                                <a
-                                                    href={beurt.documentUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    style={{ fontSize: "var(--text-xs)", color: "var(--color-primary)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                                >
-                                                    📄 Bekijk
-                                                </a>
-                                            ) : (
-                                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-border)" }}>—</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+        <ModalShell onSluit={onSluit} ariaLabel="Beurten overzicht" maxWidth="900px">
+            {/* ── Header ─────────────────────────────────────────────── */}
+            <div style={{
+                padding: "var(--space-4) var(--space-5)",
+                borderBottom: "1px solid var(--color-border)",
+                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                gap: "var(--space-4)", flexShrink: 0,
+            }}>
+                <div>
+                    <h2 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)" }}>
+                        🔧 Beurten overzicht
+                    </h2>
+                    {stats && (
+                        <p style={{ margin: "4px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                            {stats.totaal} totaal
+                            {" · "}<span style={{ color: "var(--color-error)" }}>{stats.groteBeurten} grote</span>
+                            {" · "}<span style={{ color: "var(--color-success, #16a34a)" }}>{stats.kleineBeurten} kleine</span>
+                            {" · "}<span style={{ color: "var(--color-primary, #2563eb)" }}>{stats.apkDezeMaand} APK deze maand</span>
+                        </p>
                     )}
                 </div>
-
-                {/* ── Footer ─────────────────────────────────────────────── */}
-                <div style={{
-                    padding: "var(--space-3) var(--space-5)",
-                    borderTop: "1px solid var(--color-border)",
-                    display: "flex", justifyContent: "flex-end", flexShrink: 0,
-                    background: "var(--glass-bg-subtle)",
-                }}>
-                    <button onClick={onSluit} className="btn btn-ghost" style={{ minHeight: "40px" }}>
-                        Sluiten
-                    </button>
-                </div>
+                <button
+                    onClick={onSluit}
+                    className="btn btn-ghost btn-sm"
+                    style={{ minHeight: "40px", flexShrink: 0 }}
+                    aria-label="Sluiten"
+                >
+                    ✕
+                </button>
             </div>
-        </div>
+
+            {/* ── Filter balk ────────────────────────────────────────── */}
+            <div style={{
+                padding: "var(--space-3) var(--space-5)",
+                borderBottom: "1px solid var(--color-border)",
+                display: "flex", gap: "var(--space-2)", flexWrap: "wrap",
+                alignItems: "center", flexShrink: 0,
+                background: "var(--glass-bg-subtle)",
+            }}>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontWeight: "var(--weight-medium)", marginRight: "var(--space-1)" }}>
+                    Filter:
+                </span>
+                {["Alle", ...beschikbareTypes].map((type) => (
+                    <button
+                        key={type}
+                        onClick={() => setFilterType(type)}
+                        className={`btn btn-sm ${filterType === type ? "btn-primary" : "btn-ghost"}`}
+                        style={{ minHeight: "32px", fontSize: "var(--text-xs)", gap: "4px" }}
+                    >
+                        {type !== "Alle" && (TYPE_ICOON[type as TypeWerk] ?? "🔧")} {type}
+                    </button>
+                ))}
+                <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                    {gesorteerd.length} {gesorteerd.length === 1 ? "beurt" : "beurten"}
+                </span>
+            </div>
+
+            {/* ── Tabel ──────────────────────────────────────────────── */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+                {beurten === undefined ? (
+                    <div style={{ padding: "var(--space-12)", textAlign: "center", color: "var(--color-muted)" }}>
+                        <p style={{ fontSize: "var(--text-2xl)", marginBottom: "var(--space-2)" }}>⏳</p>
+                        <p style={{ fontSize: "var(--text-sm)" }}>Beurten laden…</p>
+                    </div>
+                ) : gesorteerd.length === 0 ? (
+                    <div style={{ padding: "var(--space-12)", textAlign: "center", color: "var(--color-muted)" }}>
+                        <p style={{ fontSize: "var(--text-2xl)", marginBottom: "var(--space-2)" }}>📋</p>
+                        <p style={{ fontSize: "var(--text-sm)" }}>
+                            {filterType === "Alle" ? "Nog geen beurten geregistreerd." : `Geen "${filterType}" beurten gevonden.`}
+                        </p>
+                    </div>
+                ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>#</th>
+                                <th
+                                    style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
+                                    onClick={() => toggleSort("type")}
+                                >
+                                    Type werk{sortPijl("type")}
+                                </th>
+                                <th
+                                    style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
+                                    onClick={() => toggleSort("datum")}
+                                >
+                                    Datum{sortPijl("datum")}
+                                </th>
+                                <th
+                                    style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
+                                    onClick={() => toggleSort("km")}
+                                >
+                                    Kilometerstand{sortPijl("km")}
+                                </th>
+                                <th style={thStyle}>Notities</th>
+                                <th style={thStyle}>Document</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {gesorteerd.map((beurt, idx) => (
+                                <tr
+                                    key={beurt._id}
+                                    style={{
+                                        background: idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle, rgba(255,255,255,0.02))",
+                                        transition: "background 0.15s",
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = "var(--glass-bg)")}
+                                    onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle, rgba(255,255,255,0.02))")}
+                                >
+                                    {/* Rijnummer */}
+                                    <td style={{ ...tdStyle, color: "var(--color-muted)", fontSize: "var(--text-xs)", width: "40px" }}>
+                                        {idx + 1}
+                                    </td>
+
+                                    {/* Type werk + icoon */}
+                                    <td style={tdStyle}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                            <span style={{ fontSize: "var(--text-base)" }}>
+                                                {TYPE_ICOON[beurt.typeWerk] ?? "🔧"}
+                                            </span>
+                                            <span
+                                                style={{
+                                                    fontWeight: "var(--weight-semibold)",
+                                                    color: TYPE_BADGE_KLEUR[beurt.typeWerk] ?? "var(--color-body)",
+                                                    fontSize: "var(--text-xs)",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {beurt.typeWerk}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    {/* Datum */}
+                                    <td style={{ ...tdStyle, fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>
+                                        {formatDatum(beurt.datumUitgevoerd)}
+                                    </td>
+
+                                    {/* Kilometerstand */}
+                                    <td style={{ ...tdStyle, fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>
+                                        {beurt.kmStandOnderhoud.toLocaleString("nl-NL")} km
+                                    </td>
+
+                                    {/* Notities */}
+                                    <td style={{ ...tdStyle, maxWidth: "260px" }}>
+                                        {beurt.werkNotities ? (
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                                {beurt.werkNotities}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-border)" }}>—</span>
+                                        )}
+                                    </td>
+
+                                    {/* Document link */}
+                                    <td style={tdStyle}>
+                                        {beurt.documentUrl ? (
+                                            <a
+                                                href={beurt.documentUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                style={{ fontSize: "var(--text-xs)", color: "var(--color-primary)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                            >
+                                                📄 Bekijk
+                                            </a>
+                                        ) : (
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-border)" }}>—</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
+            {/* ── Footer ─────────────────────────────────────────────── */}
+            <div style={{
+                padding: "var(--space-3) var(--space-5)",
+                borderTop: "1px solid var(--color-border)",
+                display: "flex", justifyContent: "flex-end", flexShrink: 0,
+                background: "var(--glass-bg-subtle)",
+            }}>
+                <button onClick={onSluit} className="btn btn-ghost" style={{ minHeight: "40px" }}>
+                    Sluiten
+                </button>
+            </div>
+        </ModalShell>
     );
 }

@@ -34,10 +34,14 @@ function formatDag(ms: number): string {
 
 function statusKleur(status: string): string {
     switch (status) {
+        case "Gepland": return "#8b5cf6";
+        case "Aanwezig": return "#0891b2";
         case "Wachtend": return "var(--color-muted)";
         case "Bezig": return "var(--color-primary)";
         case "Wacht op onderdelen": return "var(--color-warning, #d97706)";
         case "Klaar": return "var(--color-success, #16a34a)";
+        case "Afgerond": return "#15803d";
+        case "Geannuleerd": return "var(--color-error, #dc2626)";
         default: return "var(--color-muted)";
     }
 }

@@ -53,9 +53,11 @@ export const ALL: APIRoute = async ({ request, params }) => {
         ...(siteUrl ? [siteUrl.replace(/\/$/, "")] : []),
     ].filter(Boolean);
 
-    const corsOrigin = allowedOrigins.includes(requestOrigin)
-        ? requestOrigin
-        : (allowedOrigins[0] ?? requestOrigin);
+    // Reflect the real request origin back — the Go backend is the authority on
+    // origin validation. Never fall back to localhost when the origin is unknown,
+    // as that would cause the browser to reject the response with a CORS error.
+    const corsOrigin = requestOrigin || allowedOrigins[0] || "";
+
 
     // ── Preflight OPTIONS afhandelen ─────────────────────────────────────────
     // Astro/Vercel kan preflight requests krijgen; we handelen ze direct af

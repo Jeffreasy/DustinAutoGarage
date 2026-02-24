@@ -50,9 +50,11 @@ go run ./tools/encrypt_mail_config/ --tenant-id <uuid> --host smtp.example.com -
 ```
 
 #### `tools/setup_imap_accounts`
-Configures IMAP credentials for a tenant's inbox polling. Writes to the `tenants` IMAP config fields.
+Configures IMAP credentials for a tenant's inbox polling. Writes to the `imap_accounts` table.
 
-**When to use**: Enabling inbound email reply tracking for a tenant.
+**When to use**: Initial IMAP setup for a tenant when the API is not yet accessible, or for bulk configuration during onboarding. For runtime management, prefer the API endpoint: `POST /admin/imap-config` (supports `account_type`, `host`, `port`, `user`, `password`, `tls_mode`).
+
+> **`imap_tls_mode`**: Since migration `20260224000001`, each IMAP account has a configurable `imap_tls_mode` field (`ssl` or `starttls`). Default: `ssl`. This replaces the previous hardcoded `"ssl"` behavior.
 
 #### `tools/email_queue`
 Inspects the current state of the `email_outbox` table. Shows pending, failed, and retry-scheduled messages.
@@ -75,6 +77,8 @@ go run ./tools/generate_key/
 Connects to the database and runs test queries to confirm that PostgreSQL RLS policies are correctly enforced. Simulates cross-tenant access attempts and asserts they are blocked.
 
 **When to use**: After any migration that alters RLS policies. Run before every production deployment.
+
+> **⚠️ FORCE_RLS Tables**: `email_outbox`, `email_logs`, and `email_inbox` have `FORCE ROW LEVEL SECURITY`. Even the table owner must set `app.bypass_rls = 'true'` (via `storage.WithoutRLS()`) or `app.current_tenant` to access these tables. Verify this tool also tests these tables specifically.
 
 #### `tools/test_decrypt`
 Tests decryption of stored `mail_config` using the current `TENANT_SECRET_KEY`. Useful to verify the key is correct before running the API.

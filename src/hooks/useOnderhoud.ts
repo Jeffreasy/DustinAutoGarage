@@ -36,6 +36,14 @@ export function useRecenteOnderhoudsbeurten(
     return useQuery(api.onderhoudshistorie.getRecenteOnderhoudsbeurten, { limiet });
 }
 
+/**
+ * Haalt verrijkte recente beurten op met voertuig-context (kenteken, merk, model).
+ * Gebruik dit voor de activiteitsfeed waar de eigenaar/balie direct het voertuig wil zien.
+ */
+export function useRecenteBeurtenVerrijkt(limiet: number = 20) {
+    return useQuery(api.onderhoudshistorie.getRecenteBeurtenVerrijkt, { limiet });
+}
+
 // ---------------------------------------------------------------------------
 // Mutation hooks
 // ---------------------------------------------------------------------------

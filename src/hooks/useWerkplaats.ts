@@ -28,8 +28,18 @@ export type WerkorderVerrijkt = {
     werkplekId?: Id<"werkplekken">;
     monteursId?: Id<"medewerkers">;
     klacht: string;
-    status: "Wachtend" | "Bezig" | "Wacht op onderdelen" | "Klaar";
+    status:
+    | "Gepland"
+    | "Aanwezig"
+    | "Wachtend"
+    | "Bezig"
+    | "Wacht op onderdelen"
+    | "Klaar"
+    | "Afgerond"
+    | "Geannuleerd";
     afspraakDatum: number;
+    totaalKosten?: number;
+    gearchiveerd?: boolean;
     tokenIdentifier: string;
     aangemaaktOp: number;
     voertuig: { kenteken: string; merk: string; model: string } | null;

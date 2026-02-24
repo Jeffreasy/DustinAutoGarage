@@ -52,6 +52,8 @@ LaventeCare prohibits writing raw native SQL statements in Go to eliminate SQL I
    ```
 5. Your query is now available via strict types in `db.New(pool).GetUserByEmail(ctx, params)`.
 
+> **⚠️ sqlc Type Drift Warning**: If you manually edit a `db/*.sql.go` file AND the referenced column is later made nullable (e.g., via `ALTER COLUMN x DROP NOT NULL`), Docker's clean build will regenerate the `.sql.go` from the updated schema. The generated type changes from `string` to `pgtype.Text`, breaking callers that pass a plain `string`. **Rule**: For columns that may become nullable, use raw `tx.Exec()` in workers instead of sqlc params structs, or regenerate sqlc locally before committing.
+
 ---
 
 ## Testing Expectations
@@ -76,7 +78,8 @@ go tool cover -html=coverage.out
 - **Role Validations (RBAC)**: Valid roles should pass the `customMiddleware.RBACMiddleware`, invalid/underprivileged requests MUST be bounced.
 - **Tenant Isolation**: Any integration test firing against mock DB data MUST assure that the user from `Tenant A` receives `HTTP 404/403` or empty arrays if attempting to index records from `Tenant B`.
 - **Worker Timeouts**: Ensure unit tests validate that `context.WithTimeout` does not leak hanging goroutines if the SMTP target server is non-responsive.
-- **Email Integration**: Verify SMTP contract with mock SMTP servers to assert correct outbox pattern behavior.
+- **Email Integration**: Verify SMTP contract with mock SMTP servers to assert correct outbox pattern behavior. Confirm `email_logs` rows are written post-send (recipient_email + recipient_hash both populated).
+- **Janitor RLS**: Confirm cleanup queries inside `storage.WithoutRLS()` delete rows on FORCE_RLS tables. A query outside this wrapper should match 0 rows.
 - **Analytics RLS**: Confirm IP hash is correctly anonymized and partitions route correctly.
 - **Blog Worker**: Verify that scheduled posts are promoted correctly and RLS bypass is properly scoped.
 

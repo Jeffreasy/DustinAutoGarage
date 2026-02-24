@@ -282,6 +282,13 @@ export default defineSchema({
         afspraakDatum: v.number(),
 
         /**
+         * Totale kosten van de werkorder (euro, excl. BTW).
+         * Wordt ingevuld bij afsluiting via WerkorderAfsluitenModal.
+         * Optioneel voor backward-compatibiliteit met bestaande records.
+         */
+        totaalKosten: v.optional(v.number()),
+
+        /**
          * Gearchiveerd door eigenaar — verbergt order van het actieve bord.
          * undefined / false = zichtbaar, true = gearchiveerd.
          */

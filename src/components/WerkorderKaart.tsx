@@ -21,6 +21,7 @@ import type { WerkorderVerrijkt, WerkplekDoc } from "../hooks/useWerkplaats";
 import { useVerplaatsNaarWerkplek, useUpdateStatus } from "../hooks/useWerkplaats";
 import type { DomeinRol } from "../../convex/helpers";
 import WerkorderAfsluitenModal from "./WerkorderAfsluitenModal";
+import WerkorderDetailModal from "./modals/WerkorderDetailModal";
 
 // ---------------------------------------------------------------------------
 // Avatar helpers
@@ -47,7 +48,29 @@ function avatarKleur(naam: string): string {
 // Status config
 // ---------------------------------------------------------------------------
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, {
+    label: string;
+    accentKleur: string;
+    badgeBg: string;
+    badgeBorder: string;
+    badgeTekst: string;
+}> = {
+    // ── Vóór binnenkomst ───────────────────────────────────────────────────
+    "Gepland": {
+        label: "📅 Gepland",
+        accentKleur: "#8b5cf6",
+        badgeBg: "#f5f3ff",
+        badgeBorder: "#c4b5fd",
+        badgeTekst: "#5b21b6",
+    },
+    "Aanwezig": {
+        label: "🏁 Aanwezig",
+        accentKleur: "#0891b2",
+        badgeBg: "#ecfeff",
+        badgeBorder: "#67e8f9",
+        badgeTekst: "#164e63",
+    },
+    // ── In behandeling ─────────────────────────────────────────────────────
     "Wachtend": {
         label: "Wachtend",
         accentKleur: "#6b7280",
@@ -69,6 +92,7 @@ const STATUS_CONFIG = {
         badgeBorder: "#93c5fd",
         badgeTekst: "#1e3a5f",
     },
+    // ── Afgerond ──────────────────────────────────────────────────────────
     "Klaar": {
         label: "✅ Klaar",
         accentKleur: "#22c55e",
@@ -76,7 +100,32 @@ const STATUS_CONFIG = {
         badgeBorder: "#86efac",
         badgeTekst: "#14532d",
     },
+    "Afgerond": {
+        label: "🏆 Afgerond",
+        accentKleur: "#16a34a",
+        badgeBg: "#f0fdf4",
+        badgeBorder: "#4ade80",
+        badgeTekst: "#14532d",
+    },
+    "Geannuleerd": {
+        label: "🚫 Geannuleerd",
+        accentKleur: "#dc2626",
+        badgeBg: "#fef2f2",
+        badgeBorder: "#fca5a5",
+        badgeTekst: "#7f1d1d",
+    },
 } as const;
+
+// Veilige getter — onbekende status krijgt een neutrale config
+function getStatusCfg(status: string) {
+    return STATUS_CONFIG[status] ?? {
+        label: status,
+        accentKleur: "#6b7280",
+        badgeBg: "var(--color-surface)",
+        badgeBorder: "var(--color-border)",
+        badgeTekst: "var(--color-muted)",
+    };
+}
 
 // ---------------------------------------------------------------------------
 // WerkorderKaart
@@ -100,6 +149,7 @@ export default function WerkorderKaart({
     const [toonWachtInput, setToonWachtInput] = useState(false);
     const [wachtNotitie, setWachtNotitie] = useState("");
     const [toonAfsluitenModal, setToonAfsluitenModal] = useState(false);
+    const [toonDetail, setToonDetail] = useState(false);
     const [bezig, setBezig] = useState(false);
 
     // Mutations
@@ -110,7 +160,7 @@ export default function WerkorderKaart({
     const isMonteur = domeinRol === "monteur" || domeinRol === "balie" || domeinRol === "eigenaar";
     const isBalie = domeinRol === "balie" || domeinRol === "eigenaar";
 
-    const statusCfg = STATUS_CONFIG[order.status];
+    const statusCfg = getStatusCfg(order.status);
     const beschikbarePlekken = werkplekken.filter((p) => p._id !== order.werkplekId);
 
     // ---------------------------------------------------------------------------
@@ -124,6 +174,8 @@ export default function WerkorderKaart({
             await verplaats({
                 werkorderId: order._id,
                 werkplekId,
+                // Als order Gepland/Aanwezig was en op brug gezet wordt → Bezig
+                // Als terug naar buiten → Wachtend
                 nieuweStatus: werkplekId ? "Bezig" : "Wachtend",
             });
         } finally {
@@ -131,6 +183,49 @@ export default function WerkorderKaart({
         }
     }
 
+    // Gepland → Aanwezig (balie+): klant is er — zet auto als aanwezig op terrein
+    async function handleAanwezig() {
+        setBezig(true);
+        try {
+            await updateStatus({
+                werkorderId: order._id,
+                nieuweStatus: "Aanwezig",
+                notitie: "Auto aanwezig op terrein",
+            });
+        } finally {
+            setBezig(false);
+        }
+    }
+
+    // Aanwezig → Wachtend (balie+): auto staat op het terrein, klaar voor de brug
+    async function handleNaarWachtend() {
+        setBezig(true);
+        try {
+            await updateStatus({
+                werkorderId: order._id,
+                nieuweStatus: "Wachtend",
+                notitie: "Auto klaargezet voor brug",
+            });
+        } finally {
+            setBezig(false);
+        }
+    }
+
+    // Geannuleerd (balie+): afspraak ongedaan gemaakt
+    async function handleGeannuleerd() {
+        if (!window.confirm(`Werkorder voor ${order.voertuig?.kenteken ?? "dit voertuig"} annuleren? Dit kan niet ongedaan worden gemaakt.`)) return;
+        setBezig(true);
+        try {
+            await updateStatus({
+                werkorderId: order._id,
+                nieuweStatus: "Geannuleerd",
+                notitie: "Geannuleerd door balie",
+            });
+        } finally {
+            setBezig(false);
+        }
+    }
+    // Wacht op onderdelen snelactie (monteur+)
     async function handleWachtOpOnderdelen() {
         setBezig(true);
         setToonWachtInput(false);
@@ -174,8 +269,15 @@ export default function WerkorderKaart({
                     background: statusCfg.accentKleur,
                 }} />
 
-                {/* === Kaart inhoud === */}
-                <div style={{ padding: "calc(var(--space-4) + 3px) var(--space-4) 0" }}>
+                {/* === Klikbare kaart-inhoud (balie+ → detail modal) === */}
+                <div
+                    style={{ padding: "calc(var(--space-4) + 3px) var(--space-4) 0", cursor: isBalie ? "pointer" : "default" }}
+                    onClick={isBalie ? () => setToonDetail(true) : undefined}
+                    role={isBalie ? "button" : undefined}
+                    aria-label={isBalie ? `Werkorder details ${order.voertuig?.kenteken ?? ""}` : undefined}
+                    tabIndex={isBalie ? 0 : undefined}
+                    onKeyDown={isBalie ? (e) => { if (e.key === "Enter" || e.key === " ") setToonDetail(true); } : undefined}
+                >
 
                     {/* 1. Kenteken + Status badge */}
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-2)", flexWrap: "wrap" }}>
@@ -223,40 +325,51 @@ export default function WerkorderKaart({
                         </p>
                     </div>
 
-                    {/* 4. Monteur — initialen-avatar + naam */}
-                    {order.monteur ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
-                            <span
-                                aria-label={`Monteur: ${order.monteur.naam}`}
-                                style={{
-                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                    width: "28px", height: "28px", borderRadius: "50%",
-                                    background: avatarKleur(order.monteur.naam),
-                                    color: "#fff", fontSize: "11px", fontWeight: 700,
-                                    flexShrink: 0, letterSpacing: "0.03em",
-                                }}
-                            >
-                                {avatarInitialen(order.monteur.naam)}
+                    {/* 4. Afsprakendatum + Monteur */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginTop: "var(--space-2)", flexWrap: "wrap" }}>
+                        {/* Afsprakendatum */}
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            📅 {new Date(order.afspraakDatum).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })}
+                        </span>
+
+                        {/* Monteur avatar + naam */}
+                        {order.monteur ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                <span
+                                    aria-label={`Monteur: ${order.monteur.naam}`}
+                                    style={{
+                                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                        width: "24px", height: "24px", borderRadius: "50%",
+                                        background: avatarKleur(order.monteur.naam),
+                                        color: "#fff", fontSize: "10px", fontWeight: 700,
+                                        flexShrink: 0, letterSpacing: "0.03em",
+                                    }}
+                                >
+                                    {avatarInitialen(order.monteur.naam)}
+                                </span>
+                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                                    {order.monteur.naam}
+                                </span>
+                            </div>
+                        ) : (
+                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic" }}>
+                                Geen monteur
                             </span>
-                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                                {order.monteur.naam}
-                            </span>
-                        </div>
-                    ) : (
-                        <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: "var(--space-2) 0 0", fontStyle: "italic" }}>
-                            Geen monteur toegewezen
-                        </p>
-                    )}
+                        )}
+                    </div>
                 </div>
 
-                {/* === Acties (monteur+) === */}
+                {/* Actiezone — stopPropagation zodat klik hier NIET de detail modal opent */}
                 {isMonteur && (
-                    <div style={{ padding: "0 var(--space-4) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                    <div
+                        style={{ padding: "0 var(--space-4) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
 
                         {/* Rij 1: Verplaatsen + Wacht op onderdelen + Logboek */}
                         <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                            {/* Grote verplaats knop */}
-                            {order.status !== "Klaar" && (
+                            {/* Bug 2 fix: Verplaats-knop NIET bij eindstatussen */}
+                            {!["Klaar", "Afgerond", "Geannuleerd"].includes(order.status) && (
                                 <button
                                     onClick={() => { setToonVerplaatsSheet(!toonVerplaatsSheet); setToonWachtInput(false); }}
                                     disabled={bezig}
@@ -295,6 +408,42 @@ export default function WerkorderKaart({
                             </button>
                         </div>
 
+                        {/* Bug 3 fix: Gepland → Aanwezig knop (balie+) */}
+                        {isBalie && order.status === "Gepland" && (
+                            <button
+                                onClick={handleAanwezig}
+                                disabled={bezig}
+                                className="btn btn-sm"
+                                aria-label="Markeer als aanwezig"
+                                style={{
+                                    minHeight: "48px", width: "100%",
+                                    background: "linear-gradient(135deg, #0891b2, #0e7490)",
+                                    color: "#fff", border: "none",
+                                    borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)",
+                                    fontSize: "var(--text-sm)", cursor: "pointer",
+                                }}
+                            >
+                                {bezig ? "…" : "🏁 Auto aanwezig"}
+                            </button>
+                        )}
+
+                        {/* Aanwezig → Wachtend knop (balie+) */}
+                        {isBalie && order.status === "Aanwezig" && (
+                            <button
+                                onClick={handleNaarWachtend}
+                                disabled={bezig}
+                                className="btn btn-ghost btn-sm"
+                                aria-label="Klaarzetten voor brug"
+                                style={{
+                                    minHeight: "48px", width: "100%",
+                                    fontWeight: "var(--weight-semibold)",
+                                    fontSize: "var(--text-sm)",
+                                }}
+                            >
+                                {bezig ? "…" : "⏩ Klaarzetten voor brug"}
+                            </button>
+                        )}
+
                         {/* Afsluiten (balie+, alleen als Klaar) */}
                         {isBalie && order.status === "Klaar" && (
                             <button
@@ -310,6 +459,26 @@ export default function WerkorderKaart({
                                 aria-label="Werkorder definitief afsluiten"
                             >
                                 ✅ Auto klaar — Doorsturen
+                            </button>
+                        )}
+
+                        {/* Bug 4 fix: Geannuleerd-knop (balie+, niet bij eindstatussen) */}
+                        {isBalie && !["Klaar", "Afgerond", "Geannuleerd"].includes(order.status) && (
+                            <button
+                                onClick={handleGeannuleerd}
+                                disabled={bezig}
+                                className="btn btn-ghost btn-sm"
+                                aria-label="Werkorder annuleren"
+                                style={{
+                                    minHeight: "40px",
+                                    width: "100%",
+                                    color: "var(--color-error, #dc2626)",
+                                    fontSize: "var(--text-xs)",
+                                    fontWeight: "var(--weight-semibold)",
+                                    borderColor: "rgba(220,38,38,0.3)",
+                                }}
+                            >
+                                {bezig ? "…" : "🚫 Afspraak annuleren"}
                             </button>
                         )}
 
@@ -426,6 +595,14 @@ export default function WerkorderKaart({
                     kenteken={order.voertuig?.kenteken ?? "—"}
                     klacht={order.klacht}
                     onSluit={() => setToonAfsluitenModal(false)}
+                />
+            )}
+
+            {/* Detail modal — read-only, voor balie+ */}
+            {toonDetail && (
+                <WerkorderDetailModal
+                    order={order}
+                    onSluit={() => setToonDetail(false)}
                 />
             )}
         </>

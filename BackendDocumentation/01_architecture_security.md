@@ -15,18 +15,19 @@ LaventeCare Auth Systems is built on the premise that internal trust is a liabil
 
 ### 1. The HTTP Layer (Gateway)
 - Built on `chi` router for zero-allocation routing.
-- **Middlewares** (applied in order): Sentry HTTP tracking, RequestID, RealIP, custom Slog logger, Panic Recovery, dynamic CORS, global Ratelimit (`x/time/rate`), and Tenant Context extraction.
-- CSRF protection is applied **only on authenticated routes** (not public auth endpoints).
+- **Middlewares** (applied in order): Native `sentryhttp` (with repanic enabled for full context capturing), RequestID, RealIP, custom Slog logger, Panic Recovery, dynamic CORS, global Ratelimit (`x/time/rate`), and Tenant Context extraction.
+- CSRF protection is applied **only on mutating authenticated routes** (not public auth endpoints or persistent `GET` SSE streams).
 
 ### 2. Domain Logic (Services)
 - **Token Generation**: Asymmetric RSA-SHA256 (`RS256`) JWTs for access limits.
 - **Stateless Verification**: Revocation checks hit Redis cache for instant invalidation (e.g. forced logouts) bypassing DB round-trips.
+- **Real-Time Push Transport**: Utilizes native **Server-Sent Events (SSE)** coupled with **Redis Pub/Sub** to stream bidirectional app states directly to clients.
 
 ### 3. The Unified Background Worker
 Replaces legacy multi-worker architectures. A single `worker` binary runs **6** sub-routines:
 1. **Email Dispatching**: Uses the outbox pattern from `email_outbox` to send via tenant SMTP gateways over batch-polled routines.
 2. **IMAP Polling**: Checks for incoming emails and replies.
-3. **Janitor**: Purges expired tokens, unverified accounts, and orphans.
+3. **Janitor**: Purges expired tokens, unverified accounts, and orphans. Cleans `email_logs` (180-day retention), `email_outbox` (30-day sent/failed), and `email_inbox` archived items (90-day). **Critical**: All Janitor cleanup queries MUST run inside `storage.WithoutRLS()` — `email_outbox`, `email_logs`, and `email_inbox` all have `FORCE ROW LEVEL SECURITY`. Without the bypass, every DELETE silently matches 0 rows.
 4. **Social Queues**: Executes LLM text generation and schedules posts to X (formerly Twitter).
 5. **Analytics Maintenance**: Auto-rotates analytics database partitions to prevent bloat.
 6. **Blog Scheduler**: (`internal/workers/blog`) — Polls every 5 minutes. Promotes `status = 'scheduled'` blog posts to `'published'` when their `scheduled_for` timestamp has passed. Operates via an RLS-bypass transaction to act cross-tenant.
@@ -47,7 +48,7 @@ Every piece of data is isolated to a specific Tenant. The application acts stric
 | `viewer` | 1 | Read-only access to own profile, mail config, stats, audit logs |
 | `user` | 2 | Write access to own self-service: profile, password, sessions, GDPR export/delete, email change |
 | `editor` | 3 | Operational: user management, invites, email inbox, analytics dashboard, direct messaging, blog CMS, presence, feedback |
-| `admin` | 4 | Governance: tenant settings, SMTP config, CORS, Telegram/X config, social campaigns |
+| `admin` | 4 | Governance: tenant settings, SMTP config, **IMAP config**, CORS, Telegram/X config, social campaigns |
 
 ---
 
@@ -61,6 +62,7 @@ Every piece of data is isolated to a specific Tenant. The application acts stric
 - `telegram_config`: Per-tenant Telegram bot credentials for alerting webhooks.
 
 ### Authentication
+- **Tenant-Configurable MFA**: MFA enforcement is tenant-scoped via the `require_mfa` JSONB flag in `tenants.settings` (defaults to `false`). When enabled, `editor` and `admin` roles are forced to complete MFA authentication before receiving an active session.
 - `refresh_tokens`: Hashes of active opaque tokens with `family_id` rotation tracking.
 - `verification_tokens` / `invitations`: SHA256 deterministic hashes for single-use flows.
 - `mfa_email_otp`: Time-limited 6 digit codes stored directly on the `users` table (`mfa_email_otp`, `mfa_email_otp_expiry`).
@@ -71,6 +73,6 @@ Every piece of data is isolated to a specific Tenant. The application acts stric
 - `blog_revisions`: Full document history of every blog post edit.
 - `social_campaigns` & `social_posts`: Configs, generated text, and X tokens. Posts support premium content tiers: `content_type` can be `tweet` (≤280), `verhaal` (≤1500), or `artikel` (≤4000).
 - `analytics_events`: Partitioned tables holding GDPR-friendly `ip_hash` visits and page flows (12-month rolling window).
-- `email_outbox` / `email_logs`: Reliable delivery tracking mechanism.
-- `direct_messages` + `message_read_receipts`: 1-on-1 real-time chat between tenant members.
+- `email_outbox` / `email_logs`: Reliable delivery tracking. `email_logs` stores both `recipient_email` (plain, for dashboard) and `recipient_hash` (SHA-256, GDPR). `imap_accounts` stores per-tenant IMAP credentials with `imap_tls_mode` (`ssl` or `starttls`).
+- `direct_messages` + `message_read_receipts`: 1-on-1 push-based chat. Integrates strictly with the Redis SSE router for instant frontend delivery.
 - `feedback`: Internal ticket system with Telegram alerting on new submissions.

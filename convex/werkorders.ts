@@ -139,7 +139,8 @@ export const maakWerkorderAan = mutation({
             afspraakDatum: args.afspraakDatum,
             monteursId: args.monteursId,
             werkplekId: undefined,
-            status: "Wachtend",
+            // Nieuwe werkorders starten als Gepland — ze zijn ingepland maar nog niet aanwezig
+            status: "Gepland",
             tokenIdentifier: profiel.tokenIdentifier,
             aangemaaktOp: Date.now(),
         });
@@ -305,6 +306,7 @@ export const sluitWerkorderAf = mutation({
             v.literal("Overig"),
         ),
         slotNotitie: v.optional(v.string()),
+        totaalKosten: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const profiel = await requireDomainRole(ctx, "balie");
@@ -314,8 +316,11 @@ export const sluitWerkorderAf = mutation({
             throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
         }
 
-        // Status afsluiten
-        await ctx.db.patch(args.werkorderId, { status: "Klaar" });
+        // Status naar Afgerond — Klaar was 'klaar voor ophalen', Afgerond is definitief gesloten
+        await ctx.db.patch(args.werkorderId, {
+            status: "Afgerond",
+            totaalKosten: args.totaalKosten,
+        });
 
         // Kopieer naar onderhoudshistorie voor langetermijn-voertuighistoriek
         await ctx.db.insert("onderhoudshistorie", {
@@ -344,7 +349,7 @@ export const sluitWerkorderAf = mutation({
         await ctx.db.insert("werkorderLogs", {
             werkorderId: args.werkorderId,
             monteursId: profiel._id,
-            actie: "Werkorder afgesloten — Klaar voor ophalen",
+            actie: `Werkorder afgesloten — Afgerond${args.totaalKosten ? ` (€ ${args.totaalKosten.toFixed(2)})` : ""}`,
             notitie: args.slotNotitie,
             tijdstip: Date.now(),
             tokenIdentifier: profiel.tokenIdentifier,

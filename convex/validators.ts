@@ -93,12 +93,25 @@ export const vWerkplekType = v.union(
 /**
  * Lifecycle-status van een werkorder (het 'kaartje' op het bord).
  *
- * Transitie:
- *   Wachtend → Bezig → (Wacht op onderdelen →) Klaar
+ * Volledig transitie-pad:
+ *   Gepland → Aanwezig → Wachtend → Bezig → (Wacht op onderdelen →) Klaar → Afgerond
+ *                                                                           └→ Geannuleerd
+ *
+ * Backward-compatibel: bestaande waarden zijn NIET hernoemd.
+ * Nieuwe waarden zijn toegevoegd aan voor- en achterkant.
  */
 export const vWerkorderStatus = v.union(
-    v.literal("Wachtend"),             // Auto staat buiten, wacht op brug
-    v.literal("Bezig"),               // Monteur is actief aan het werk
-    v.literal("Wacht op onderdelen"), // Klus gepauzeerd, onderdeel besteld
-    v.literal("Klaar"),               // Klaar voor ophalen door klant
+    // ── Vóór binnenkomst ───────────────────────────────────────────────────
+    v.literal("Gepland"),             // Afspraak gemaakt, auto verwacht
+    v.literal("Aanwezig"),            // Auto is op het terrein, wacht op verwerking
+
+    // ── In behandeling ─────────────────────────────────────────────────────
+    v.literal("Wachtend"),            // Auto staat buiten, wacht op brug
+    v.literal("Bezig"),              // Monteur is actief aan het werk
+    v.literal("Wacht op onderdelen"),// Klus gepauzeerd, onderdeel besteld
+
+    // ── Afgerond ──────────────────────────────────────────────────────────
+    v.literal("Klaar"),              // Klaar voor ophalen door klant
+    v.literal("Afgerond"),           // Klant heeft auto opgehaald / betaald
+    v.literal("Geannuleerd"),        // Afspraak geannuleerd door klant of garage
 );

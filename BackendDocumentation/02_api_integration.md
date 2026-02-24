@@ -132,6 +132,7 @@ If exceeded, the API responds with `429 Too Many Requests`.
 | `/email/message/{id}/read` | PATCH | Mark email as read |
 | `/email/message/{id}/star` | PATCH | Toggle star on email |
 | `/email/message/{id}/reply` | POST | Reply to an inbound email |
+| `/email/message/{id}/reply-with-attachment` | POST | Reply with file attachment |
 | `/email/message/{id}/archive` | POST | Archive email |
 | `/email/send` | POST | Send ad-hoc outbound email |
 | `/email/stats` | GET | Email delivery stats (alias) |
@@ -157,6 +158,7 @@ If exceeded, the API responds with `429 Too Many Requests`.
 | `/messages` | POST | Send 1-on-1 direct message |
 | `/messages/conversations` | GET | List active chat threads |
 | `/messages/unread` | GET | Total unread badge count |
+| `/messages/stream` | GET | Subscribe to SSE (Server-Sent Events) for real-time incoming messages |
 | `/messages/{userID}` | GET | Conversation history with specific user |
 | `/messages/{userID}/read` | PATCH | Mark conversation as read |
 
@@ -171,6 +173,11 @@ If exceeded, the API responds with `429 Too Many Requests`.
 | `/analytics/bounce-rate` | GET | Bounce rate metric |
 | `/analytics/session-duration` | GET | Average session duration |
 | `/analytics/live` | GET | Real-time active visitors (Redis-backed) |
+
+**RDW Open Data Proxy (Editor+):**
+| Endpoint | Method | Description |
+|:---------|:-------|:------------|
+| `/rdw/voertuig/{kenteken}` | GET | Secure, authenticated proxy to the RDW Open Data API (Voertuigen & Brandstof datasets) for automatic license plate lookups. |
 
 **CMS — Blog Engine (Editor+):**
 | Endpoint | Method | Description |
@@ -205,8 +212,11 @@ If exceeded, the API responds with `429 Too Many Requests`.
 | `/admin/tenants` | POST | Spin up new tenant boundaries |
 | `/admin/tenants` | DELETE | ⚠️ **Not implemented** — returns `405 Method Not Allowed` |
 | `/admin/mail-config` | GET | Read current SMTP config |
-| `/admin/mail-config` | POST | Write / update AES-GCM encrypted SMTP credentials |
+| `/admin/mail-config` | POST | Write / update AES-GCM encrypted SMTP credentials. `from` field is validated against RFC 5322 via `mail.ParseAddress`. Key version stored dynamically via `crypto.CurrentKeyVersion()`. |
 | `/admin/mail-config` | DELETE | Remove custom SMTP config (fallback to system SMTP) |
+| `/admin/imap-config` | GET | List configured IMAP accounts (passwords excluded) |
+| `/admin/imap-config` | POST | Create or update IMAP account. Body: `{account_type, host, port, user, password, tls_mode}`. Same SSRF validation as SMTP. `tls_mode`: `ssl` or `starttls`. |
+| `/admin/imap-config` | DELETE | Deactivate IMAP account. Query param: `?account_type=info` |
 | `/admin/cors-origins` | PUT | Add/update allowed frontend domains |
 
 **Telegram Alerting:**

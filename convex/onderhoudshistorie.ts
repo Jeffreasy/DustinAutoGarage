@@ -15,7 +15,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { vTypeWerk } from "./validators";
-import { requireAuth } from "./helpers";
+import { requireAuth, requireDomainRole } from "./helpers";
 
 
 // ---------------------------------------------------------------------------
@@ -65,6 +65,53 @@ export const getRecenteOnderhoudsbeurten = query({
             .take(limiet);
     },
 });
+
+/**
+ * getRecenteBeurtenVerrijkt — Recente beurten met voertuig-context (kenteken, merk, model).
+ *
+ * Verrijkt elke beurt met een JOIN op de voertuigen tabel.
+ * Handig voor de eigenaar/balie activiteitsfeed: direct zichtbaar om welk voertuig het gaat.
+ */
+export const getRecenteBeurtenVerrijkt = query({
+    args: { limiet: v.optional(v.number()) },
+    handler: async (ctx, args) => {
+        const tokenIdentifier = await requireAuth(ctx);
+        const limiet = args.limiet ?? 20;
+
+        const beurten = await ctx.db
+            .query("onderhoudshistorie")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier)
+            )
+            .order("desc")
+            .take(limiet);
+
+        // JOIN: voertuig-data ophalen per beurt
+        const verrijkt = await Promise.all(
+            beurten.map(async (beurt) => {
+                const voertuig = await ctx.db.get(beurt.voertuigId);
+                return {
+                    ...beurt,
+                    voertuig: voertuig
+                        ? {
+                            _id: voertuig._id,
+                            kenteken: voertuig.kenteken,
+                            merk: voertuig.merk,
+                            model: voertuig.model,
+                            bouwjaar: voertuig.bouwjaar,
+                            brandstof: voertuig.brandstof,
+                            kilometerstand: voertuig.kilometerstand,
+                            apkVervaldatum: voertuig.apkVervaldatum,
+                        }
+                        : null,
+                };
+            })
+        );
+
+        return verrijkt;
+    },
+});
+
 
 // ---------------------------------------------------------------------------
 // Mutaties
@@ -141,6 +188,9 @@ export const updateDocumentUrl = mutation({
 export const verwijder = mutation({
     args: { historieId: v.id("onderhoudshistorie") },
     handler: async (ctx, args): Promise<void> => {
+        // Alleen eigenaar mag verwijderen — balie/monteur/stagiair hebben geen delete-rechten
+        await requireDomainRole(ctx, "eigenaar");
+
         const tokenIdentifier = await requireAuth(ctx);
 
         const entry = await ctx.db.get(args.historieId);

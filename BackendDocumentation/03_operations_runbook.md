@@ -1,4 +1,4 @@
-![alt text](image.png)# 03. Operations & Deployment Runbook
+# 03. Operations & Deployment Runbook
 
 ## The Unified Worker
 To simplify orchestration, avoid multiple failing cron-jobs, and manage concurrency efficiently, LaventeCare Auth runs all background processes via a single compiled Go binary: `cmd/worker`.
@@ -11,7 +11,7 @@ To simplify orchestration, avoid multiple failing cron-jobs, and manage concurre
 5.  **Analytics Maintenance**: Month-to-month auto-provisioner. Evaluates `analytics_events` timestamps and provisions new inherited partitions for PostgreSQL ahead of time. Detaches records older than 12 months.
 6.  **Blog Scheduler** (`internal/workers/blog`): Polls every 5 minutes. Automatically promotes blog posts with `status = 'scheduled'` to `'published'` when their `scheduled_for` timestamp is reached. Operates via a low-level RLS-bypass transaction to act across all tenants simultaneously.
 
-*(Note: If a process panics, an isolated panic-handler traps the crash, sends error details to Sentry, but keeps the remaining sub-routines running flawlessly).*
+*(Note: If a process panics, an isolated `safeStart` panic handler traps the crash, extracts execution context via Sentry's SDK `BeforeSend` hooks, reports the stack trace, and keeps the remaining sub-routines running flawlessly).*
 
 ---
 
@@ -23,15 +23,18 @@ We use Render as our primary cloud provider due to native PostgreSQL extensions 
     - Create a Redis instance.
     - Create a Web Service for the API (`docker-compose` build logic is mostly ignored; Render targets the Repo's root `Dockerfile` natively, or set up via standard Build Command `go build -o api ./cmd/api`).
     - Create a Background Worker service tracking `go build -o worker ./cmd/worker`.
+    - Render main: https://laventecareauthsystems.onrender.com
+    - service id render: srv-d60ud1ali9vc73fj7ihg
 
 2.  **Crucial Environment Variables**
     | Variable | Purpose |
     | :--- | :--- |
     | `DATABASE_URL` | PostgreSQL DSN |
-    | `REDIS_URL` | Instant Revocation + Online Presence Tracking |
+    | `REDIS_URL` | Redis Cloud / Internal cluster — powers Instant Revocation, **Pub/Sub SSE Chat**, and Online Presence Tracking |
     | `JWT_SECRET` | 32+ character RSA Generator Key string |
-    | `SENTRY_DSN` | Exception tracking (Sentry.io) |
+    | `SENTRY_DSN` | Enterprise Exception logging (Sentry.io) with deep `BeforeSend` Http.Request context tracking |
     | `TENANT_SECRET_KEY` | 64 Hex chars (32-bytes). Master AES-GCM encryption key for Tenant SMTP/API credentials |
+    | `TENANT_SECRET_KEY_V2` | (Optional) New key during rotation. `crypto.CurrentKeyVersion()` auto-detects V3 → V2 → default 1 |
     | `APP_ENV` | `production`, `staging`, `development` |
     | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | System fallback SMTP credentials for platform-level emails |
     | `IMAP_HOST` / `IMAP_PORT` / `IMAP_USER` / `IMAP_PASS` | System-level IMAP credentials for inbox polling |
@@ -53,16 +56,32 @@ LaventeCare provides complete white-labeling capability. Instead of using a sing
 - **AES-GCM Encryption**: An encryption key (`TENANT_SECRET_KEY`) is generated upon infra provisioning. It must be kept physically safe and NEVER committed.
 - **Fail-open Logic**: If a tenant has not configured their SMTP settings, the worker defaults back to the System Default injected via `.env` arrays.
 - **SSRF Protection**: Before SMTP handshake, the worker evaluates target infrastructure IPs and drops connections to local, loopback, or internal-origin ranges.
+- **SMTP Config Caching**: Tenant SMTP config is cached in-memory with a **5-minute TTL** per tenant (via `sync.Map` in `workers/email`). Config changes take effect within 5 minutes. Eliminates 60+ redundant DB queries/min per active tenant.
+- **`from` Validation**: The `POST /admin/mail-config` endpoint validates the `from` field against RFC 5322 via `mail.ParseAddress()`. Invalid addresses are rejected with HTTP 400.
+- **`email_logs` audit trail**: Since migration `20260224000001`, `recipient_email` is stored alongside the SHA-256 `recipient_hash` for dashboard visibility. The NOT NULL constraint is relaxed (DEFAULT `''`) for backwards compatibility.
+- **IMAP TLS Mode**: `imap_accounts.imap_tls_mode` column (added migration `20260224000001`) allows per-account configuration of `ssl` or `starttls`. Previously hardcoded to `"ssl"`.
+- **IMAP Management**: Tenants configure IMAP credentials via `POST /admin/imap-config` (no direct SQL required).
 
 ### Disaster Recovery: Key Rotation (Zero Downtime)
 If the `TENANT_SECRET_KEY` is compromised, deploy a zero-downtime rotation.
 
-1. Export the new key as `TENANT_SECRET_KEY_V2`.
-2. The Go-crypto implementation attempts decrypt on V1, falls back to decrypt on V2.
-3. Write a small script querying all records in `tenants.mail_config`, read them using the old key, encrypt using the new key, and commit the DB transaction saving `mail_config_key_version: 2`.
-4. Drop V1 out of Render Env, rotate V2 to V1 position.
+1. Generate a new key: `go run ./tools/generate_key/`.
+2. Export the new key as `TENANT_SECRET_KEY_V2` in Render.
+3. `crypto.CurrentKeyVersion()` (called by `UpdateMailConfig`) will automatically tag new configs as version 2.
+4. Write a script: query all `tenants.mail_config` where `mail_config_key_version = 1`, re-encrypt using V2, commit.
+5. Drop V1 (`TENANT_SECRET_KEY`) from Render Env once all rows are at version 2.
 
 > **Tooling**: Use `tools/encrypt_mail_config` for manual re-encryption during key rotation. Use `tools/generate_key` to generate a cryptographically secure new key.
+
+### Janitor Cleanup & FORCE_RLS
+The Janitor worker runs hourly and handles data retention. **Important**: `email_outbox`, `email_logs`, and `email_inbox` all have `FORCE ROW LEVEL SECURITY`. The Janitor uses `storage.WithoutRLS()` to bypass RLS inside a single transaction. Without this, all DELETEs silently match 0 rows.
+
+| Table | Retention Policy |
+| :--- | :--- |
+| `email_logs` | 180 days |
+| `email_outbox` (sent/failed) | 30 days |
+| `email_inbox` (archived) | 90 days |
+| `refresh_tokens`, `verification_tokens`, `invitations` | Expired immediately |
 
 ---
 

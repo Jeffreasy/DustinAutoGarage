@@ -3,20 +3,19 @@
  *
  * React Island — Medewerkers Beheer (Split-Role strategie)
  *
+ * Design: volledig design-system conform (design-tokens.css + components.css)
+ *   - Gebruikt: .card, .card-header, .card-title, .input, .select, .label,
+ *               .btn, .btn-primary, .btn-ghost, .btn-danger, .btn-full,
+ *               .badge, .alert, .section-title, .form-group
+ *   - Responsive: single-column mobiel, twee-kolom desktop (≥640px) via CSS grid
+ *   - Form classes: .input, .select, .label (NIET form-input/form-select/form-label)
+ *
  * Features:
  *   - Real-time lijst van alle medewerkers (Convex useQuery)
- *   - Cold-start: eigenaar-bootstrap via ensureEigenaar
+ *   - Cold-start: eigenaar-bootstrap of medewerker-koppeling
  *   - Uitnodiging formulier → POST /api/invite → LaventeCare /users/invite
- *   - Admin-only: admin uitnodigen + eigenaar domeinrol toewijzen
  *   - Domeinrol wijzigen (eigenaar only in Convex)
  *   - Medewerker deactiveren / reaktiveren (eigenaar only)
- *
- * Props:
- *   identityRole — LaventeCare identity-rol van de ingelogde gebruiker.
- *                  Doorgegeven vanuit medewerkers.astro (server-side).
- *                  Bepaalt welke invite-opties zichtbaar zijn.
- *
- * Dient gerenderd te worden binnen een LaventeConvexProvider context.
  */
 
 import { useState } from "react";
@@ -48,31 +47,34 @@ const ROL_LABELS: Record<DomeinRol, string> = {
     stagiair: "Stagiair",
 };
 
-const ROL_BADGE_COLORS: Record<DomeinRol, string> = {
-    eigenaar: "#0d7a5f",   // teal-700
-    balie: "#1a6fa3",      // sky-700
-    monteur: "#5c5c8a",    // slate-600
-    stagiair: "#7a5c1a",   // amber-700
+/** CSS-kleur per domeinrol — op basis van design system primitieven */
+const ROL_BADGE_BG: Record<DomeinRol, string> = {
+    eigenaar: "var(--color-accent-dim)",
+    balie: "rgba(96,165,250,0.12)",
+    monteur: "rgba(148,163,184,0.10)",
+    stagiair: "rgba(250,204,21,0.10)",
+};
+
+const ROL_BADGE_COLOR: Record<DomeinRol, string> = {
+    eigenaar: "var(--color-accent-text)",
+    balie: "var(--primitive-blue-400, #60a5fa)",
+    monteur: "var(--color-body)",
+    stagiair: "var(--color-warning)",
 };
 
 // ---------------------------------------------------------------------------
 // Sub-componenten
 // ---------------------------------------------------------------------------
 
-/** Pill-badge voor domeinrol weergave */
+/** Pill-badge voor domeinrol weergave — design system conform */
 function RolBadge({ rol }: { rol: DomeinRol }) {
     return (
         <span
+            className="badge"
             style={{
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "2px 10px",
-                borderRadius: "var(--radius-full, 9999px)",
-                fontSize: "var(--text-xs, 0.75rem)",
-                fontWeight: "600",
-                color: "#fff",
-                background: ROL_BADGE_COLORS[rol] ?? "var(--color-muted)",
-                letterSpacing: "0.02em",
+                background: ROL_BADGE_BG[rol] ?? "var(--color-surface-3)",
+                color: ROL_BADGE_COLOR[rol] ?? "var(--color-body)",
+                border: "1px solid var(--color-border)",
             }}
         >
             {ROL_LABELS[rol] ?? rol}
@@ -80,28 +82,95 @@ function RolBadge({ rol }: { rol: DomeinRol }) {
     );
 }
 
+/** Sectie-header met titel en optionele badge */
+function SectieTitel({ children, badge }: { children: React.ReactNode; badge?: React.ReactNode }) {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
+            <h2 className="section-title" style={{ margin: 0 }}>{children}</h2>
+            {badge}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Spinner
+// ---------------------------------------------------------------------------
+
+function Spinner() {
+    return (
+        <div
+            role="status"
+            aria-live="polite"
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "var(--space-3)",
+                padding: "var(--space-16) var(--space-4)",
+                color: "var(--color-muted)",
+                fontSize: "var(--text-sm)",
+            }}
+        >
+            <span
+                aria-hidden="true"
+                style={{
+                    width: "var(--spinner-size)",
+                    height: "var(--spinner-size)",
+                    border: "2px solid currentColor",
+                    borderTopColor: "transparent",
+                    borderRadius: "50%",
+                    display: "inline-block",
+                    animation: "spin 0.8s linear infinite",
+                }}
+            />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            Profielen ophalen…
+        </div>
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Cold-Start Banner
 // ---------------------------------------------------------------------------
 
+/**
+ * ColdStartBanner — toont wanneer de ingelogde gebruiker nog geen Convex-profiel heeft.
+ *
+ * Twee scenario's:
+ *   1. Eerste login ooit (leeg systeem) → eigenaar bootstrappen
+ *   2. Uitgenodigde medewerker (systeem bestaat al) → registreer als monteur (veilige default)
+ */
 function ColdStartBanner({ naam }: { naam: string }) {
     const { isAuthenticated } = useConvexAuth();
     const ensureEigenaar = useMutation(api.medewerkers.ensureEigenaar);
+    const registreer = useMutation(api.medewerkers.registreerMedewerker);
     const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
     const [bericht, setBericht] = useState("");
 
-    async function handleBootstrap() {
+    async function handleBootstrapEigenaar() {
         if (!isAuthenticated) return;
         setStatus("loading");
         try {
             const result = await ensureEigenaar({ naam });
-            if (result.created) {
-                setStatus("ok");
-                setBericht("Eigenaar-profiel aangemaakt! De pagina ververst automatisch.");
-            } else {
-                setStatus("ok");
-                setBericht(result.reden ?? "Record bestond al.");
-            }
+            setStatus("ok");
+            setBericht(
+                result.created
+                    ? "Eigenaar-profiel aangemaakt! De pagina ververst automatisch."
+                    : result.reden ?? "Record bestond al."
+            );
+        } catch (err) {
+            setStatus("error");
+            setBericht(err instanceof Error ? err.message : "Onbekende fout");
+        }
+    }
+
+    async function handleRegistreerAlsMedewerker() {
+        if (!isAuthenticated) return;
+        setStatus("loading");
+        try {
+            await registreer({ naam, domeinRol: "monteur" });
+            setStatus("ok");
+            setBericht("Profiel aangemaakt! De eigenaar kan je garage-functie nu aanpassen.");
         } catch (err) {
             setStatus("error");
             setBericht(err instanceof Error ? err.message : "Onbekende fout");
@@ -117,49 +186,73 @@ function ColdStartBanner({ naam }: { naam: string }) {
     }
 
     return (
-        <div
-            style={{
-                padding: "var(--space-6)",
-                borderRadius: "var(--radius-lg)",
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                textAlign: "center",
-                maxWidth: "480px",
-                margin: "0 auto",
-            }}
-        >
-            <h2 style={{ fontSize: "var(--text-xl)", marginBottom: "var(--space-2)" }}>
-                👋 Welkom bij de garage!
-            </h2>
-            <p style={{ color: "var(--color-muted)", marginBottom: "var(--space-5)" }}>
-                Er zijn nog geen medewerkers gekoppeld. Klik hieronder om jezelf
-                als <strong>eigenaar</strong> te registreren en het systeem te starten.
-            </p>
+        <div style={{ maxWidth: "540px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+            {/* Header */}
+            <div style={{ textAlign: "center", padding: "var(--space-4) 0 var(--space-2)" }}>
+                <div style={{ fontSize: "2.5rem", lineHeight: 1, marginBottom: "var(--space-3)" }}>👋</div>
+                <h2 style={{ fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", margin: "0 0 var(--space-2)" }}>
+                    Welkom bij de garage!
+                </h2>
+                <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)", margin: 0 }}>
+                    Je account is nog niet gekoppeld. Kies hoe je wilt beginnen.
+                </p>
+            </div>
 
+            {/* Foutmelding */}
             {status === "error" && (
-                <p style={{ color: "var(--color-error)", marginBottom: "var(--space-3)" }}>
-                    ❌ {bericht}
-                </p>
+                <div className="alert alert-error" role="alert">❌ {bericht}</div>
             )}
 
+            {/* Verbindingsstatus */}
             {!isAuthenticated && (
-                <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>
-                    ⏳ Sessie verbinden met Convex…
-                </p>
+                <div className="alert alert-info">⏳ Verbinding maken met Convex…</div>
             )}
 
-            <button
-                className="btn btn-primary"
-                onClick={handleBootstrap}
-                disabled={status === "loading" || !isAuthenticated}
-                id="bootstrap-eigenaar-btn"
-            >
-                {!isAuthenticated
-                    ? "Verbinding maken…"
-                    : status === "loading"
-                        ? "Bezig…"
-                        : "Registreer als eigenaar"}
-            </button>
+            {/* Optie 1: eerste eigenaar */}
+            <div className="card" style={{ borderColor: "var(--color-border-luminous)", background: "var(--color-accent-subtle)" }}>
+                <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+                    <span style={{ fontSize: "var(--text-xl)", lineHeight: 1, flexShrink: 0 }}>🏪</span>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)", margin: "0 0 var(--space-1)" }}>
+                            Ik ben de garage-eigenaar
+                        </p>
+                        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-xs)", margin: "0 0 var(--space-4)" }}>
+                            Start het systeem en registreer jezelf als eerste eigenaar van de garage.
+                        </p>
+                        <button
+                            className="btn btn-primary btn-full"
+                            onClick={handleBootstrapEigenaar}
+                            disabled={status === "loading" || !isAuthenticated}
+                            id="bootstrap-eigenaar-btn"
+                        >
+                            {status === "loading" ? "Bezig…" : "Registreer als eigenaar"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Optie 2: uitgenodigde medewerker */}
+            <div className="card">
+                <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+                    <span style={{ fontSize: "var(--text-xl)", lineHeight: 1, flexShrink: 0 }}>👷</span>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)", margin: "0 0 var(--space-1)" }}>
+                            Ik ben uitgenodigd als medewerker
+                        </p>
+                        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-xs)", margin: "0 0 var(--space-4)" }}>
+                            Koppel je account aan de garage. De eigenaar wijst daarna je definitieve functie toe.
+                        </p>
+                        <button
+                            className="btn btn-ghost btn-full"
+                            onClick={handleRegistreerAlsMedewerker}
+                            disabled={status === "loading" || !isAuthenticated}
+                            id="registreer-medewerker-btn"
+                        >
+                            {status === "loading" ? "Bezig…" : "Koppel mijn account"}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
@@ -168,15 +261,25 @@ function ColdStartBanner({ naam }: { naam: string }) {
 // Invite formulier
 // ---------------------------------------------------------------------------
 
-function InviteFormulier({ identityRole }: { identityRole: IdentityRole }) {
+function InviteFormulier({
+    identityRole,
+    isEigenaarDomein,
+}: {
+    identityRole: IdentityRole;
+    isEigenaarDomein: boolean;
+}) {
     const isAdmin = identityRole === "admin";
     const [email, setEmail] = useState("");
-    const [identityRol, setIdentityRol] = useState<"user" | "editor" | "admin">("user");
+    const [identityRol, setIdentityRol] = useState<"user" | "editor" | "admin">("editor");
     const [domeinRolKeuze, setDomeinRolKeuze] = useState<DomeinRol>("monteur");
     const [naam, setNaam] = useState("");
     const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
     const [result, setResult] = useState<InviteResult | null>(null);
     const [fout, setFout] = useState("");
+
+    // Geen pre-flight Convex record: inviteData.token is een LaventeCare invite-token
+    // en heeft een ander formaat dan een Convex tokenIdentifier (issuer|sub).
+    // De medewerker koppelt zichzelf via de cold-start banner na eerste login.
 
     async function handleInvite(e: React.FormEvent) {
         e.preventDefault();
@@ -185,7 +288,6 @@ function InviteFormulier({ identityRole }: { identityRole: IdentityRole }) {
         setResult(null);
 
         try {
-            // Stap 1: LaventeCare uitnodiging aanmaken (identity)
             const response = await fetch("/api/invite", {
                 method: "POST",
                 headers: {
@@ -207,8 +309,6 @@ function InviteFormulier({ identityRole }: { identityRole: IdentityRole }) {
             const inviteData: InviteResult = await response.json();
             setResult(inviteData);
             setStatus("ok");
-
-            // Reset formulier
             setEmail("");
             setNaam("");
         } catch (err) {
@@ -218,147 +318,134 @@ function InviteFormulier({ identityRole }: { identityRole: IdentityRole }) {
     }
 
     return (
-        <div
-            style={{
-                padding: "var(--space-5)",
-                borderRadius: "var(--radius-lg)",
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-            }}
-        >
-            <h3 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-4)", fontWeight: 600 }}>
-                Nieuwe medewerker uitnodigen
-            </h3>
+        <form onSubmit={handleInvite} style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
 
-            <form onSubmit={handleInvite} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-                <div>
-                    <label htmlFor="invite-naam" className="form-label">Naam</label>
-                    <input
-                        id="invite-naam"
-                        type="text"
-                        className="form-input"
-                        value={naam}
-                        onChange={(e) => setNaam(e.target.value)}
-                        placeholder="Bijv. Jan de Vries"
-                        required
-                        aria-label="Naam van de nieuwe medewerker"
-                    />
-                </div>
+            {/* Naam + E-mail */}
+            <div className="form-group">
+                <label htmlFor="invite-naam" className="label">Naam</label>
+                <input
+                    id="invite-naam"
+                    type="text"
+                    className="input"
+                    value={naam}
+                    onChange={(e) => setNaam(e.target.value)}
+                    placeholder="Bijv. Jan de Vries"
+                    required
+                />
+            </div>
 
-                <div>
-                    <label htmlFor="invite-email" className="form-label">E-mailadres</label>
-                    <input
-                        id="invite-email"
-                        type="email"
-                        className="form-input"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="jan@example.com"
-                        required
-                        aria-label="E-mailadres van de nieuwe medewerker"
-                    />
-                </div>
+            <div className="form-group">
+                <label htmlFor="invite-email" className="label">E-mailadres</label>
+                <input
+                    id="invite-email"
+                    type="email"
+                    className="input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="jan@example.com"
+                    required
+                />
+            </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                    <div>
-                        <label htmlFor="invite-identity-rol" className="form-label">
+            {/* Twee selects — stapelt op mobiel, naast elkaar op ≥640px */}
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: "var(--space-4)",
+            }}>
+                <style>{`
+                    @media (min-width: 640px) {
+                        .invite-selects-grid { grid-template-columns: 1fr 1fr !important; }
+                    }
+                `}</style>
+                <div className="invite-selects-grid" style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr",
+                    gap: "var(--space-4)",
+                }}>
+                    <div className="form-group">
+                        <label htmlFor="invite-identity-rol" className="label">
                             Platform-toegang (LaventeCare)
                         </label>
                         <select
                             id="invite-identity-rol"
-                            className="form-select"
+                            className="select"
                             value={identityRol}
                             onChange={(e) => setIdentityRol(e.target.value as "user" | "editor" | "admin")}
-                            aria-label="LaventeCare identity rol"
                         >
-                            <option value="user">Gebruiker (monteur / stagiair)</option>
-                            <option value="editor">Editor (balie / werkplaatschef)</option>
-                            {isAdmin && (
-                                <option value="admin">Admin (mede-systeembeheerder)</option>
+                            <option value="user">Gebruiker — monteur / stagiair</option>
+                            <option value="editor">Editor — balie / werkplaatschef</option>
+                            {(isAdmin || isEigenaarDomein) && (
+                                <option value="admin">Admin — mede-systeembeheerder</option>
                             )}
                         </select>
-                        <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "4px" }}>
-                            Bepaalt wie LaventeCare mag beheren
-                            {isAdmin && " — als admin kun jij ook nieuwe admins uitnodigen"}
-                        </p>
+                        <p className="field-hint">Bepaalt toegang tot LaventeCare-beheer</p>
                     </div>
 
-                    <div>
-                        <label htmlFor="invite-domein-rol" className="form-label">
-                            Garage-functie (Convex)
+                    <div className="form-group">
+                        <label htmlFor="invite-domein-rol" className="label">
+                            Garage-functie
                         </label>
                         <select
                             id="invite-domein-rol"
-                            className="form-select"
+                            className="select"
                             value={domeinRolKeuze}
                             onChange={(e) => setDomeinRolKeuze(e.target.value as DomeinRol)}
-                            aria-label="Garage domein rol"
                         >
-                            {isAdmin && (
-                                <option value="eigenaar">Eigenaar (volledig beheer)</option>
+                            {(isAdmin || isEigenaarDomein) && (
+                                <option value="eigenaar">Eigenaar — volledig beheer</option>
                             )}
                             <option value="balie">Balie / Receptie</option>
                             <option value="monteur">Monteur</option>
                             <option value="stagiair">Stagiair</option>
                         </select>
-                        <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "4px" }}>
-                            Bepaalt wat ze mogen zien in de app
-                            {isAdmin && " — als admin kun jij ook een nieuwe eigenaar aanwijzen"}
+                        <p className="field-hint">Bepaalt wat ze zien in de app</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Fout */}
+            {fout && (
+                <div className="alert alert-error" role="alert">❌ {fout}</div>
+            )}
+
+            {/* Succes */}
+            {result && (
+                <div className="alert alert-success" role="status">
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: "var(--weight-semibold)", margin: "0 0 var(--space-2)" }}>✅ Uitnodiging aangemaakt!</p>
+                        <p style={{ fontSize: "var(--text-xs)", margin: "0 0 var(--space-2)", color: "inherit", opacity: 0.8 }}>
+                            Deel deze link met de medewerker:
+                        </p>
+                        <code style={{
+                            display: "block",
+                            padding: "var(--space-2) var(--space-3)",
+                            background: "rgba(0,0,0,0.2)",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "var(--text-xs)",
+                            wordBreak: "break-all",
+                            fontFamily: "var(--font-mono)",
+                        }}>
+                            {import.meta.env.PUBLIC_API_URL}{result.link}
+                        </code>
+                        <p style={{ fontSize: "var(--text-xs)", margin: "var(--space-2) 0 0", opacity: 0.8 }}>
+                            Medewerker koppelt zich zelf na eerste login. Jij wijst daarna de functie{" "}
+                            <strong>{ROL_LABELS[domeinRolKeuze]}</strong> toe.
                         </p>
                     </div>
                 </div>
+            )}
 
-                {fout && (
-                    <p role="alert" style={{ color: "var(--color-error)", fontSize: "var(--text-sm)" }}>
-                        ❌ {fout}
-                    </p>
-                )}
-
-                {result && (
-                    <div
-                        role="status"
-                        style={{
-                            padding: "var(--space-3) var(--space-4)",
-                            borderRadius: "var(--radius-md)",
-                            background: "var(--color-success-bg, #f0faf4)",
-                            border: "1px solid var(--color-success-border, #a3e6cc)",
-                            color: "var(--color-success, #0d7a5f)",
-                        }}
-                    >
-                        <strong>✅ Uitnodiging aangemaakt!</strong>
-                        <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-sm)" }}>
-                            Deel deze link met de medewerker:
-                        </p>
-                        <code
-                            style={{
-                                display: "block",
-                                marginTop: "var(--space-2)",
-                                padding: "var(--space-2)",
-                                background: "rgba(0,0,0,0.05)",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "var(--text-xs)",
-                                wordBreak: "break-all",
-                            }}
-                        >
-                            {import.meta.env.PUBLIC_API_URL}{result.link}
-                        </code>
-                        <p style={{ marginTop: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                            Na registratie moet de medewerker inloggen om automatisch gekoppeld te worden.
-                        </p>
-                    </div>
-                )}
-
-                <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={status === "loading"}
-                    id="invite-submit-btn"
-                    style={{ alignSelf: "flex-start" }}
-                >
-                    {status === "loading" ? "Bezig met uitnodigen…" : "Uitnodiging versturen"}
-                </button>
-            </form>
-        </div>
+            <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={status === "loading"}
+                id="invite-submit-btn"
+                style={{ alignSelf: "flex-start" }}
+            >
+                {status === "loading" ? "Bezig met uitnodigen…" : "Uitnodiging versturen"}
+            </button>
+        </form>
     );
 }
 
@@ -389,100 +476,82 @@ function MedewerkerRij({
     const isZichzelf = medewerker._id === actueelProfielId;
 
     async function handleRolWijziging(nieuweRol: DomeinRol) {
-        setBezig(true);
-        setFout("");
-        try {
-            await wijzig({ medewerkerId: medewerker._id, nieuweDomeinRol: nieuweRol });
-        } catch (err) {
-            setFout(err instanceof Error ? err.message : "Fout");
-        } finally {
-            setBezig(false);
-        }
+        setBezig(true); setFout("");
+        try { await wijzig({ medewerkerId: medewerker._id, nieuweDomeinRol: nieuweRol }); }
+        catch (err) { setFout(err instanceof Error ? err.message : "Fout"); }
+        finally { setBezig(false); }
     }
 
     async function handleDeactiveer() {
         if (!confirm(`Weet je zeker dat je ${medewerker.naam} wilt deactiveren?`)) return;
-        setBezig(true);
-        setFout("");
-        try {
-            await deactiveer({ medewerkerId: medewerker._id });
-        } catch (err) {
-            setFout(err instanceof Error ? err.message : "Fout");
-        } finally {
-            setBezig(false);
-        }
+        setBezig(true); setFout("");
+        try { await deactiveer({ medewerkerId: medewerker._id }); }
+        catch (err) { setFout(err instanceof Error ? err.message : "Fout"); }
+        finally { setBezig(false); }
     }
 
     async function handleAktiveer() {
-        setBezig(true);
-        setFout("");
-        try {
-            await aktiveer({ medewerkerId: medewerker._id });
-        } catch (err) {
-            setFout(err instanceof Error ? err.message : "Fout");
-        } finally {
-            setBezig(false);
-        }
+        setBezig(true); setFout("");
+        try { await aktiveer({ medewerkerId: medewerker._id }); }
+        catch (err) { setFout(err instanceof Error ? err.message : "Fout"); }
+        finally { setBezig(false); }
     }
 
     return (
         <div
+            className="card card-sm"
             style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "var(--space-3)",
-                padding: "var(--space-4)",
-                borderRadius: "var(--radius-md)",
-                background: medewerker.actief ? "var(--color-surface)" : "var(--color-surface-alt, rgba(0,0,0,0.03))",
-                border: "1px solid var(--color-border)",
                 opacity: medewerker.actief ? 1 : 0.6,
+                display: "flex",
+                gap: "var(--space-3)",
+                alignItems: "flex-start",
                 flexWrap: "wrap",
             }}
         >
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                <div
-                    aria-hidden="true"
-                    style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "var(--radius-full)",
-                        background: "var(--color-primary-muted, #e0f5ef)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 700,
-                        fontSize: "var(--text-sm)",
-                        color: "var(--color-primary)",
-                        flexShrink: 0,
-                    }}
-                >
-                    {medewerker.naam.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                    <div style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>
-                        {medewerker.naam}
-                        {isZichzelf && (
-                            <span style={{ marginLeft: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                                (jij)
-                            </span>
-                        )}
-                    </div>
-                    {!medewerker.actief && (
-                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>Gedeactiveerd</span>
-                    )}
-                </div>
+            {/* Avatar */}
+            <div
+                aria-hidden="true"
+                style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "var(--radius-full)",
+                    background: "var(--color-accent-dim)",
+                    border: "1px solid var(--color-border-luminous)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: "var(--weight-bold)",
+                    fontSize: "var(--text-sm)",
+                    color: "var(--color-accent-text)",
+                    flexShrink: 0,
+                }}
+            >
+                {medewerker.naam.charAt(0).toUpperCase()}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
-                <RolBadge rol={medewerker.domeinRol as DomeinRol} />
+            {/* Info + acties */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Naam + rol badge */}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-2)" }}>
+                    <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
+                        {medewerker.naam}
+                    </span>
+                    {isZichzelf && (
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>(jij)</span>
+                    )}
+                    <RolBadge rol={medewerker.domeinRol as DomeinRol} />
+                    {!medewerker.actief && (
+                        <span className="badge badge-warning">Gedeactiveerd</span>
+                    )}
+                </div>
 
+                {/* Eigenaar-acties: rol wijzigen + deactiveren */}
                 {isActerendEigenaar && !isZichzelf && (
-                    <>
+                    <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
                         <select
-                            aria-label={`Wijzig domeinrol van ${medewerker.naam}`}
-                            className="form-select"
-                            style={{ fontSize: "var(--text-xs)", padding: "4px 8px" }}
+                            aria-label={`Wijzig garage-functie van ${medewerker.naam}`}
+                            className="select"
+                            style={{ width: "auto", minWidth: "160px", fontSize: "var(--text-xs)", minHeight: "var(--control-height-sm)" }}
                             value={medewerker.domeinRol}
                             onChange={(e) => handleRolWijziging(e.target.value as DomeinRol)}
                             disabled={bezig}
@@ -494,11 +563,10 @@ function MedewerkerRij({
 
                         {medewerker.actief ? (
                             <button
-                                className="btn btn-ghost btn-sm"
+                                className="btn btn-danger btn-sm"
                                 onClick={handleDeactiveer}
                                 disabled={bezig}
                                 aria-label={`Deactiveer ${medewerker.naam}`}
-                                style={{ color: "var(--color-error)" }}
                             >
                                 Deactiveer
                             </button>
@@ -512,15 +580,16 @@ function MedewerkerRij({
                                 Heractiveer
                             </button>
                         )}
-                    </>
+                    </div>
+                )}
+
+                {/* Foutmelding */}
+                {fout && (
+                    <p role="alert" style={{ color: "var(--color-error)", fontSize: "var(--text-xs)", marginTop: "var(--space-2)" }}>
+                        ❌ {fout}
+                    </p>
                 )}
             </div>
-
-            {fout && (
-                <p role="alert" style={{ width: "100%", color: "var(--color-error)", fontSize: "var(--text-xs)" }}>
-                    ❌ {fout}
-                </p>
-            )}
         </div>
     );
 }
@@ -533,7 +602,6 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
     const isAdmin = identityRole === "admin";
     const { isEigenaar, domeinRol, isLoading, isNietGekoppeld } = useRol();
     const profiel = useQuery(api.medewerkers.getMijnProfiel);
-    // Skip list query while: (1) role loading, (2) not yet registered, (3) insufficient access
     const kanLijstZien = !isLoading && !isNietGekoppeld && (isEigenaar || domeinRol === "balie" || isAdmin);
     const alleMedewerkers = useQuery(
         api.medewerkers.listMedewerkers,
@@ -541,96 +609,73 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
     );
     const medewerkers = kanLijstZien ? alleMedewerkers : null;
 
-    if (isLoading) {
-        return (
-            <div
-                role="status"
-                aria-live="polite"
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: "200px",
-                    gap: "var(--space-3)",
-                    color: "var(--color-muted)",
-                }}
-            >
-                <span
-                    aria-hidden="true"
-                    style={{
-                        width: "20px",
-                        height: "20px",
-                        border: "2px solid currentColor",
-                        borderTopColor: "transparent",
-                        borderRadius: "50%",
-                        display: "inline-block",
-                        animation: "spin 0.8s linear infinite",
-                    }}
-                />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                Profielen ophalen…
-            </div>
-        );
-    }
+    if (isLoading) return <Spinner />;
 
-    // Cold-start: nog geen enkel medewerkers-record
+    // Cold-start: no medewerker record yet
     if (isNietGekoppeld) {
         const naam =
             typeof window !== "undefined"
                 ? (document.cookie
                     .split("; ")
                     .find((c) => c.startsWith("lc_name="))
-                    ?.split("=")?.[1] ?? "") ||
-                "Eigenaar"
-                : "Eigenaar";
+                    ?.split("=")?.[1] ?? "") || "Medewerker"
+                : "Medewerker";
 
         return <ColdStartBanner naam={decodeURIComponent(naam)} />;
     }
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-8)" }}>
 
-            {/* Jouw profiel */}
+            {/* ── Jouw profiel ──────────────────────────────────────────── */}
             {profiel && (
                 <section aria-labelledby="jouw-profiel-heading">
-                    <h2 id="jouw-profiel-heading" style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>
-                        Jouw profiel
-                    </h2>
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "var(--space-3)",
-                            padding: "var(--space-4)",
-                            borderRadius: "var(--radius-lg)",
-                            background: "var(--color-surface)",
-                            border: "1px solid var(--color-border)",
-                        }}
-                    >
-                        <div>
-                            <div style={{ fontWeight: 600 }}>{profiel.naam}</div>
-                            <div style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", marginTop: "2px" }}>
-                                Garage-functie:
-                            </div>
+                    <SectieTitel>Jouw profiel</SectieTitel>
+                    <div className="card" style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap" }}>
+                        <div
+                            aria-hidden="true"
+                            style={{
+                                width: "48px",
+                                height: "48px",
+                                borderRadius: "var(--radius-full)",
+                                background: "var(--color-accent-dim)",
+                                border: "1px solid var(--color-border-luminous)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: "var(--weight-bold)",
+                                fontSize: "var(--text-lg)",
+                                color: "var(--color-accent-text)",
+                                flexShrink: 0,
+                            }}
+                        >
+                            {profiel.naam.charAt(0).toUpperCase()}
                         </div>
-                        <RolBadge rol={profiel.domeinRol as DomeinRol} />
+                        <div style={{ flex: 1 }}>
+                            <p style={{ margin: "0 0 var(--space-1)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
+                                {profiel.naam}
+                            </p>
+                            <RolBadge rol={profiel.domeinRol as DomeinRol} />
+                        </div>
                     </div>
                 </section>
             )}
 
-            {/* Medewerkers lijst (balie+) */}
+            {/* ── Medewerkers lijst (balie+) ─────────────────────────── */}
             {(isEigenaar || domeinRol === "balie") && (
                 <section aria-labelledby="medewerkers-lijst-heading">
-                    <h2 id="medewerkers-lijst-heading" style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>
-                        Alle medewerkers
-                    </h2>
+                    <SectieTitel>Alle medewerkers</SectieTitel>
                     {medewerkers == null ? (
-                        <p style={{ color: "var(--color-muted)" }}>Laden…</p>
+                        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>Laden…</p>
                     ) : medewerkers.length === 0 ? (
-                        <p style={{ color: "var(--color-muted)" }}>Geen medewerkers gevonden.</p>
+                        <div className="empty-state" style={{ padding: "var(--space-10) var(--space-4)" }}>
+                            <span className="empty-state-icon">👥</span>
+                            <p className="empty-state-title">Geen medewerkers gevonden</p>
+                            <p className="empty-state-desc">Nodig medewerkers uit via het formulier hieronder.</p>
+                        </div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                            {medewerkers!.map((m: { _id: import("../../convex/_generated/dataModel").Id<"medewerkers">; naam: string; domeinRol: string; actief: boolean }) => (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                            {medewerkers.map((m: { _id: import("../../convex/_generated/dataModel").Id<"medewerkers">; naam: string; domeinRol: string; actief: boolean }) => (
                                 <MedewerkerRij
                                     key={m._id}
                                     medewerker={m}
@@ -643,48 +688,33 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
                 </section>
             )}
 
-            {/* Uitnodiging formulier (balie+) */}
+            {/* ── Uitnodiging formulier ─────────────────────────────── */}
             {(isEigenaar || domeinRol === "balie" || isAdmin) && (
                 <section aria-labelledby="invite-heading">
-                    <h2 id="invite-heading" style={{ fontSize: "var(--text-lg)", fontWeight: 600, marginBottom: "var(--space-3)" }}>
+                    <SectieTitel
+                        badge={
+                            (isAdmin || isEigenaar) ? (
+                                <span className="badge badge-accent">
+                                    {isAdmin ? "admin-modus" : "eigenaar-modus"}
+                                </span>
+                            ) : undefined
+                        }
+                    >
                         Medewerker uitnodigen
-                        {isAdmin && (
-                            <span
-                                style={{
-                                    marginLeft: "var(--space-2)",
-                                    fontSize: "var(--text-xs)",
-                                    fontWeight: 500,
-                                    color: "var(--color-primary)",
-                                    background: "var(--color-primary-muted, rgba(13,122,95,0.12))",
-                                    padding: "2px 8px",
-                                    borderRadius: "var(--radius-full)",
-                                    letterSpacing: "0.02em",
-                                }}
-                            >
-                                admin-modus
-                            </span>
-                        )}
-                    </h2>
-                    <InviteFormulier identityRole={identityRole} />
+                    </SectieTitel>
+                    <div className="card">
+                        <InviteFormulier identityRole={identityRole} isEigenaarDomein={isEigenaar} />
+                    </div>
                 </section>
             )}
 
-            {/* Monteur / stagiair: geen beheer-opties */}
+            {/* ── Monteur / stagiair: geen beheer-opties ────────────── */}
             {!isEigenaar && domeinRol !== "balie" && (
-                <div
-                    style={{
-                        padding: "var(--space-5)",
-                        borderRadius: "var(--radius-lg)",
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-border)",
-                        textAlign: "center",
-                        color: "var(--color-muted)",
-                    }}
-                >
-                    <p>
-                        Je bent ingelogd als <RolBadge rol={domeinRol!} />.
-                    </p>
-                    <p style={{ marginTop: "var(--space-2)", fontSize: "var(--text-sm)" }}>
+                <div className="empty-state" style={{ padding: "var(--space-12) var(--space-4)" }}>
+                    <span className="empty-state-icon">🔒</span>
+                    <p className="empty-state-title">Beperkt toegang</p>
+                    <p className="empty-state-desc">
+                        Je bent ingelogd als <strong>{ROL_LABELS[domeinRol!] ?? domeinRol}</strong>.
                         Alleen balie-medewerkers en de eigenaar kunnen medewerkers beheren.
                     </p>
                 </div>
