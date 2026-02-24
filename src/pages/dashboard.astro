@@ -7,7 +7,7 @@
  */
 
 import BaseLayout from "../layouts/BaseLayout.astro";
-import DashboardIsland from "../components/DashboardIsland";
+import DashboardIsland from "../components/dashboard/DashboardIsland";
 
 const user = Astro.locals.user ?? null;
 if (!user) return Astro.redirect("/login?reden=sessie_verlopen");

@@ -9,10 +9,10 @@
  *   monteur / stagiair → MonteurOnderhoudView (read-only dossier)
  */
 
-import { useRol } from "../hooks/useRol";
-import BalieOnderhoudView from "./onderhoud/BalieOnderhoudView";
-import MonteurOnderhoudView from "./onderhoud/MonteurOnderhoudView";
-import EigenaarOnderhoudView from "./onderhoud/EigenaarOnderhoudView";
+import { useRol } from "../../hooks/useRol";
+import BalieOnderhoudView from "./BalieOnderhoudView";
+import MonteurOnderhoudView from "./MonteurOnderhoudView";
+import EigenaarOnderhoudView from "./EigenaarOnderhoudView";
 
 export default function OnderhoudshistorieModule() {
     const { domeinRol, isLoading, isNietGekoppeld } = useRol();

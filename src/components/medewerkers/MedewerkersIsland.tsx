@@ -20,10 +20,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-import { useRol, type DomeinRol } from "../hooks/useRol";
-import { LaventeConvexProvider } from "./LaventeConvexProvider";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
+import { useRol, type DomeinRol } from "../../hooks/useRol";
+import { LaventeConvexProvider } from "../providers/LaventeConvexProvider";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -675,7 +675,7 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
                         </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                            {medewerkers.map((m: { _id: import("../../convex/_generated/dataModel").Id<"medewerkers">; naam: string; domeinRol: string; actief: boolean }) => (
+                            {medewerkers.map((m: { _id: import("../../../convex/_generated/dataModel").Id<"medewerkers">; naam: string; domeinRol: string; actief: boolean }) => (
                                 <MedewerkerRij
                                     key={m._id}
                                     medewerker={m}

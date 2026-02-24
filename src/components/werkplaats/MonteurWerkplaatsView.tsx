@@ -6,7 +6,7 @@
  * met de andere rol-views (Balie, Eigenaar).
  */
 
-import WerkplaatsBord from "../WerkplaatsBord";
+import WerkplaatsBord from "./WerkplaatsBord";
 
 export default function MonteurWerkplaatsView() {
     return (

@@ -15,8 +15,8 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 
 import { api } from "../../../convex/_generated/api";
-import WerkplaatsBord from "../WerkplaatsBord";
-import NieuweWerkorderModal from "../NieuweWerkorderModal";
+import WerkplaatsBord from "./WerkplaatsBord";
+import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
 
 // Dag-labels NL
 const DAGNAMEN = ["zo", "ma", "di", "wo", "do", "vr", "za"];

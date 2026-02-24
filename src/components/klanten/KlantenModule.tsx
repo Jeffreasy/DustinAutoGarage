@@ -9,10 +9,10 @@
  *   eigenaar            →  EigenaarKlantenView (balie + omzet + export + GDPR)
  */
 
-import { useRol } from "../hooks/useRol";
-import MonteurKlantenView from "./klanten/MonteurKlantenView";
-import BalieKlantenView from "./klanten/BalieKlantenView";
-import EigenaarKlantenView from "./klanten/EigenaarKlantenView";
+import { useRol } from "../../hooks/useRol";
+import MonteurKlantenView from "./MonteurKlantenView";
+import BalieKlantenView from "./BalieKlantenView";
+import EigenaarKlantenView from "./EigenaarKlantenView";
 
 export default function KlantenModule() {
     const { domeinRol, isLoading } = useRol();

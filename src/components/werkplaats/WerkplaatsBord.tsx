@@ -16,18 +16,18 @@
  */
 
 import { useState } from "react";
-import type { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
 import {
     useWerkplekken,
     useWerkorders,
     useSeedDefaultWerkplekken,
     type WerkorderVerrijkt,
     type WerkplekDoc,
-} from "../hooks/useWerkplaats";
-import { useRol } from "../hooks/useRol";
+} from "../../hooks/useWerkplaats";
+import { useRol } from "../../hooks/useRol";
 import WerkorderKaart from "./WerkorderKaart";
 import WerkorderLogboek from "./WerkorderLogboek";
-import NieuweWerkorderModal from "./NieuweWerkorderModal";
+import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
 
 // ---------------------------------------------------------------------------
 // KolomHeader helper

@@ -12,8 +12,8 @@
  * component volledig client-side rendert als één React tree.
  */
 
-import { LaventeConvexProvider } from "./LaventeConvexProvider";
-import VoertuigenDashboard from "./VoertuigenDashboard";
+import { LaventeConvexProvider } from "../providers/LaventeConvexProvider";
+import VoertuigenDashboard from "../voertuigen/VoertuigenDashboard";
 
 export default function DashboardIsland() {
     return (

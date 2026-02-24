@@ -5,7 +5,7 @@
  * in één React root, identiek aan het patroon van KlantenIsland, VoertuigenIsland etc.
  */
 
-import { LaventeConvexProvider } from "./LaventeConvexProvider";
+import { LaventeConvexProvider } from "../providers/LaventeConvexProvider";
 import OnderhoudshistorieModule from "./OnderhoudshistorieModule";
 
 export default function OnderhoudshistorieIsland() {

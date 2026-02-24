@@ -8,10 +8,10 @@
  *   eigenaar            →  EigenaarVoertuigenView (fleet-stats + balie)
  */
 
-import { useRol } from "../hooks/useRol";
-import MonteurVoertuigenView from "./voertuigen/MonteurVoertuigenView";
-import BalieVoertuigenView from "./voertuigen/BalieVoertuigenView";
-import EigenaarVoertuigenView from "./voertuigen/EigenaarVoertuigenView";
+import { useRol } from "../../hooks/useRol";
+import MonteurVoertuigenView from "./MonteurVoertuigenView";
+import BalieVoertuigenView from "./BalieVoertuigenView";
+import EigenaarVoertuigenView from "./EigenaarVoertuigenView";
 
 export default function VoertuigenModule() {
     const { domeinRol, isLoading } = useRol();

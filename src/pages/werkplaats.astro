@@ -7,7 +7,7 @@
  */
 
 import BaseLayout from "../layouts/BaseLayout.astro";
-import WerkplaatsBordIsland from "../components/WerkplaatsBordIsland";
+import WerkplaatsBordIsland from "../components/werkplaats/WerkplaatsBordIsland";
 
 const user = Astro.locals.user ?? null;
 if (!user) return Astro.redirect("/login?reden=sessie_verlopen");

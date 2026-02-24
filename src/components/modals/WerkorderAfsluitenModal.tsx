@@ -7,9 +7,9 @@
  */
 
 import { useState } from "react";
-import type { Id } from "../../convex/_generated/dataModel";
-import { useSluitWerkorderAf } from "../hooks/useWerkplaats";
-import ModalShell from "./modals/ModalShell";
+import type { Id } from "../../../convex/_generated/dataModel";
+import { useSluitWerkorderAf } from "../../hooks/useWerkplaats";
+import ModalShell from "./ModalShell";
 
 const TYPE_WERK_OPTIES = [
     "Grote Beurt",

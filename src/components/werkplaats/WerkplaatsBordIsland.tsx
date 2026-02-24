@@ -5,7 +5,7 @@
  * WerkplaatsModule dispatcht naar de juiste subview op basis van domeinRol.
  */
 
-import { LaventeConvexProvider } from "./LaventeConvexProvider";
+import { LaventeConvexProvider } from "../providers/LaventeConvexProvider";
 import WerkplaatsModule from "./WerkplaatsModule";
 
 export default function WerkplaatsBordIsland() {

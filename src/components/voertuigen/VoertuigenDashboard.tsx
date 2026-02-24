@@ -22,12 +22,12 @@
  */
 
 import { useState } from "react";
-import { useVoertuigenLijst, useApkWaarschuwingen } from "../hooks/useVoertuigen";
-import { useRol } from "../hooks/useRol";
-import type { Doc } from "../../convex/_generated/dataModel";
-import NieuwVoertuigModal from "./modals/NieuwVoertuigModal";
-import NieuweKlantModal from "./modals/NieuweKlantModal";
-import VoertuigDetailPanel from "./modals/VoertuigDetailPanel";
+import { useVoertuigenLijst, useApkWaarschuwingen } from "../../hooks/useVoertuigen";
+import { useRol } from "../../hooks/useRol";
+import type { Doc } from "../../../convex/_generated/dataModel";
+import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
+import NieuweKlantModal from "../modals/NieuweKlantModal";
+import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
 
 // ---------------------------------------------------------------------------
 // Helper

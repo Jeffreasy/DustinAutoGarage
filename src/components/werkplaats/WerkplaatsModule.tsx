@@ -9,10 +9,10 @@
  *   eigenaar            →  EigenaarWerkplaatsView  (Kanban + archief + werkplekken)
  */
 
-import { useRol } from "../hooks/useRol";
-import BalieWerkplaatsView from "./werkplaats/BalieWerkplaatsView";
-import EigenaarWerkplaatsView from "./werkplaats/EigenaarWerkplaatsView";
-import MonteurWerkplaatsView from "./werkplaats/MonteurWerkplaatsView";
+import { useRol } from "../../hooks/useRol";
+import BalieWerkplaatsView from "./BalieWerkplaatsView";
+import EigenaarWerkplaatsView from "./EigenaarWerkplaatsView";
+import MonteurWerkplaatsView from "./MonteurWerkplaatsView";
 
 export default function WerkplaatsModule() {
     const { domeinRol, isLoading } = useRol();

@@ -8,8 +8,8 @@
  */
 
 import { useState } from "react";
-import type { Id } from "../../convex/_generated/dataModel";
-import { useWerkorderLogs, useVoegLogToe } from "../hooks/useWerkplaats";
+import type { Id } from "../../../convex/_generated/dataModel";
+import { useWerkorderLogs, useVoegLogToe } from "../../hooks/useWerkplaats";
 
 interface WerkorderLogboekProps {
     werkorderId: Id<"werkorders">;

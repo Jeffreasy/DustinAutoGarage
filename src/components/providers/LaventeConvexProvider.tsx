@@ -27,9 +27,9 @@ import {
     type ReactNode,
 } from "react";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
-import { config } from "../lib/config";
-import { fetchConvexToken, redirectToLogin } from "../lib/auth";
-import { ApiError } from "../lib/api";
+import { config } from "../../lib/config";
+import { fetchConvexToken, redirectToLogin } from "../../lib/auth";
+import { ApiError } from "../../lib/api";
 
 // ---------------------------------------------------------------------------
 // Types

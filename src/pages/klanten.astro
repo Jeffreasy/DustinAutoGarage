@@ -7,7 +7,7 @@
  */
 
 import BaseLayout from "../layouts/BaseLayout.astro";
-import KlantenIsland from "../components/KlantenIsland";
+import KlantenIsland from "../components/klanten/KlantenIsland";
 
 const user = Astro.locals.user ?? null;
 if (!user) return Astro.redirect("/login?reden=sessie_verlopen");

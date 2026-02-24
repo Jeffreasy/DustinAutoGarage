@@ -13,13 +13,13 @@
  */
 
 import { useState } from "react";
-import type { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
 import {
     useZoekKlanten,
     useVoertuigenVanKlant,
     useMaakWerkorderAan,
-} from "../hooks/useWerkplaats";
-import ModalShell from "./modals/ModalShell";
+} from "../../hooks/useWerkplaats";
+import ModalShell from "./ModalShell";
 
 interface NieuweWerkorderModalProps {
     onSluit: () => void;

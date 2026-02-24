@@ -16,12 +16,12 @@
  */
 
 import { useState } from "react";
-import type { Id } from "../../convex/_generated/dataModel";
-import type { WerkorderVerrijkt, WerkplekDoc } from "../hooks/useWerkplaats";
-import { useVerplaatsNaarWerkplek, useUpdateStatus } from "../hooks/useWerkplaats";
-import type { DomeinRol } from "../../convex/helpers";
-import WerkorderAfsluitenModal from "./WerkorderAfsluitenModal";
-import WerkorderDetailModal from "./modals/WerkorderDetailModal";
+import type { Id } from "../../../convex/_generated/dataModel";
+import type { WerkorderVerrijkt, WerkplekDoc } from "../../hooks/useWerkplaats";
+import { useVerplaatsNaarWerkplek, useUpdateStatus } from "../../hooks/useWerkplaats";
+import type { DomeinRol } from "../../../convex/helpers";
+import WerkorderAfsluitenModal from "../modals/WerkorderAfsluitenModal";
+import WerkorderDetailModal from "../modals/WerkorderDetailModal";
 
 // ---------------------------------------------------------------------------
 // Avatar helpers
