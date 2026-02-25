@@ -242,25 +242,30 @@ const weergaveNaam = user?.full_name?.trim() || user?.email || "";
 <script>
     (function () {
         const btn = document.getElementById("profile-menu-btn") as HTMLButtonElement | null;
-        const dropdown = document.getElementById("profile-dropdown");
-        const menu = document.getElementById("profile-menu");
+        // Cast na guard zodat TS de closures correct narrowt
+        const dropdown = document.getElementById("profile-dropdown") as HTMLElement | null;
+        const menu = document.getElementById("profile-menu") as HTMLElement | null;
         if (!btn || !dropdown || !menu) return;
 
-        const isOpen = () => dropdown.getAttribute("aria-hidden") === "false";
+        // Na de guard zijn dropdown en menu gegarandeerd HTMLElement
+        const d = dropdown as HTMLElement;
+        const m = menu as HTMLElement;
+
+        const isOpen = () => d.getAttribute("aria-hidden") === "false";
 
         function open() {
-            dropdown.setAttribute("aria-hidden", "false");
-            dropdown.classList.add("profile-dropdown--open");
+            d.setAttribute("aria-hidden", "false");
+            d.classList.add("profile-dropdown--open");
             btn!.setAttribute("aria-expanded", "true");
             btn!.classList.add("is-open");
             // Focus eerste item
-            const firstItem = dropdown.querySelector<HTMLElement>("[role='menuitem']");
+            const firstItem = d.querySelector<HTMLElement>("[role='menuitem']");
             if (firstItem) setTimeout(() => firstItem.focus(), 20);
         }
 
         function close() {
-            dropdown.setAttribute("aria-hidden", "true");
-            dropdown.classList.remove("profile-dropdown--open");
+            d.setAttribute("aria-hidden", "true");
+            d.classList.remove("profile-dropdown--open");
             btn!.setAttribute("aria-expanded", "false");
             btn!.classList.remove("is-open");
         }
@@ -272,7 +277,7 @@ const weergaveNaam = user?.full_name?.trim() || user?.email || "";
 
         // Sluit bij klik buiten
         document.addEventListener("click", (e) => {
-            if (!menu.contains(e.target as Node)) close();
+            if (!m.contains(e.target as Node)) close();
         });
 
         // Escape
@@ -284,9 +289,9 @@ const weergaveNaam = user?.full_name?.trim() || user?.email || "";
         });
 
         // Pijltjes-navigatie
-        dropdown.addEventListener("keydown", (e) => {
+        d.addEventListener("keydown", (e) => {
             const items = Array.from(
-                dropdown.querySelectorAll<HTMLElement>("[role='menuitem']")
+                d.querySelectorAll<HTMLElement>("[role='menuitem']")
             );
             const idx = items.indexOf(document.activeElement as HTMLElement);
             if (e.key === "ArrowDown") {
