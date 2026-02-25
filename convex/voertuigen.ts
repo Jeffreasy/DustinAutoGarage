@@ -15,7 +15,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { vBrandstof } from "./validators";
-import { requireAuth } from "./helpers";
+import { requireAuth, requireDomainRole } from "./helpers";
 
 
 // ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ export const getVerlopenApk = query({
 
 /**
  * zoekOpKenteken — Zoek voertuigen op (gedeeltelijk) kenteken.
- * Minimaal 2 tekens vereist; client-side filtering op lowercase match.
+ * Minimaal 2 tekens vereist; client-side filtering op uppercase normalized match.
  * Gebruikt door de onderhoud-modules en voertuig-selectie forms.
  */
 export const zoekOpKenteken = query({
@@ -142,6 +142,8 @@ export const zoekOpKenteken = query({
     handler: async (ctx, args): Promise<Doc<"voertuigen">[]> => {
         const tokenIdentifier = await requireAuth(ctx);
         const term = args.term.toUpperCase().replace(/[\s-]/g, "");
+
+        if (term.length < 2) return [];
 
         const alleVoertuigen = await ctx.db
             .query("voertuigen")
@@ -151,7 +153,7 @@ export const zoekOpKenteken = query({
             .collect();
 
         return alleVoertuigen.filter((v) =>
-            v.kenteken.toUpperCase().replace(/[\s-]/g, "").includes(term)
+            v.kenteken.includes(term)
         );
     },
 });
@@ -187,8 +189,26 @@ export const create = mutation({
             );
         }
 
+        // Normaliseer kenteken: altijd uppercase, geen streepjes (bijv. "GH-446-V" → "GH446V")
+        const normalKenteken = args.kenteken.toUpperCase().replace(/[\s-]/g, "");
+
+        // M-6 FIX: verifieer dat het kenteken niet al geregistreerd is voor deze tenant
+        const bestaandVoertuig = await ctx.db
+            .query("voertuigen")
+            .withIndex("by_token_and_kenteken", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier).eq("kenteken", normalKenteken)
+            )
+            .first();
+
+        if (bestaandVoertuig) {
+            throw new Error(
+                `CONFLICT: Kenteken "${normalKenteken}" is al geregistreerd in deze garage.`
+            );
+        }
+
         return ctx.db.insert("voertuigen", {
             ...args,
+            kenteken: normalKenteken,
             tokenIdentifier,
             aangemaaktOp: Date.now(),
         });
@@ -220,7 +240,12 @@ export const update = mutation({
             throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
         }
 
-        const { voertuigId, ...patch } = args;
+        const { voertuigId, ...fields } = args;
+
+        // Normaliseer kenteken indien meegestuurd
+        const patch = fields.kenteken
+            ? { ...fields, kenteken: fields.kenteken.toUpperCase().replace(/[\s-]/g, "") }
+            : { ...fields };
 
         const cleanPatch = Object.fromEntries(
             Object.entries(patch).filter(([, val]) => val !== undefined)
@@ -269,12 +294,14 @@ export const updateKilometerstand = mutation({
  * verwijder — Verwijder een voertuig en alle bijbehorende onderhoudshistorie.
  *
  * ⚠️ Cascade verwijdering — onomkeerbaar.
- *    Overweeg eerst het voertuig los te koppelen van de klant in de UI.
+ * H-4 FIX: Vereist minimaal de rol "balie" — monteurs en stagiairs
+ * mogen geen voertuigen met cascade-effecten verwijderen.
  */
 export const verwijder = mutation({
     args: { voertuigId: v.id("voertuigen") },
     handler: async (ctx, args): Promise<void> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        const profiel = await requireDomainRole(ctx, "balie");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const voertuig = await ctx.db.get(args.voertuigId);
         if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {

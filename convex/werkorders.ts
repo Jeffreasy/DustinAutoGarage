@@ -22,7 +22,7 @@
 
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { vWerkorderStatus } from "./validators";
+import { vWerkorderStatus, vTypeWerk } from "./validators";
 import { requireAuth, requireDomainRole } from "./helpers";
 
 // ---------------------------------------------------------------------------
@@ -49,9 +49,13 @@ export const lijstWerkordersVoorBord = query({
             .order("asc")
             .collect();
 
+        // M-5 FIX: filter gearchiveerde orders server-side — voorkomen dat verouderde
+        // kaartjes op het bord verschijnen als de UI-filter ooit mist.
+        const actief = orders.filter((o) => !o.gearchiveerd);
+
         // Verrijk elke order met voertuig- en klantdata voor de kaartjes
         const verrijkt = await Promise.all(
-            orders.map(async (order) => {
+            actief.map(async (order) => {
                 const voertuig = await ctx.db.get(order.voertuigId);
                 const klant = await ctx.db.get(order.klantId);
                 const monteur = order.monteursId
@@ -300,16 +304,7 @@ export const sluitWerkorderAf = mutation({
     args: {
         werkorderId: v.id("werkorders"),
         kmStandOnderhoud: v.number(),
-        typeWerk: v.union(
-            v.literal("Grote Beurt"),
-            v.literal("Kleine Beurt"),
-            v.literal("APK"),
-            v.literal("Reparatie"),
-            v.literal("Bandenwisseling"),
-            v.literal("Schadeherstel"),
-            v.literal("Diagnostiek"),
-            v.literal("Overig"),
-        ),
+        typeWerk: vTypeWerk,
         slotNotitie: v.optional(v.string()),
         totaalKosten: v.optional(v.number()),
     },
@@ -321,16 +316,34 @@ export const sluitWerkorderAf = mutation({
             throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
         }
 
+        // M-3 FIX: valideer kmStandOnderhoud — consistent met updateKilometerstand
+        if (args.kmStandOnderhoud <= 0) {
+            throw new Error("INVALID: Kilometerstand moet groter dan 0 zijn.");
+        }
+        const voertuigCheck = await ctx.db.get(order.voertuigId);
+        if (
+            voertuigCheck?.kilometerstand !== undefined &&
+            args.kmStandOnderhoud < voertuigCheck.kilometerstand * 0.8
+        ) {
+            throw new Error(
+                `INVALID: Kilometerstand (${args.kmStandOnderhoud.toLocaleString("nl-NL")}) ` +
+                `is meer dan 20% lager dan de huidige stand ` +
+                `(${voertuigCheck.kilometerstand.toLocaleString("nl-NL")}). Controleer de invoer.`
+            );
+        }
+
         // Status naar Afgerond — Klaar was 'klaar voor ophalen', Afgerond is definitief gesloten
         await ctx.db.patch(args.werkorderId, {
             status: "Afgerond",
             totaalKosten: args.totaalKosten,
         });
 
-        // Kopieer naar onderhoudshistorie voor langetermijn-voertuighistoriek
+        // Kopieer naar onderhoudshistorie voor langetermijn-voertuighistoriek.
+        // datumUitgevoerd = afsluittijdstip (Date.now()), niet de afspraakdatum.
+        // De afspraak was wanneer gepland, de uitvoering is wanneer afgesloten.
         await ctx.db.insert("onderhoudshistorie", {
             voertuigId: order.voertuigId,
-            datumUitgevoerd: order.afspraakDatum,
+            datumUitgevoerd: Date.now(),
             typeWerk: args.typeWerk,
             kmStandOnderhoud: args.kmStandOnderhoud,
             werkNotities: args.slotNotitie ?? order.klacht,

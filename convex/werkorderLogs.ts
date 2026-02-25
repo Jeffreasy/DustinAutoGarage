@@ -24,11 +24,21 @@ import { requireAuth, requireDomainRole } from "./helpers";
 
 /**
  * lijstLogsVoorWerkorder — alle logregels voor één werkorder, nieuwste eerst.
+ *
+ * IDOR-bescherming: werkorder eigenaarschap wordt geverifieerd voordat logs
+ * worden teruggegeven. Een geauthenticeerde gebruiker van een andere tenant
+ * kan geen logs opvragen met een geraden werkorderId.
  */
 export const lijstLogsVoorWerkorder = query({
     args: { werkorderId: v.id("werkorders") },
     handler: async (ctx, args) => {
-        await requireAuth(ctx);
+        const tokenIdentifier = await requireAuth(ctx);
+
+        // IDOR-fix: verifieer dat de werkorder tot de huidige tenant behoort
+        const order = await ctx.db.get(args.werkorderId);
+        if (!order || order.tokenIdentifier !== tokenIdentifier) {
+            return [];
+        }
 
         return ctx.db
             .query("werkorderLogs")
@@ -48,6 +58,9 @@ export const lijstLogsVoorWerkorder = query({
  * Wordt intern aangeroepen door werkorders.ts, maar ook direct bruikbaar
  * voor handmatige monteurs-notities via de LogboekModal.
  *
+ * IDOR-bescherming: werkorder eigenaarschap wordt geverifieerd voordat de
+ * log-entry wordt aangemaakt.
+ *
  * @param werkorderId - de werkorder waaraan de log gekoppeld wordt
  * @param actie       - auto-gegenereerde omschrijving (bijv. "Verplaatst naar Brug 1")
  * @param notitie     - optionele vrije tekst van de monteur
@@ -60,6 +73,12 @@ export const voegLogToe = mutation({
     },
     handler: async (ctx, args) => {
         const profiel = await requireDomainRole(ctx, "monteur");
+
+        // IDOR-fix: verifieer dat de werkorder tot de huidige tenant behoort
+        const order = await ctx.db.get(args.werkorderId);
+        if (!order || order.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
+        }
 
         return ctx.db.insert("werkorderLogs", {
             werkorderId: args.werkorderId,

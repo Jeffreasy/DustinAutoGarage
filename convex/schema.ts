@@ -174,11 +174,13 @@ export default defineSchema({
     })
         .index("by_klant", ["klantId"])
         .index("by_token_identifier", ["tokenIdentifier"])
-        .index("by_kenteken_and_token", ["kenteken", "tokenIdentifier"])
+        // Index: eerst tenant-filter, dan kenteken-lookup (consistente volgorde: token eerst)
+        .index("by_token_and_kenteken", ["tokenIdentifier", "kenteken"])
         // Index: eerst tenant-filter (tokenIdentifier), dan range-scan op APK-datum.
-        // Dit is efficiënter dan by_apk_and_token met datumveld eerst,
-        // want we willen altijd tenant-geïsoleerd zoeken.
-        .index("by_apk_and_token", ["tokenIdentifier", "apkVervaldatum"]),
+        .index("by_apk_and_token", ["tokenIdentifier", "apkVervaldatum"])
+        // L-3 FIX: sort op aanmaaktijdstip voor deterministische volgorde in list() queries.
+        // .order("desc") op by_token_identifier sorteert op interne ID, niet op aangemaaktOp.
+        .index("by_aangemaakt_and_token", ["tokenIdentifier", "aangemaaktOp"]),
 
     // ──────────────────────────────────────────────────────────────────────────
     // Tabel 3: onderhoudshistorie
@@ -347,5 +349,7 @@ export default defineSchema({
         // Alle logs per werkorder ophalen (voor het logboek-panel).
         .index("by_werkorder", ["werkorderId"])
         // Tenant-brede audit-query.
-        .index("by_token_identifier", ["tokenIdentifier"]),
+        .index("by_token_identifier", ["tokenIdentifier"])
+        // L-1 FIX: datum-index voor tenant-brede audit queries (bijv. "alle acties van vandaag").
+        .index("by_datum_and_token", ["tokenIdentifier", "tijdstip"]),
 });

@@ -139,6 +139,16 @@ export const registreer = mutation({
             throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
         }
 
+        // M-4 FIX: datum mag niet meer dan 1 dag in de toekomst liggen
+        // Voorkomt data-vervuiling en onjuiste omzetberekeningen.
+        const maxToekomst = Date.now() + 86400000; // +1 dag
+        if (args.datumUitgevoerd > maxToekomst) {
+            throw new Error(
+                "INVALID: Datum mag maximaal één dag in de toekomst liggen. " +
+                "Gebruik de werkelijke uitvoerdatum."
+            );
+        }
+
         // Kilometerstand automatisch bijwerken als de nieuwe stand hoger is
         if (
             voertuig.kilometerstand === undefined ||
@@ -184,14 +194,15 @@ export const updateDocumentUrl = mutation({
  * verwijder — Verwijder een onderhoudsrecord.
  * Kilometerstand op het voertuig wordt NIET teruggedraaid (dat vereist
  * een herberekening van alle records — te implementeren indien gewenst).
+ * Vereiste domeinrol: "eigenaar".
  */
 export const verwijder = mutation({
     args: { historieId: v.id("onderhoudshistorie") },
     handler: async (ctx, args): Promise<void> => {
         // Alleen eigenaar mag verwijderen — balie/monteur/stagiair hebben geen delete-rechten
-        await requireDomainRole(ctx, "eigenaar");
-
-        const tokenIdentifier = await requireAuth(ctx);
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+        // profiel.tokenIdentifier is de tenant-anchor — geen tweede requireAuth() nodig
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const entry = await ctx.db.get(args.historieId);
         if (!entry || entry.tokenIdentifier !== tokenIdentifier) {

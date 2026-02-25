@@ -15,23 +15,44 @@
  * Required Convex environment variables:
  *   LAVENTECARE_API_URL   — e.g. https://auth.laventecare.nl
  *   LAVENTECARE_APP_ID    — e.g. dustin-auto-garage
+ *
+ * L-2 FIX: env-var validatie bij module-load zodat de deployment direct
+ * faalt met een duidelijke foutmelding als een variabele ontbreekt,
+ * in plaats van een cryptische runtime-fout later.
  */
+
+const domain = process.env.LAVENTECARE_API_URL;
+const applicationID = process.env.LAVENTECARE_APP_ID;
+
+if (!domain) {
+    throw new Error(
+        "MISSING ENV: LAVENTECARE_API_URL is niet geconfigureerd. " +
+        "Stel deze in via het Convex Dashboard → Settings → Environment Variables."
+    );
+}
+
+if (!applicationID) {
+    throw new Error(
+        "MISSING ENV: LAVENTECARE_APP_ID is niet geconfigureerd. " +
+        "Stel deze in via het Convex Dashboard → Settings → Environment Variables."
+    );
+}
+
 export default {
     providers: [
         {
             /**
              * The base URL of the LaventeCare Go backend.
              * Convex appends `/.well-known/openid-configuration` to this value.
-             *
              * Must NOT have a trailing slash.
              */
-            domain: process.env.LAVENTECARE_API_URL as string,
+            domain,
 
             /**
              * Audience claim (`aud`) embedded in the RS256 JWT by LaventeCare.
              * Convex rejects tokens whose `aud` does not match this value.
              */
-            applicationID: process.env.LAVENTECARE_APP_ID as string,
+            applicationID,
         },
     ],
 };

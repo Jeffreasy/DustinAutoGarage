@@ -261,7 +261,10 @@ export const create = mutation({
     },
 });
 
-/** update — Wijzig klantgegevens (patch semantiek). */
+/** update — Wijzig klantgegevens (patch semantiek).
+ * M-7 FIX: Vereist minimaal de rol "balie" — consistentie met deactiveer.
+ * Stagiairs mogen geen contactgegevens of klanttype wijzigen.
+ */
 export const update = mutation({
     args: {
         klantId: v.id("klanten"),
@@ -279,7 +282,8 @@ export const update = mutation({
         klantNotities: v.optional(v.string()),
     },
     handler: async (ctx, args): Promise<void> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        const profiel = await requireDomainRole(ctx, "balie");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const klant = await ctx.db.get(args.klantId);
         if (!klant || klant.tokenIdentifier !== tokenIdentifier) {
@@ -344,14 +348,17 @@ export const updateKlantBalieVelden = mutation({
     },
 });
 
-/** deactiveer — Zachte verwijdering: zet status op "Inactief". */
+/**
+ * deactiveer — Zachte verwijdering: zet status op "Inactief".
+ * Vereist minimaal de rol "balie" — monteurs/stagiairs mogen geen klanten deactiveren.
+ */
 export const deactiveer = mutation({
     args: { klantId: v.id("klanten") },
     handler: async (ctx, args): Promise<void> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        const profiel = await requireDomainRole(ctx, "balie");
 
         const klant = await ctx.db.get(args.klantId);
-        if (!klant || klant.tokenIdentifier !== tokenIdentifier) {
+        if (!klant || klant.tokenIdentifier !== profiel.tokenIdentifier) {
             throw new Error("FORBIDDEN: Klant niet gevonden of geen toegang.");
         }
 
@@ -362,11 +369,13 @@ export const deactiveer = mutation({
 /**
  * verwijder — Harde verwijdering van een klant en al zijn gekoppelde data.
  * ⚠️  Cascade: voertuigen → onderhoudshistorie → werkorders → werkorderLogs
+ * Vereist de rol "eigenaar" — cascade-delete is een onomkeerbare destructieve actie.
  */
 export const verwijder = mutation({
     args: { klantId: v.id("klanten") },
     handler: async (ctx, args): Promise<void> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const klant = await ctx.db.get(args.klantId);
         if (!klant || klant.tokenIdentifier !== tokenIdentifier) {

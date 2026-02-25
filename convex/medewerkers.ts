@@ -202,12 +202,22 @@ export const registreerMedewerker = mutation({
             throw new Error("FORBIDDEN: Alleen de eigenaar kan andere eigenaren registreren.");
         }
 
-        // Balie of hogere rol vereist om anderen te registreren
+        // Balie of hogere rol vereist om ANDEREN te registreren via doelTokenIdentifier
         if (doelTokenIdentifier && !acterendeProfiel) {
             throw new Error("FORBIDDEN: Je hebt geen domein-toegang om medewerkers toe te voegen.");
         }
 
-        const [issuer, sub] = targetTokenIdentifier.split("|");
+        // M-2 FIX: Self-registratie met een hogere rol dan stagiair vereist minimaal een
+        // bestaand balie-profiel. Een volledig nieuwe gebruiker zonder acterendeProfiel
+        // mag zichzelf alleen als stagiair registreren (laagste rol in de hiërarchie).
+        if (!doelTokenIdentifier && !acterendeProfiel && domeinRol !== "stagiair") {
+            throw new Error(
+                "FORBIDDEN: Een nieuwe medewerker kan zichzelf alleen als stagiair registreren. " +
+                "Vraag de eigenaar of balie om je de juiste rol te geven."
+            );
+        }
+
+        const [, sub] = targetTokenIdentifier.split("|");
         const userId = sub ?? targetTokenIdentifier;
 
         await ctx.db.insert("medewerkers", {
@@ -238,8 +248,9 @@ export const wijzigDomeinRol = mutation({
         const acteert = await requireDomainRole(ctx, "eigenaar");
 
         const doelMedewerker = await ctx.db.get(medewerkerId);
-        if (!doelMedewerker) {
-            throw new Error("NOT_FOUND: Medewerker niet gevonden.");
+        // H-1 FIX: cross-tenant IDOR guard — eigenaar van tenant A kan tenant B niet wijzigen
+        if (!doelMedewerker || doelMedewerker.tokenIdentifier !== acteert.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Medewerker niet gevonden of behoort tot andere garage.");
         }
 
         // Guard: eigenaar kan zichzelf niet degraderen
@@ -280,8 +291,9 @@ export const deactiveerMedewerker = mutation({
         }
 
         const doelMedewerker = await ctx.db.get(medewerkerId);
-        if (!doelMedewerker) {
-            throw new Error("NOT_FOUND: Medewerker niet gevonden.");
+        // H-2 FIX: cross-tenant IDOR guard
+        if (!doelMedewerker || doelMedewerker.tokenIdentifier !== acteert.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Medewerker niet gevonden of behoort tot andere garage.");
         }
 
         await ctx.db.patch(medewerkerId, { actief: false });
@@ -292,17 +304,25 @@ export const deactiveerMedewerker = mutation({
 /**
  * activeerMedewerker — heractiveer een gedeactiveerde medewerker.
  * Vereiste domeinrol: "eigenaar".
+ * H-3 FIX: tenant-scope check toegevoegd + self-activatie guard.
  */
 export const activeerMedewerker = mutation({
     args: {
         medewerkerId: v.id("medewerkers"),
     },
     handler: async (ctx, { medewerkerId }) => {
-        await requireDomainRole(ctx, "eigenaar");
+        const acteert = await requireDomainRole(ctx, "eigenaar");
+
+        // H-3 FIX: self-activatie guard (consistent met deactiveer)
+        // In theorie kan de eigenaar zichzelf niet deactiveren, maar als guard toch aanwezig
+        if (medewerkerId === acteert._id) {
+            throw new Error("FORBIDDEN: Je kunt je eigen account niet heractiveren via deze route.");
+        }
 
         const doelMedewerker = await ctx.db.get(medewerkerId);
-        if (!doelMedewerker) {
-            throw new Error("NOT_FOUND: Medewerker niet gevonden.");
+        // H-3 FIX: cross-tenant IDOR guard
+        if (!doelMedewerker || doelMedewerker.tokenIdentifier !== acteert.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Medewerker niet gevonden of behoort tot andere garage.");
         }
 
         await ctx.db.patch(medewerkerId, { actief: true });
