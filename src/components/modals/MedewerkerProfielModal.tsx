@@ -121,6 +121,8 @@ function TabOverzicht({ data, isEigenaar, isZichzelf, onSave }: {
     onSave: (patch: Record<string, unknown>) => Promise<void>;
 }) {
     const [editMode, setEditMode] = useState(false);
+    const [voornaam, setVoornaam] = useState((data.voornaam as string) ?? "");
+    const [achternaam, setAchternaam] = useState((data.achternaam as string) ?? "");
     const [bio, setBio] = useState((data.bio as string) ?? "");
     const [telefoon, setTelefoon] = useState((data.telefoonnummer as string) ?? "");
     const [email, setEmail] = useState((data.email as string) ?? "");
@@ -129,9 +131,26 @@ function TabOverzicht({ data, isEigenaar, isZichzelf, onSave }: {
     const kanBewerken = isZichzelf || isEigenaar;
     const rol = (data.domeinRol as string) ?? "monteur";
 
+    // Samengestelde weergavenaam: voornaam + achternaam, of fallback naar naam
+    const volledigeNaam = [voornaam, achternaam].filter(Boolean).join(" ") || (data.naam as string) || "?";
+    const displayNaamInHeader = editMode
+        ? [voornaam, achternaam].filter(Boolean).join(" ") || (data.naam as string) || "?"
+        : (data.voornaam || data.achternaam
+            ? [data.voornaam as string, data.achternaam as string].filter(Boolean).join(" ")
+            : (data.naam as string) || "?");
+
     async function opslaan() {
         setBezig(true);
-        await onSave({ bio, telefoonnummer: telefoon, email });
+        // Stel naam samen als weergavenaam
+        const samengesteldeNaam = [voornaam, achternaam].filter(Boolean).join(" ");
+        await onSave({
+            naam: samengesteldeNaam || (data.naam as string),
+            voornaam: voornaam || undefined,
+            achternaam: achternaam || undefined,
+            bio,
+            telefoonnummer: telefoon,
+            email,
+        });
         setBezig(false);
         setEditMode(false);
     }
@@ -147,11 +166,11 @@ function TabOverzicht({ data, isEigenaar, isZichzelf, onSave }: {
                     fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)", color: "#fff",
                     boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
                 }}>
-                    {((data.naam as string) ?? "?").charAt(0).toUpperCase()}
+                    {displayNaamInHeader.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0 }}>
                     <p style={{ margin: "0 0 var(--space-1)", fontWeight: "var(--weight-bold)", fontSize: "var(--text-base)", color: "var(--color-heading)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {data.naam as string}
+                        {displayNaamInHeader}
                     </p>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-1)" }}>
                         <Badge>{ROL_LABELS[rol] ?? rol}</Badge>
@@ -163,6 +182,30 @@ function TabOverzicht({ data, isEigenaar, isZichzelf, onSave }: {
             {/* Bio */}
             {editMode ? (
                 <>
+                    {/* Naam-sectie (bewerkbaar) */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                            <label className="label" style={{ fontSize: "var(--text-xs)" }}>Voornaam</label>
+                            <input
+                                className="input"
+                                type="text"
+                                placeholder="Voornaam"
+                                value={voornaam}
+                                onChange={e => setVoornaam(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                            <label className="label" style={{ fontSize: "var(--text-xs)" }}>Achternaam</label>
+                            <input
+                                className="input"
+                                type="text"
+                                placeholder="Achternaam"
+                                value={achternaam}
+                                onChange={e => setAchternaam(e.target.value)}
+                            />
+                        </div>
+                    </div>
                     <label className="label" style={{ fontSize: "var(--text-xs)" }}>Bio</label>
                     <textarea
                         value={bio} onChange={e => setBio(e.target.value)}
@@ -199,6 +242,13 @@ function TabOverzicht({ data, isEigenaar, isZichzelf, onSave }: {
             )}
 
             <SectieKop>Persoonlijk</SectieKop>
+            {/* Weergave voornaam + achternaam */}
+            {!editMode && (
+                <>
+                    <InfoRij label="Voornaam" value={data.voornaam as string} />
+                    <InfoRij label="Achternaam" value={data.achternaam as string} />
+                </>
+            )}
             <InfoRij label="Geboortedatum" value={data.geboortedatum ? `${formatDatum(data.geboortedatum as number)} (${leeftijd(data.geboortedatum as number)} jr)` : undefined} />
             <InfoRij label="Nationaliteit" value={data.nationaliteit as string} />
             <InfoRij label="Adres" value={data.adres ? `${data.adres}, ${data.postcode} ${data.woonplaats}` : undefined} />

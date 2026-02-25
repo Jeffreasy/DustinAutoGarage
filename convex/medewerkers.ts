@@ -398,6 +398,9 @@ export const getMedewerkerProfiel = query({
  */
 export const updateMijnProfiel = mutation({
     args: {
+        naam: v.optional(v.string()),
+        voornaam: v.optional(v.string()),
+        achternaam: v.optional(v.string()),
         email: v.optional(v.string()),
         telefoonnummer: v.optional(v.string()),
         geboortedatum: v.optional(v.number()),
@@ -442,6 +445,8 @@ export const updateMedewerkerProfiel = mutation({
         medewerkerId: v.id("medewerkers"),
         // Publieke velden
         naam: v.optional(v.string()),
+        voornaam: v.optional(v.string()),
+        achternaam: v.optional(v.string()),
         email: v.optional(v.string()),
         telefoonnummer: v.optional(v.string()),
         geboortedatum: v.optional(v.number()),

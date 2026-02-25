@@ -57,6 +57,18 @@ export default defineSchema({
         naam: v.string(),
 
         /**
+         * Voornaam — apart opgeslagen voor aanhef, sortering en filters.
+         * Optioneel voor backward-compatibiliteit met bestaande records.
+         */
+        voornaam: v.optional(v.string()),
+
+        /**
+         * Achternaam — apart opgeslagen voor aanhef, sortering en filters.
+         * Optioneel voor backward-compatibiliteit met bestaande records.
+         */
+        achternaam: v.optional(v.string()),
+
+        /**
          * Zachte deactivatie: actief=false verbergt de medewerker in de UI
          * en blokkeert domain-rol access, maar behoudt de audit trail.
          */

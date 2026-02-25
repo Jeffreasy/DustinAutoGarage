@@ -466,7 +466,7 @@ function InviteFormulier({ identityRole, isEigenaarDomein }: { identityRole: Ide
 // ---------------------------------------------------------------------------
 
 function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onProfielKlik }: {
-    medewerker: { _id: Id<"medewerkers">; naam: string; domeinRol: string; actief: boolean };
+    medewerker: { _id: Id<"medewerkers">; naam: string; voornaam?: string; achternaam?: string; domeinRol: string; actief: boolean };
     isActerendEigenaar: boolean;
     actueelProfielId: Id<"medewerkers"> | undefined;
     onProfielKlik: (id: Id<"medewerkers">) => void;
@@ -481,6 +481,9 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
     const isZichzelf = medewerker._id === actueelProfielId;
     const rol = medewerker.domeinRol as DomeinRol;
     const avatarGradient = ROL_AVATAR[rol] ?? ROL_AVATAR.monteur;
+
+    // Toon voornaam + achternaam als beschikbaar, anders naam
+    const weergaveNaam = [medewerker.voornaam, medewerker.achternaam].filter(Boolean).join(" ") || medewerker.naam;
 
     async function handleRolWijziging(nieuweRol: DomeinRol) {
         setBezig(true); setFout("");
@@ -525,7 +528,7 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
                 color: "#fff", flexShrink: 0,
                 boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             }}>
-                {medewerker.naam.charAt(0).toUpperCase()}
+                {weergaveNaam.charAt(0).toUpperCase()}
             </div>
 
             {/* Info + acties */}
@@ -533,7 +536,7 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
                 {/* Naam + badges */}
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-2)" }}>
                     <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
-                        {medewerker.naam}
+                        {weergaveNaam}
                     </span>
                     {isZichzelf && (
                         <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>(jij)</span>
