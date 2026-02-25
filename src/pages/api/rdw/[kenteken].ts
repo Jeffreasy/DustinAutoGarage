@@ -5,15 +5,19 @@
  *
  * Browser → /api/rdw/{kenteken}
  *   → (Astro server-side)
- *     → LaventeCare /api/v1/rdw/voertuig/{kenteken}  (auth-beveiligd, editor+)
+ *     → LaventeCare /api/v1/rdw/voertuig/{kenteken} (editor+)
  *
- * Stuurt cookies en X-Tenant-ID mee zodat de Go backend de gebruiker kan herkennen.
+ * Auth-strategie (in volgorde van prioriteit):
+ *   1. LAVENTECARE_TOKEN env var → Bearer header (service account, editor+ rol)
+ *   2. Fallback: forward user-cookies (werkt alleen als user zelf editor+ is)
  */
 
 import type { APIRoute } from "astro";
 
 const API_URL = import.meta.env.API_URL as string;
 const TENANT_ID = import.meta.env.TENANT_ID as string;
+// Service account token met editor+ rechten — staat in Vercel env vars
+const SVC_TOKEN = import.meta.env.LAVENTECARE_TOKEN as string | undefined;
 
 export const GET: APIRoute = async ({ request, params }) => {
     const kenteken = params.kenteken ?? "";
@@ -21,33 +25,32 @@ export const GET: APIRoute = async ({ request, params }) => {
 
     const forwardHeaders = new Headers();
 
-    // Forward cookies (access_token, csrf_token) for auth.
-    const cookie = request.headers.get("cookie");
-    if (cookie) forwardHeaders.set("cookie", cookie);
+    if (SVC_TOKEN) {
+        // Service-account pad: vaste token met editor+ rol
+        forwardHeaders.set("Authorization", `Bearer ${SVC_TOKEN}`);
+    } else {
+        // Fallback: forward user-cookies
+        const cookie = request.headers.get("cookie");
+        if (cookie) forwardHeaders.set("cookie", cookie);
 
-    // Forward CSRF token if present.
-    const csrf = request.headers.get("x-csrf-token");
-    if (csrf) forwardHeaders.set("x-csrf-token", csrf);
+        const csrf = request.headers.get("x-csrf-token");
+        if (csrf) forwardHeaders.set("x-csrf-token", csrf);
+    }
 
     forwardHeaders.set("Accept", "application/json");
     forwardHeaders.set("Accept-Encoding", "identity");
 
-    if (TENANT_ID) {
-        forwardHeaders.set("X-Tenant-ID", TENANT_ID);
-    }
+    if (TENANT_ID) forwardHeaders.set("X-Tenant-ID", TENANT_ID);
 
     const backendResponse = await fetch(targetUrl, {
         method: "GET",
         headers: forwardHeaders,
     });
 
-    // Buffer the response body (Anti-Gravity: prevents hanging streams).
     const body = await backendResponse.text();
 
     return new Response(body, {
         status: backendResponse.status,
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
     });
 };
