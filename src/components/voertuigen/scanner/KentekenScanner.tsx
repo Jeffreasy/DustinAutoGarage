@@ -109,6 +109,53 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
         scanFoto(file);
     }
 
+    /**
+     * compresseerFoto — client-side canvas resize + JPEG compressie.
+     * Vercel's serverless function limit is 4.5 MB. Camera foto's van moderne
+     * telefoons kunnen 10+ MB zijn. OCR heeft max ~1280px nodig.
+     */
+    async function compresseerFoto(file: File): Promise<File> {
+        const MAX_BREEDTE = 1280;
+        const MAX_BYTES = 3 * 1024 * 1024; // 3 MB ruim onder de Vercel limiet
+
+        // Als het al klein genoeg is, gewoon doorgeven
+        if (file.size <= MAX_BYTES) return file;
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+
+                // Schaal berekenen
+                const schaal = img.width > MAX_BREEDTE ? MAX_BREEDTE / img.width : 1;
+                const breedte = Math.round(img.width * schaal);
+                const hoogte = Math.round(img.height * schaal);
+
+                const canvas = document.createElement("canvas");
+                canvas.width = breedte;
+                canvas.height = hoogte;
+                canvas.getContext("2d")!.drawImage(img, 0, 0, breedte, hoogte);
+
+                // Verlaag kwaliteit indien nog steeds te groot
+                let kwaliteit = 0.82;
+                const tryBlob = (q: number) => {
+                    canvas.toBlob((blob) => {
+                        if (!blob) { resolve(file); return; }
+                        if (blob.size > MAX_BYTES && q > 0.4) {
+                            tryBlob(q - 0.15);
+                        } else {
+                            resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+                        }
+                    }, "image/jpeg", q);
+                };
+                tryBlob(kwaliteit);
+            };
+            img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+            img.src = objectUrl;
+        });
+    }
+
     async function scanFoto(file: File) {
         setStatus("scanning");
         setFoutmelding("");
@@ -116,8 +163,12 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
         setVoertuigInfo(undefined);
 
         try {
+            // Client-side compressie vóór upload (Vercel max 4.5MB)
+            const gecomprimeerd = await compresseerFoto(file);
+
             const form = new FormData();
-            form.append("foto", file);
+            form.append("foto", gecomprimeerd);
+
 
             const res = await fetch("/api/rdw/scan-foto", {
                 method: "POST",
