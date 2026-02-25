@@ -59,6 +59,18 @@ export function useApkWaarschuwingen(
     );
 }
 
+/**
+ * Haalt voertuigen op waarvan de APK al verlopen is (apkVervaldatum < nu).
+ * Aparte query zodat "verlopen" en "bijna verlopen" correct onderscheiden worden.
+ */
+export function useVerlopenApk(): Doc<"voertuigen">[] | undefined {
+    const { isAuthenticated } = useConvexAuth();
+    return useQuery(
+        api.voertuigen.getVerlopenApk,
+        isAuthenticated ? {} : "skip"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Hook: voertuig op ID
 // ---------------------------------------------------------------------------

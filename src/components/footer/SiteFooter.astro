@@ -1,0 +1,187 @@
+---
+/**
+ * src/components/footer/SiteFooter.astro
+ *
+ * Unified site footer — responsive (desktop + mobile via CSS).
+ * Bevat brand, footer-navigatie (conditioneel op user) en copyright.
+ *
+ * Props worden doorgegeven vanuit BaseLayout.astro.
+ */
+
+export interface Props {
+    user: {
+        full_name?: string | null;
+        email?: string | null;
+        role?: string;
+    } | null;
+    isAdmin: boolean;
+    isActief: (pad: string) => boolean;
+}
+
+const { user, isAdmin, isActief } = Astro.props;
+const jaar = new Date().getFullYear();
+---
+
+<footer class="site-footer no-print" role="contentinfo">
+    <div class="site-footer-inner">
+        <!-- Brand -->
+        <div class="footer-brand">
+            <span class="footer-logo-text">Dustin Auto Garage</span>
+            <span class="footer-tagline"
+                >Professioneel klanten- en voertuigbeheer</span
+            >
+        </div>
+
+        <!-- Footer navigatie — alleen zichtbaar als ingelogd -->
+        {
+            user && (
+                <nav class="footer-nav" aria-label="Footernavigatie">
+                    <a
+                        href="/dashboard"
+                        class:list={[
+                            "footer-link",
+                            {
+                                "footer-link--actief": isActief("/dashboard"),
+                            },
+                        ]}
+                    >
+                        Dashboard
+                    </a>
+                    <a
+                        href="/werkplaats"
+                        class:list={[
+                            "footer-link",
+                            {
+                                "footer-link--actief": isActief("/werkplaats"),
+                            },
+                        ]}
+                    >
+                        Werkplaats
+                    </a>
+                    <a
+                        href="/klanten"
+                        class:list={[
+                            "footer-link",
+                            {
+                                "footer-link--actief": isActief("/klanten"),
+                            },
+                        ]}
+                    >
+                        Klanten
+                    </a>
+                    <a
+                        href="/voertuigen"
+                        class:list={[
+                            "footer-link",
+                            {
+                                "footer-link--actief": isActief("/voertuigen"),
+                            },
+                        ]}
+                    >
+                        Voertuigen
+                    </a>
+                    <a
+                        href="/onderhoud"
+                        class:list={[
+                            "footer-link",
+                            {
+                                "footer-link--actief": isActief("/onderhoud"),
+                            },
+                        ]}
+                    >
+                        Onderhoud
+                    </a>
+                    {isAdmin && (
+                        <a
+                            href="/medewerkers"
+                            class:list={[
+                                "footer-link",
+                                {
+                                    "footer-link--actief":
+                                        isActief("/medewerkers"),
+                                },
+                            ]}
+                        >
+                            Medewerkers
+                        </a>
+                    )}
+                </nav>
+            )
+        }
+
+        <!-- Copyright -->
+        <p class="footer-copy">&copy; {jaar} Dustin Auto Garage</p>
+    </div>
+</footer>
+
+<style>
+    /* ── Footer ───────────────────────────────────────────────────────────── */
+    .site-footer {
+        background: var(--color-surface);
+        border-top: 1px solid var(--color-border);
+        margin-top: auto;
+    }
+
+    .site-footer-inner {
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+    }
+
+    /* Brand */
+    .footer-brand {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .footer-logo-text {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-semibold);
+        color: var(--color-heading);
+    }
+    .footer-tagline {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+    }
+
+    /* Footer nav */
+    .footer-nav {
+        display: flex;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+    }
+    .footer-link {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        text-decoration: none;
+        transition: color var(--transition-base);
+    }
+    .footer-link:hover {
+        color: var(--color-heading);
+    }
+    .footer-link--actief {
+        color: var(--color-heading);
+        font-weight: var(--weight-semibold);
+    }
+
+    /* Copyright */
+    .footer-copy {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        margin: 0;
+    }
+
+    /* ── Mobile: stack verticaal ─────────────────────────────────────────── */
+    @media (max-width: 640px) {
+        .site-footer-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--space-3);
+        }
+    }
+</style>

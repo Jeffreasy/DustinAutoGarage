@@ -1,0 +1,323 @@
+---
+/**
+ * src/components/navigation/SiteHeader.astro
+ *
+ * Desktop site-header: logo, navigation links, user info,
+ * ThemeToggle, logout button en hamburger toggle (mobile only).
+ *
+ * Props worden doorgegeven vanuit BaseLayout.astro.
+ */
+
+import ThemeToggle from "../ui/ThemeToggle.astro";
+
+export interface Props {
+    user: {
+        full_name?: string | null;
+        email?: string | null;
+        role?: string;
+    } | null;
+    isAdmin: boolean;
+    isActief: (pad: string) => boolean;
+}
+
+const { user, isAdmin, isActief } = Astro.props;
+---
+
+<header class="site-header no-print" role="banner">
+    <div class="site-header-inner">
+        <!-- Logo / Brand -->
+        <a
+            href="/dashboard"
+            class="site-logo"
+            aria-label="Dustin Auto Garage — Dashboard"
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                style="color: var(--color-accent);"
+            >
+                <path
+                    d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"
+                ></path>
+                <circle cx="6.5" cy="16.5" r="2.5"></circle>
+                <circle cx="16.5" cy="16.5" r="2.5"></circle>
+            </svg>
+            <span>Dustin Auto Garage</span>
+        </a>
+
+        <!-- Desktop navigatielinks — alleen zichtbaar als ingelogd -->
+        {
+            user && (
+                <nav class="site-nav hide-mobile" aria-label="Hoofdnavigatie">
+                    <a
+                        href="/dashboard"
+                        class:list={[
+                            "nav-link",
+                            { "nav-link--actief": isActief("/dashboard") },
+                        ]}
+                    >
+                        Dashboard
+                    </a>
+                    <a
+                        href="/werkplaats"
+                        class:list={[
+                            "nav-link",
+                            { "nav-link--actief": isActief("/werkplaats") },
+                        ]}
+                    >
+                        <span aria-hidden="true">🏭</span> Werkplaats
+                    </a>
+                    <a
+                        href="/klanten"
+                        class:list={[
+                            "nav-link",
+                            { "nav-link--actief": isActief("/klanten") },
+                        ]}
+                    >
+                        <span aria-hidden="true">👥</span> Klanten
+                    </a>
+                    <a
+                        href="/voertuigen"
+                        class:list={[
+                            "nav-link",
+                            { "nav-link--actief": isActief("/voertuigen") },
+                        ]}
+                    >
+                        <span aria-hidden="true">🚗</span> Voertuigen
+                    </a>
+                    <a
+                        href="/onderhoud"
+                        class:list={[
+                            "nav-link",
+                            { "nav-link--actief": isActief("/onderhoud") },
+                        ]}
+                    >
+                        <span aria-hidden="true">🔧</span> Onderhoud
+                    </a>
+                    {isAdmin && (
+                        <a
+                            href="/medewerkers"
+                            class:list={[
+                                "nav-link",
+                                {
+                                    "nav-link--actief":
+                                        isActief("/medewerkers"),
+                                },
+                            ]}
+                        >
+                            <span aria-hidden="true">👥</span> Medewerkers
+                        </a>
+                    )}
+                </nav>
+            )
+        }
+
+        <!-- Acties rechts -->
+        <div class="site-header-actions">
+            {
+                user && (
+                    <span
+                        class="nav-user-name hide-mobile"
+                        title={user.email ?? ""}
+                    >
+                        {user.full_name ?? user.email}
+                    </span>
+                )
+            }
+
+            <ThemeToggle />
+
+            {
+                user && (
+                    <a
+                        href="/logout"
+                        class="btn btn-ghost btn-sm no-print hide-mobile"
+                        aria-label="Uitloggen"
+                    >
+                        Uitloggen
+                    </a>
+                )
+            }
+
+            <!-- Hamburger toggle — uitsluitend mobiel -->
+            {
+                user && (
+                    <button
+                        id="mobile-menu-toggle"
+                        class="mobile-menu-btn show-mobile"
+                        aria-label="Menu openen"
+                        aria-expanded="false"
+                        aria-controls="mobile-menu"
+                        type="button"
+                    >
+                        <span class="hamburger-line" />
+                        <span class="hamburger-line" />
+                        <span class="hamburger-line" />
+                    </button>
+                )
+            }
+        </div>
+    </div>
+</header>
+
+<style>
+    /* ── Site-header ──────────────────────────────────────────────────────── */
+    .site-header {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky, 300);
+        background: var(--glass-bg-strong, var(--color-surface));
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--glass-border, var(--color-border));
+        box-shadow: 0 1px 0 var(--glass-border, var(--color-border));
+    }
+
+    .site-header-inner {
+        max-width: var(--container-max, 1280px);
+        margin: 0 auto;
+        padding: 0 var(--space-5);
+        height: 60px;
+        display: flex;
+        align-items: center;
+        gap: var(--space-6);
+    }
+
+    /* ── Logo ─────────────────────────────────────────────────────────────── */
+    .site-logo {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-weight: var(--weight-bold);
+        font-size: var(--text-sm);
+        color: var(--color-heading);
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: opacity var(--transition-base);
+    }
+    .site-logo:hover {
+        opacity: 0.8;
+    }
+
+    /* ── Desktop navigatielinks ───────────────────────────────────────────── */
+    .site-nav {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        flex: 1;
+    }
+
+    .nav-link {
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        color: var(--color-muted);
+        text-decoration: none;
+        transition:
+            color var(--transition-base),
+            background var(--transition-base);
+        white-space: nowrap;
+    }
+    .nav-link:hover {
+        color: var(--color-heading);
+        background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+    }
+    .nav-link--actief {
+        color: var(--color-heading);
+        background: var(--glass-bg, rgba(255, 255, 255, 0.08));
+        font-weight: var(--weight-semibold);
+    }
+
+    /* ── Acties rechts ────────────────────────────────────────────────────── */
+    .site-header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .nav-user-name {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        max-width: 160px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ── Hamburger knop ───────────────────────────────────────────────────── */
+    .mobile-menu-btn {
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        width: 40px;
+        height: 40px;
+        padding: var(--space-2);
+        background: transparent;
+        border: 1px solid var(--glass-border, var(--color-border));
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        color: var(--color-heading);
+        transition:
+            background var(--transition-base),
+            border-color var(--transition-base);
+        flex-shrink: 0;
+    }
+    .mobile-menu-btn:hover {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+    }
+
+    .hamburger-line {
+        display: block;
+        width: 18px;
+        height: 2px;
+        background: currentColor;
+        border-radius: 2px;
+        transition:
+            transform 0.25s ease,
+            opacity 0.25s ease;
+        transform-origin: center;
+    }
+
+    /* Hamburger → X animatie */
+    .mobile-menu-btn.is-open .hamburger-line:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+    .mobile-menu-btn.is-open .hamburger-line:nth-child(2) {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+    .mobile-menu-btn.is-open .hamburger-line:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    /* ── Responsive helpers ───────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+        .hide-mobile {
+            display: none !important;
+        }
+        .show-mobile {
+            display: flex !important;
+        }
+        .mobile-menu-btn {
+            display: flex;
+        }
+        .site-header-inner {
+            padding: 0 var(--space-4);
+            gap: var(--space-3);
+        }
+    }
+</style>

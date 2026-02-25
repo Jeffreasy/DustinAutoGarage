@@ -132,10 +132,10 @@ export default function WerkorderDetailModal({ order, onSluit }: Props) {
                 <button
                     onClick={onSluit}
                     className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "40px", flexShrink: 0 }}
+                    style={{ minHeight: "40px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
                     aria-label="Modal sluiten"
                 >
-                    ✕
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
             </div>
 
@@ -150,8 +150,9 @@ export default function WerkorderDetailModal({ order, onSluit }: Props) {
                     background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)",
                     borderRadius: "var(--radius-lg)", padding: "var(--space-4)",
                 }}>
-                    <p style={{ margin: "0 0 4px", fontSize: "var(--text-xs)", color: "#dc2626", fontWeight: "var(--weight-semibold)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                        🔴 Klacht / opdracht
+                    <p style={{ margin: "0 0 4px", fontSize: "var(--text-xs)", color: "#dc2626", fontWeight: "var(--weight-semibold)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="#dc2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                        Klacht / opdracht
                     </p>
                     <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--color-heading)", fontWeight: "var(--weight-medium)", lineHeight: 1.5 }}>
                         {order.klacht}
@@ -159,7 +160,7 @@ export default function WerkorderDetailModal({ order, onSluit }: Props) {
                 </div>
 
                 {/* Klant */}
-                <Sectie titel="👤 Klant">
+                <Sectie titel="Klant">
                     <InfoRij
                         label="Naam"
                         waarde={order.klant ? `${order.klant.voornaam} ${order.klant.achternaam}` : null}
@@ -180,14 +181,14 @@ export default function WerkorderDetailModal({ order, onSluit }: Props) {
                 </Sectie>
 
                 {/* Planning */}
-                <Sectie titel="📅 Planning & uitvoering">
+                <Sectie titel="Planning & uitvoering">
                     <InfoRij label="Afspraakdatum" waarde={formatDatum(order.afspraakDatum)} />
                     <InfoRij label="Monteur" waarde={order.monteur?.naam ?? "Niet toegewezen"} />
                 </Sectie>
 
                 {/* Financieel */}
                 {order.totaalKosten !== undefined && (
-                    <Sectie titel="💶 Financieel">
+                    <Sectie titel="Financieel">
                         <InfoRij label="Totaal (excl. BTW)" waarde={formatEuro(order.totaalKosten)} />
                         <InfoRij label="BTW (21%)" waarde={formatEuro(order.totaalKosten * 0.21)} />
                     </Sectie>
@@ -210,7 +211,7 @@ export default function WerkorderDetailModal({ order, onSluit }: Props) {
                     style={{ minHeight: "44px", color: "var(--color-accent-text)", textDecoration: "none" }}
                     title="Onderhoudsdossier bekijken"
                 >
-                    📋 Onderhoudsdossier →
+                    Onderhoudsdossier →
                 </a>
             </div>
 

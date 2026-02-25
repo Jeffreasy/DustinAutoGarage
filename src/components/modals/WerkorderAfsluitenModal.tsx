@@ -94,15 +94,16 @@ export default function WerkorderAfsluitenModal({
                 alignItems: "center",
             }}>
                 <div>
-                    <h2 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", margin: 0 }}>
-                        ✅ Werkorder afsluiten
+                    <h2 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", margin: 0, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#16a34a" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                        Werkorder afsluiten
                     </h2>
                     <p style={{ margin: "2px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}>
                         {kenteken}
                     </p>
                 </div>
-                <button onClick={onSluit} className="btn btn-ghost btn-sm" aria-label="Annuleren" style={{ minHeight: "44px", minWidth: "44px" }}>
-                    ✕
+                <button onClick={onSluit} className="btn btn-ghost btn-sm" aria-label="Annuleren" style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
             </div>
 
@@ -209,7 +210,12 @@ export default function WerkorderAfsluitenModal({
                         }}
                         aria-label="Werkorder definitief afsluiten"
                     >
-                        {bezig ? "Afsluiten…" : "✅ Auto klaar — Doorsturen"}
+                        {bezig ? "Afsluiten\u2026" : (
+                            <>
+                                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                Auto klaar — Doorsturen
+                            </>
+                        )}
                     </button>
                 </div>
             </div>

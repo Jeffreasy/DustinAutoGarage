@@ -1,11 +1,8 @@
 /**
  * src/components/voertuigen/MonteurVoertuigenView.tsx
  *
- * Monteur / Stagiair weergave: lees-only wagenpark.
- * - Zoekbalk op kenteken of merk/model
- * - Voertuigkaart: groot kenteken · merk/model · bouwjaar · brandstof
- * - APK-datum in kleur (rood=verlopen, oranje=<30d, groen=ok)
- * - Geen CRUD, geen financiële info
+ * Monteur / Stagiair: lees-only wagenpark.
+ * ui-ux-pro-max: SVG search icon, glassmorphism card, APK badge, skeleton grid.
  */
 
 import { useState } from "react";
@@ -13,26 +10,80 @@ import { useVoertuigenLijst } from "../../hooks/useVoertuigen";
 import ScannerSlot from "./scanner/ScannerSlot";
 import type { Doc } from "../../../convex/_generated/dataModel";
 
-function apkKleur(apkMs: number | undefined): string {
-    if (!apkMs) return "var(--color-muted)";
+// ---------------------------------------------------------------------------
+// APK helpers
+// ---------------------------------------------------------------------------
+
+function apkKleur(apkMs: number | undefined) {
+    if (!apkMs) return { color: "var(--color-muted)", bg: "transparent", border: "transparent" };
     const nu = Date.now();
-    const dagMs = 24 * 60 * 60 * 1000;
-    if (apkMs < nu) return "var(--color-error, #dc2626)";
-    if (apkMs < nu + 30 * dagMs) return "var(--color-warning, #d97706)";
-    return "var(--color-success, #16a34a)";
+    if (apkMs < nu) return { color: "#dc2626", bg: "rgba(220,38,38,0.08)", border: "rgba(220,38,38,0.3)" };
+    if (apkMs < nu + 30 * 864e5) return { color: "#d97706", bg: "rgba(217,119,6,0.08)", border: "rgba(217,119,6,0.3)" };
+    return { color: "#16a34a", bg: "rgba(22,163,74,0.08)", border: "rgba(22,163,74,0.3)" };
 }
 
 function apkLabel(apkMs: number | undefined): string {
     if (!apkMs) return "APK onbekend";
     const nu = Date.now();
-    if (apkMs < nu) return `⚠️ Verlopen: ${new Date(apkMs).toLocaleDateString("nl-NL")}`;
-    return `APK: ${new Date(apkMs).toLocaleDateString("nl-NL")}`;
+    const datum = new Date(apkMs).toLocaleDateString("nl-NL");
+    if (apkMs < nu) return `Verlopen: ${datum}`;
+    return `APK: ${datum}`;
 }
 
-function VoertuigKaartMonteur({ voertuig }: { voertuig: Doc<"voertuigen"> }) {
+// ---------------------------------------------------------------------------
+// SVG icons
+// ---------------------------------------------------------------------------
+
+function IconSearch() {
     return (
-        <div className="card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-            {/* Groot kenteken */}
+        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+    );
+}
+
+function IconCar() {
+    return (
+        <svg viewBox="0 0 24 24" width={32} height={32} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2" />
+            <circle cx="9" cy="17" r="2" /><circle cx="17" cy="17" r="2" />
+        </svg>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
+
+function VoertuigSkeleton() {
+    return (
+        <div aria-hidden="true" style={{ borderRadius: "var(--radius-xl)", background: "var(--glass-bg)", border: "1px solid var(--glass-border)", padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            <div style={{ width: "55%", height: "28px", borderRadius: "var(--radius-md)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: "75%", height: "14px", borderRadius: "var(--radius-md)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: "40%", height: "20px", borderRadius: "9999px", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// VoertuigKaartMonteur
+// ---------------------------------------------------------------------------
+
+function VoertuigKaartMonteur({ voertuig }: { voertuig: Doc<"voertuigen"> }) {
+    const apk = apkKleur(voertuig.apkVervaldatum);
+
+    return (
+        <div style={{
+            borderRadius: "var(--radius-xl)",
+            background: "var(--glass-bg)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: "1px solid var(--glass-border)",
+            boxShadow: "var(--glass-shadow)",
+            padding: "var(--space-4)",
+            display: "flex", flexDirection: "column", gap: "var(--space-3)",
+        }}>
+            {/* Kenteken */}
             <div style={{
                 fontFamily: "var(--font-mono)", fontWeight: 900,
                 fontSize: "var(--text-2xl)", color: "var(--color-heading)",
@@ -41,23 +92,34 @@ function VoertuigKaartMonteur({ voertuig }: { voertuig: Doc<"voertuigen"> }) {
                 {voertuig.kenteken}
             </div>
 
-            {/* Merk/model/jaar */}
+            {/* Merk / model / jaar / brandstof */}
             <p style={{ fontSize: "var(--text-sm)", color: "var(--color-body)", margin: 0 }}>
-                {voertuig.merk} {voertuig.model} · {voertuig.bouwjaar} · {voertuig.brandstof === "EV" ? "Elektrisch" : voertuig.brandstof}
-                {voertuig.kilometerstand && (
-                    <span style={{ color: "var(--color-muted)" }}>
-                        {" · "}{voertuig.kilometerstand.toLocaleString("nl-NL")} km
-                    </span>
-                )}
+                {voertuig.merk} {voertuig.model}
+                <span style={{ color: "var(--color-muted)" }}> · {voertuig.bouwjaar} · {voertuig.brandstof === "EV" ? "Elektrisch" : voertuig.brandstof}</span>
             </p>
 
-            {/* APK */}
-            <p style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: apkKleur(voertuig.apkVervaldatum), margin: 0 }}>
+            {voertuig.kilometerstand && (
+                <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: 0 }}>
+                    {voertuig.kilometerstand.toLocaleString("nl-NL")} km
+                </p>
+            )}
+
+            {/* APK badge */}
+            <span style={{
+                display: "inline-flex", alignSelf: "flex-start",
+                fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                color: apk.color, background: apk.bg, border: `1px solid ${apk.border}`,
+                borderRadius: "9999px", padding: "0.2em 0.65em",
+            }}>
                 {apkLabel(voertuig.apkVervaldatum)}
-            </p>
+            </span>
         </div>
     );
 }
+
+// ---------------------------------------------------------------------------
+// MonteurVoertuigenView
+// ---------------------------------------------------------------------------
 
 export default function MonteurVoertuigenView() {
     const [zoek, setZoek] = useState("");
@@ -66,26 +128,24 @@ export default function MonteurVoertuigenView() {
     const gefilterd = (voertuigen ?? []).filter((v) => {
         if (zoek.length < 2) return true;
         const t = zoek.toLowerCase();
-        return (
-            v.kenteken.toLowerCase().includes(t) ||
-            v.merk.toLowerCase().includes(t) ||
-            v.model.toLowerCase().includes(t)
-        );
+        return v.kenteken.toLowerCase().includes(t) || v.merk.toLowerCase().includes(t) || v.model.toLowerCase().includes(t);
     });
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
-            {/* Zoekbalk + scanner slot */}
+
+            {/* Zoekbalk met SVG prefix + scanner slot */}
             <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ flex: 1, maxWidth: "360px" }}>
+                <div style={{ flex: 1, maxWidth: "360px", position: "relative" }}>
+                    <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--color-muted)", pointerEvents: "none" }}>
+                        <IconSearch />
+                    </span>
                     <input
-                        type="search"
-                        value={zoek}
-                        onChange={(e) => setZoek(e.target.value)}
+                        type="search" value={zoek} onChange={(e) => setZoek(e.target.value)}
                         placeholder="Zoek op kenteken of merk…"
                         aria-label="Voertuigen zoeken"
                         className="input"
-                        style={{ minHeight: "48px" }}
+                        style={{ minHeight: "48px", paddingLeft: "40px" }}
                     />
                 </div>
                 <ScannerSlot />
@@ -93,10 +153,12 @@ export default function MonteurVoertuigenView() {
 
             {/* Grid */}
             {voertuigen === undefined ? (
-                <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>⏳ Laden…</p>
+                <div style={{ display: "grid", gap: "var(--space-3)", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
+                    {Array.from({ length: 6 }).map((_, i) => <VoertuigSkeleton key={i} />)}
+                </div>
             ) : gefilterd.length === 0 ? (
                 <div className="empty-state">
-                    <span className="empty-state-icon">🚗</span>
+                    <span className="empty-state-icon"><IconCar /></span>
                     <p className="empty-state-title">Geen voertuigen gevonden</p>
                 </div>
             ) : (

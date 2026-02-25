@@ -181,6 +181,11 @@ export const verplaatsNaarWerkplek = mutation({
             throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
         }
 
+        // Bewaar eindstatussen — Afgerond en Geannuleerd mogen niet meer worden verplaatst
+        if (order.status === "Afgerond" || order.status === "Geannuleerd") {
+            throw new Error(`CONFLICT: Werkorder is al definitief gesloten (${order.status}) en kan niet worden verplaatst.`);
+        }
+
         // Bepaal een leesbare actie-omschrijving voor het logboek
         let actieLabel = "Status gewijzigd";
         if (args.werkplekId !== order.werkplekId) {

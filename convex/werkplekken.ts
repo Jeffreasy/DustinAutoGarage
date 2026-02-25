@@ -180,7 +180,7 @@ export const seedDefaultWerkplekken = mutation({
 
         const bestaande = await ctx.db
             .query("werkplekken")
-            .withIndex("by_token_identifier", (q) =>
+            .withIndex("by_token_and_volgorde", (q) =>
                 q.eq("tokenIdentifier", profiel.tokenIdentifier)
             )
             .first();

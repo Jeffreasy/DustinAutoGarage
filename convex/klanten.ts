@@ -101,9 +101,12 @@ export const zoek = query({
 // ---------------------------------------------------------------------------
 
 /**
- * lijstKlantenMetOmzet — alle klanten verrijkt met bezoekfrequentie.
- * "Omzet" = aantal afgeronde bezoeken via onderhoudshistorie (optie B).
- * Gesorteerd op meeste bezoeken bovenaan.
+ * lijstKlantenMetOmzet — alle klanten verrijkt met:
+ *   - aantalBezoeken: sum van onderhoudshistorie records
+ *   - aantalVoertuigen: wagenpark grootte
+ *   - omzetTotaal: som van werkorders.totaalKosten (excl. BTW)
+ *   - laasteBezoekvDatum: meest recente datum uit onderhoudshistorie OF afgesloten werkorder
+ * Gesorteerd op hoogste omzet bovenaan.
  * Vereiste domeinrol: "eigenaar".
  */
 export const lijstKlantenMetOmzet = query({
@@ -128,8 +131,11 @@ export const lijstKlantenMetOmzet = query({
 
                 let aantalBezoeken = 0;
                 let laasteBezoekvDatum: number | null = null;
+                let omzetTotaal = 0;
+                let aantalWerkorders = 0;
 
                 for (const voertuig of voertuigen) {
+                    // Onderhoudshistorie — beurten tellen
                     const historie = await ctx.db
                         .query("onderhoudshistorie")
                         .withIndex("by_voertuig", (q) => q.eq("voertuigId", voertuig._id))
@@ -140,18 +146,37 @@ export const lijstKlantenMetOmzet = query({
                             laasteBezoekvDatum = h.datumUitgevoerd;
                         }
                     }
+
+                    // Werkorders — omzet + laatste datum
+                    const werkorders = await ctx.db
+                        .query("werkorders")
+                        .withIndex("by_voertuig", (q) => q.eq("voertuigId", voertuig._id))
+                        .collect();
+                    for (const wo of werkorders) {
+                        if (wo.totaalKosten !== undefined && wo.totaalKosten > 0) {
+                            omzetTotaal += wo.totaalKosten;
+                            aantalWerkorders++;
+                        }
+                        // Gebruik afspraakDatum als proxy voor laatste bezoek via werkorder
+                        if (!laasteBezoekvDatum || wo.afspraakDatum > laasteBezoekvDatum) {
+                            laasteBezoekvDatum = wo.afspraakDatum;
+                        }
+                    }
                 }
 
                 return {
                     ...klant,
                     aantalBezoeken,
-                    laasteBezoekvDatum,
                     aantalVoertuigen: voertuigen.length,
+                    laasteBezoekvDatum,
+                    omzetTotaal,
+                    aantalWerkorders,
                 };
             })
         );
 
-        return verrijkt.sort((a, b) => b.aantalBezoeken - a.aantalBezoeken);
+        // Sorteren op omzet — klanten zonder omzet zakken naar beneden
+        return verrijkt.sort((a, b) => b.omzetTotaal - a.omzetTotaal || b.aantalBezoeken - a.aantalBezoeken);
     },
 });
 

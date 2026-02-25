@@ -2,33 +2,23 @@
  * src/components/werkplaats/BalieWerkplaatsView.tsx
  *
  * Balie / Receptie weergave voor de Werkplaats.
- *
- * Layout (boven → onder):
- *   1. Planningsagenda — vandaag + komende 7 dagen, gegroepeerd per dag
- *   2. Het volledige Kanban-bord (live statusoverzicht)
- *
- * De balie plant en coördineert — de agenda is hun primaire tool.
- * Het bord eronder geeft real-time inzicht in de voortgang.
+ * ui-ux-pro-max: SVG icons, skeleton loader, geen emojis.
  */
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-
 import { api } from "../../../convex/_generated/api";
 import WerkplaatsBord from "./WerkplaatsBord";
 import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
 
-// Dag-labels NL
 const DAGNAMEN = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 const MAANDNAMEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 function formatDag(ms: number): string {
     const d = new Date(ms);
     const nu = new Date();
-    const isVandaag = d.toDateString() === nu.toDateString();
-    const isMorgen = d.toDateString() === new Date(nu.getTime() + 86400000).toDateString();
-    if (isVandaag) return "Vandaag";
-    if (isMorgen) return "Morgen";
+    if (d.toDateString() === nu.toDateString()) return "Vandaag";
+    if (d.toDateString() === new Date(nu.getTime() + 86400000).toDateString()) return "Morgen";
     return `${DAGNAMEN[d.getDay()]} ${d.getDate()} ${MAANDNAMEN[d.getMonth()]}`;
 }
 
@@ -46,6 +36,56 @@ function statusKleur(status: string): string {
     }
 }
 
+// ---------------------------------------------------------------------------
+// SVG icons
+// ---------------------------------------------------------------------------
+
+function IconCalendar() {
+    return (
+        <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+    );
+}
+
+function IconLayoutDashboard() {
+    return (
+        <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" />
+        </svg>
+    );
+}
+
+function IconPhone() {
+    return (
+        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4a2 2 0 0 1 1.99-2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.29 6.29l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+        </svg>
+    );
+}
+
+function AgendaSkeleton() {
+    return (
+        <div aria-hidden="true" style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{
+                    padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-xl)",
+                    background: "var(--glass-bg)", border: "1px solid var(--glass-border)",
+                    display: "flex", gap: "var(--space-4)", alignItems: "center",
+                }}>
+                    <div style={{ width: "80px", height: "16px", borderRadius: "var(--radius-sm)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                    <div style={{ flex: 1, height: "14px", borderRadius: "var(--radius-sm)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                    <div style={{ width: "60px", height: "20px", borderRadius: "9999px", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// PlanningsAgenda
+// ---------------------------------------------------------------------------
+
 function PlanningsAgenda() {
     const [toonNieuw, setToonNieuw] = useState(false);
     const nu = Date.now();
@@ -56,7 +96,6 @@ function PlanningsAgenda() {
         totMs: beginVandaag + 8 * 24 * 60 * 60 * 1000,
     });
 
-    // Groepeer op afspraakDatum per dag (afgerond op dag)
     const gegroepeerd = new Map<string, typeof planning>();
     if (planning) {
         for (const order of planning) {
@@ -73,8 +112,8 @@ function PlanningsAgenda() {
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
                 <div>
-                    <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", margin: 0 }}>
-                        📅 Planning — komende week
+                    <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", margin: 0, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <IconCalendar /> Planning — komende week
                     </h2>
                     <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: "2px 0 0" }}>
                         {planning?.length ?? "…"} werkorder(s) ingepland
@@ -87,11 +126,16 @@ function PlanningsAgenda() {
 
             {/* Agenda */}
             {!planning ? (
-                <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>⏳ Agenda laden…</p>
+                <AgendaSkeleton />
             ) : dagEntries.length === 0 ? (
-                <div className="card" style={{ padding: "var(--space-6)", textAlign: "center" }}>
-                    <p style={{ fontSize: "var(--text-2xl)", marginBottom: "var(--space-2)" }}>🗓️</p>
-                    <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>
+                <div style={{
+                    padding: "var(--space-8)", textAlign: "center",
+                    background: "var(--glass-bg)", border: "1px solid var(--glass-border)",
+                    borderRadius: "var(--radius-xl)", backdropFilter: "blur(12px)",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)",
+                }}>
+                    <span style={{ color: "var(--color-muted)" }}><IconCalendar /></span>
+                    <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)", margin: 0 }}>
                         Geen werkorders ingepland voor de komende week.
                     </p>
                 </div>
@@ -102,11 +146,7 @@ function PlanningsAgenda() {
                         const isVandaag = new Date(eersteDatum).toDateString() === new Date().toDateString();
                         return (
                             <div key={dagKey}>
-                                {/* Dag-label */}
-                                <div style={{
-                                    display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
-                                    marginBottom: "var(--space-2)",
-                                }}>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
                                     <span style={{
                                         fontSize: "var(--text-sm)", fontWeight: "var(--weight-bold)",
                                         color: isVandaag ? "var(--color-primary)" : "var(--color-heading)",
@@ -115,19 +155,17 @@ function PlanningsAgenda() {
                                     }}>
                                         {formatDag(eersteDatum)}
                                     </span>
-                                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                                        ({orders!.length})
-                                    </span>
+                                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>({orders!.length})</span>
                                 </div>
 
-                                {/* Rijen */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                                     {orders!.map((order) => (
-                                        <div key={order._id} className="card" style={{
+                                        <div key={order._id} style={{
                                             padding: "var(--space-3) var(--space-4)",
+                                            background: "var(--glass-bg)", backdropFilter: "blur(8px)",
+                                            border: "1px solid var(--glass-border)", borderRadius: "var(--radius-xl)",
                                             display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap",
                                         }}>
-                                            {/* Kenteken */}
                                             <span style={{
                                                 fontFamily: "var(--font-mono)", fontWeight: 700,
                                                 fontSize: "var(--text-base)", color: "var(--color-heading)",
@@ -136,14 +174,12 @@ function PlanningsAgenda() {
                                                 {order.voertuig?.kenteken ?? "–"}
                                             </span>
 
-                                            {/* Klant */}
                                             <span style={{ fontSize: "var(--text-sm)", color: "var(--color-body)", flex: 1 }}>
                                                 {order.klant
                                                     ? `${order.klant.voornaam} ${order.klant.achternaam}`
                                                     : "Onbekende klant"}
                                             </span>
 
-                                            {/* Klacht */}
                                             <span style={{
                                                 fontSize: "var(--text-xs)", color: "var(--color-muted)",
                                                 flex: 2, fontStyle: "italic", overflow: "hidden",
@@ -152,7 +188,6 @@ function PlanningsAgenda() {
                                                 {order.klacht}
                                             </span>
 
-                                            {/* Status badge */}
                                             <span style={{
                                                 fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                                                 color: statusKleur(order.status), whiteSpace: "nowrap",
@@ -160,18 +195,17 @@ function PlanningsAgenda() {
                                                 {order.status}
                                             </span>
 
-                                            {/* Bellen */}
                                             {order.klant?.telefoonnummer && (
                                                 <a
                                                     href={`tel:${order.klant.telefoonnummer}`}
                                                     style={{
                                                         fontSize: "var(--text-xs)", color: "var(--color-primary)",
                                                         textDecoration: "none", whiteSpace: "nowrap",
-                                                        minHeight: "36px", display: "flex", alignItems: "center",
+                                                        minHeight: "36px", display: "inline-flex", alignItems: "center", gap: "4px",
                                                     }}
                                                     aria-label={`Bel ${order.klant.voornaam}`}
                                                 >
-                                                    📞 {order.klant.telefoonnummer}
+                                                    <IconPhone /> {order.klant.telefoonnummer}
                                                 </a>
                                             )}
                                         </div>
@@ -195,16 +229,11 @@ function PlanningsAgenda() {
 export default function BalieWerkplaatsView() {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-8)" }}>
-            {/* 1. Planningsagenda */}
             <PlanningsAgenda />
-
-            {/* Scheider */}
             <hr style={{ border: "none", borderTop: "1px solid var(--color-border)", margin: 0 }} />
-
-            {/* 2. Live Kanban (read-only voor balie — geen archiveer-knop) */}
             <section>
-                <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", margin: "0 0 var(--space-4)" }}>
-                    🏭 Live Werkplaatsbord
+                <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", margin: "0 0 var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                    <IconLayoutDashboard /> Live Werkplaatsbord
                 </h2>
                 <WerkplaatsBord />
             </section>

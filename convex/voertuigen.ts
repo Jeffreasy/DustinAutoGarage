@@ -111,6 +111,28 @@ export const getBijnaVerlopenApk = query({
 });
 
 /**
+ * getVerlopenApk — Voertuigen waarvan de APK al verlopen is (apkVervaldatum < nu).
+ * Gescheiden van getBijnaVerlopenApk zodat de frontend onderscheid kan maken
+ * tussen "verlopen" (kritiek) en "bijna verlopen" (waarschuwing).
+ */
+export const getVerlopenApk = query({
+    args: {},
+    handler: async (ctx): Promise<Doc<"voertuigen">[]> => {
+        const tokenIdentifier = await requireAuth(ctx);
+        const nu = Date.now();
+
+        return ctx.db
+            .query("voertuigen")
+            .withIndex("by_apk_and_token", (q) =>
+                q
+                    .eq("tokenIdentifier", tokenIdentifier)
+                    .lt("apkVervaldatum", nu)
+            )
+            .collect();
+    },
+});
+
+/**
  * zoekOpKenteken — Zoek voertuigen op (gedeeltelijk) kenteken.
  * Minimaal 2 tekens vereist; client-side filtering op lowercase match.
  * Gebruikt door de onderhoud-modules en voertuig-selectie forms.
@@ -210,6 +232,8 @@ export const update = mutation({
 
 /**
  * updateKilometerstand — Snel een nieuwe kilometerstand registreren.
+ * Validatie: km moet > 0 zijn en niet meer dan 20% lager dan de huidige stand
+ * (bescherming tegen typefouten, bijv. 150000 → 15000).
  */
 export const updateKilometerstand = mutation({
     args: {
@@ -222,6 +246,17 @@ export const updateKilometerstand = mutation({
         const voertuig = await ctx.db.get(args.voertuigId);
         if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {
             throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
+        }
+
+        if (args.nieuweKilometerstand <= 0) {
+            throw new Error("INVALID: Kilometerstand moet groter dan 0 zijn.");
+        }
+
+        const huidige = voertuig.kilometerstand;
+        if (huidige !== undefined && args.nieuweKilometerstand < huidige * 0.8) {
+            throw new Error(
+                `INVALID: Kilometerstand (${args.nieuweKilometerstand.toLocaleString("nl-NL")}) is meer dan 20% lager dan de huidige stand (${huidige.toLocaleString("nl-NL")}). Controleer de invoer.`
+            );
         }
 
         await ctx.db.patch(args.voertuigId, {

@@ -137,3 +137,8 @@ export function useLijstPlanningVoorBalie(vanafMs?: number, totMs?: number) {
 export function useArchiveerWerkorder() {
     return useMutation(api.werkorders.archiveerWerkorder);
 }
+
+/** Wijs een monteur toe aan een werkorder — of ontkoppel (eigenaar/balie). */
+export function useWijsMonteurtoe() {
+    return useMutation(api.werkorders.wijsMonteurtoe);
+}

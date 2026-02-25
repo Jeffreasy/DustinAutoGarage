@@ -38,6 +38,9 @@ interface RolState {
 
     /** Geen medewerkers-record gevonden — cold-start situatie */
     isNietGekoppeld: boolean;
+
+    /** Convex _id van het eigen medewerkers-record — voor self-assign */
+    mijnId: import("../../convex/_generated/dataModel").Id<"medewerkers"> | null;
 }
 
 /**
@@ -62,8 +65,9 @@ export function useRol(): RolState {
         domeinRol,
         isEigenaar: domeinRol === "eigenaar",
         isBalie: domeinRol === "eigenaar" || domeinRol === "balie",
-        isMonteur: domeinRol !== null, // Elke actieve medewerker heeft minimaal monteur-rechten
+        isMonteur: domeinRol !== null,
         isLoading,
         isNietGekoppeld: !isLoading && profiel === null,
+        mijnId: profiel?._id ?? null,
     };
 }
