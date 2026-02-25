@@ -16,6 +16,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { useKlantenLijst, useKlantenZoek } from "../../hooks/useKlanten";
 import NieuweKlantModal from "../modals/NieuweKlantModal";
+import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
 
 type StatusFilter = "Alle" | "Actief" | "Inactief" | "Prospect";
 type TypeFilter = "Alle" | "Particulier" | "Zakelijk";
@@ -200,6 +201,7 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
     const [marketing, setMarketing] = useState(klant.accepteertMarketing);
     const [opslaan, setOpslaan] = useState(false);
     const [verwijderBevestig, setVerwijderBevestig] = useState(false);
+    const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
 
     async function handleOpslaan() {
         setOpslaan(true);
@@ -312,17 +314,31 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                 ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                         {voertuigen.map((v) => (
-                            <div key={v._id} style={{
-                                display: "flex", alignItems: "center", gap: "var(--space-3)",
-                                padding: "var(--space-3)", borderRadius: "var(--radius-md)",
-                                background: "var(--color-surface)", border: "1px solid var(--color-border)",
-                                flexWrap: "wrap",
-                            }}>
+                            <button
+                                key={v._id}
+                                onClick={() => setGeselecteerdVoertuig(v)}
+                                aria-label={`Open details van ${v.kenteken}`}
+                                style={{
+                                    all: "unset", display: "flex", alignItems: "center", gap: "var(--space-3)",
+                                    padding: "var(--space-3)", borderRadius: "var(--radius-md)",
+                                    background: "var(--color-surface)", border: "1px solid var(--color-border)",
+                                    flexWrap: "wrap", cursor: "pointer", width: "100%", boxSizing: "border-box",
+                                    transition: "background 150ms ease, border-color 150ms ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                    (e.currentTarget as HTMLElement).style.background = "var(--glass-bg-strong)";
+                                    (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border-luminous)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    (e.currentTarget as HTMLElement).style.background = "var(--color-surface)";
+                                    (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)";
+                                }}
+                            >
                                 <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: "var(--text-base)", color: "var(--color-heading)", letterSpacing: "0.05em" }}>
                                     {v.kenteken}
                                 </span>
                                 <span style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", flex: 1 }}>
-                                    {v.merk} {v.model} · {v.bouwjaar} · {v.brandstof}
+                                    {v.merk} {v.model} &middot; {v.bouwjaar} &middot; {v.brandstof}
                                     {v.kilometerstand && ` · ${v.kilometerstand.toLocaleString("nl-NL")} km`}
                                 </span>
                                 {v.apkVervaldatum && (
@@ -334,7 +350,10 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                                         APK: {new Date(v.apkVervaldatum).toLocaleDateString("nl-NL")}
                                     </span>
                                 )}
-                            </div>
+                                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: "var(--color-muted)", flexShrink: 0 }}>
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                            </button>
                         ))}
                     </div>
                 )}
@@ -411,6 +430,14 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                     )}
                 </div>
             </section>
+
+            {/* Voertuig detail modal — fixed overlay, rendert over het detail panel */}
+            {geselecteerdVoertuig !== null && (
+                <VoertuigDetailPanel
+                    voertuig={geselecteerdVoertuig}
+                    onSluit={() => setGeselecteerdVoertuig(null)}
+                />
+            )}
         </div>
     );
 }
