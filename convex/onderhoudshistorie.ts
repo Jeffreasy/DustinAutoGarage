@@ -45,32 +45,89 @@ export const getHistorie = query({
 });
 
 /**
- * getRecenteOnderhoudsbeurten — Alle onderhoudsbeurten voor de tenant,
- * gesorteerd op datum. Handig voor een activiteitenfeed op het dashboard.
+ * getTotaalStatistieken — garage-brede tellers voor de eigenaar/balie KPI-blokken.
  *
- * @param limiet - Maximaal aantal resultaten (default: 20)
+ * Waarom een aparte query?
+ *   `getRecenteBeurtenVerrijkt` heeft een limiet van 20 — KPI's op basis
+ *   van een partial dataset zijn structureel onjuist. Deze query telt ALLE
+ *   records en is geoptimaliseerd voor aggregaties, niet voor weergave.
+ *
+ * Resultaat:
+ *   { totaal, apksDezeMaand, groteBeurten, kleineBeurten, reparaties }
  */
-export const getRecenteOnderhoudsbeurten = query({
-    args: { limiet: v.optional(v.number()) },
-    handler: async (ctx, args): Promise<Doc<"onderhoudshistorie">[]> => {
+export const getTotaalStatistieken = query({
+    args: {},
+    handler: async (ctx) => {
         const tokenIdentifier = await requireAuth(ctx);
-        const limiet = args.limiet ?? 20;
+        const nu = Date.now();
+        const startMaand = new Date(nu);
+        startMaand.setDate(1);
+        startMaand.setHours(0, 0, 0, 0);
 
-        return ctx.db
+        const alle = await ctx.db
             .query("onderhoudshistorie")
             .withIndex("by_token_identifier", (q) =>
                 q.eq("tokenIdentifier", tokenIdentifier)
             )
-            .order("desc")
-            .take(limiet);
+            .collect();
+
+        return {
+            totaal: alle.length,
+            apksDezeMaand: alle.filter(
+                (b) => b.typeWerk === "APK" && b.datumUitgevoerd >= startMaand.getTime()
+            ).length,
+            groteBeurten: alle.filter((b) => b.typeWerk === "Grote Beurt").length,
+            kleineBeurten: alle.filter((b) => b.typeWerk === "Kleine Beurt").length,
+            reparaties: alle.filter((b) => b.typeWerk === "Reparatie").length,
+        };
     },
 });
 
 /**
- * getRecenteBeurtenVerrijkt — Recente beurten met voertuig-context (kenteken, merk, model).
+ * getRecenteOnderhoudsbeurten — Alle onderhoudsbeurten voor de tenant,
+ * gesorteerd op datum. Ondersteunt nu ook een datum-range filter.
  *
- * Verrijkt elke beurt met een JOIN op de voertuigen tabel.
- * Handig voor de eigenaar/balie activiteitsfeed: direct zichtbaar om welk voertuig het gaat.
+ * @param limiet   - Maximaal aantal resultaten (default: 20)
+ * @param vanafMs  - Optionele startdatum (ms since epoch)
+ * @param totMs    - Optionele einddatum (ms since epoch)
+ */
+export const getRecenteOnderhoudsbeurten = query({
+    args: {
+        limiet: v.optional(v.number()),
+        vanafMs: v.optional(v.number()),
+        totMs: v.optional(v.number()),
+    },
+    handler: async (ctx, args): Promise<Doc<"onderhoudshistorie">[]> => {
+        const tokenIdentifier = await requireAuth(ctx);
+        const limiet = args.limiet ?? 20;
+
+        let query = ctx.db
+            .query("onderhoudshistorie")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier)
+            )
+            .order("desc");
+
+        const resultaten = await query.collect();
+
+        // Datum-filter in memory (Convex ondersteunt geen range op by_token_identifier)
+        const gefilterd = resultaten.filter((b) => {
+            if (args.vanafMs !== undefined && b.datumUitgevoerd < args.vanafMs) return false;
+            if (args.totMs !== undefined && b.datumUitgevoerd > args.totMs) return false;
+            return true;
+        });
+
+        return gefilterd.slice(0, limiet);
+    },
+});
+
+
+/**
+ * getRecenteBeurtenVerrijkt — Recente beurten met voertuig- én klantcontext.
+ *
+ * Verrijkt elke beurt met een JOIN op voertuigen EN klanten.
+ * Voor de eigenaar/balie activiteitsfeed: direct zichtbaar om welk voertuig
+ * én welke klant het gaat, zonder extra round-trips.
  */
 export const getRecenteBeurtenVerrijkt = query({
     args: { limiet: v.optional(v.number()) },
@@ -86,10 +143,11 @@ export const getRecenteBeurtenVerrijkt = query({
             .order("desc")
             .take(limiet);
 
-        // JOIN: voertuig-data ophalen per beurt
+        // Dubbele JOIN: voertuig-data + klant-data ophalen per beurt
         const verrijkt = await Promise.all(
             beurten.map(async (beurt) => {
                 const voertuig = await ctx.db.get(beurt.voertuigId);
+                const klant = voertuig ? await ctx.db.get(voertuig.klantId) : null;
                 return {
                     ...beurt,
                     voertuig: voertuig
@@ -104,6 +162,14 @@ export const getRecenteBeurtenVerrijkt = query({
                             apkVervaldatum: voertuig.apkVervaldatum,
                         }
                         : null,
+                    klant: klant
+                        ? {
+                            _id: klant._id,
+                            voornaam: klant.voornaam,
+                            achternaam: klant.achternaam,
+                            telefoonnummer: klant.telefoonnummer,
+                        }
+                        : null,
                 };
             })
         );
@@ -111,6 +177,7 @@ export const getRecenteBeurtenVerrijkt = query({
         return verrijkt;
     },
 });
+
 
 
 // ---------------------------------------------------------------------------

@@ -41,6 +41,7 @@ export default function WerkorderAfsluitenModal({
     const [typeWerk, setTypeWerk] = useState<TypeWerk>("Grote Beurt");
     const [slotNotitie, setSlotNotitie] = useState("");
     const [totaalKosten, setTotaalKosten] = useState("");
+    const [btwInbegrepen, setBtwInbegrepen] = useState(false);
     const [bezig, setBezig] = useState(false);
     const [fout, setFout] = useState<string | null>(null);
 
@@ -73,6 +74,7 @@ export default function WerkorderAfsluitenModal({
                 typeWerk,
                 slotNotitie: slotNotitie.trim() || undefined,
                 totaalKosten: totaalKosten ? parseFloat(totaalKosten.replace(",", ".")) : undefined,
+                btwInbegrepen: totaalKosten ? btwInbegrepen : undefined,
             });
             onSluit();
         } catch (e) {
@@ -152,10 +154,10 @@ export default function WerkorderAfsluitenModal({
                     />
                 </div>
 
-                {/* Totaal kosten */}
+                {/* Totaal kosten + BTW toggle */}
                 <div>
                     <label htmlFor="totaal-kosten-input" style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", marginBottom: "var(--space-2)" }}>
-                        Totaalbedrag (€) <span style={{ color: "var(--color-muted)", fontWeight: "normal" }}>(excl. BTW, optioneel)</span>
+                        Totaalbedrag (€) <span style={{ color: "var(--color-muted)", fontWeight: "normal" }}>(optioneel)</span>
                     </label>
                     <input
                         id="totaal-kosten-input"
@@ -167,6 +169,25 @@ export default function WerkorderAfsluitenModal({
                         step={0.01}
                         style={inputStyle}
                     />
+                    {/* BTW toggle — alleen relevant als bedrag is ingevuld */}
+                    {totaalKosten && (
+                        <label style={{
+                            display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
+                            marginTop: "var(--space-2)", cursor: "pointer",
+                            fontSize: "var(--text-sm)", color: "var(--color-body)",
+                        }}>
+                            <input
+                                type="checkbox"
+                                checked={btwInbegrepen}
+                                onChange={(e) => setBtwInbegrepen(e.target.checked)}
+                                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--color-accent)" }}
+                            />
+                            BTW inbegrepen
+                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                                {btwInbegrepen ? "(incl. BTW)" : "(excl. BTW)"}
+                            </span>
+                        </label>
+                    )}
                 </div>
 
                 {/* Slot notitie */}

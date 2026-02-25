@@ -21,6 +21,15 @@ export type WerkplekDoc = {
     tokenIdentifier: string;
 };
 
+/** Mogelijke redenen voor annulering — gespiegeld aan vAfsluitingReden in validators.ts */
+export type AfsluitingReden =
+    | "Klant niet verschenen"
+    | "Klant geannuleerd"
+    | "Geen toestemming klant"
+    | "Onderdelen niet leverbaar"
+    | "Dubbele boeking"
+    | "Overig";
+
 export type WerkorderVerrijkt = {
     _id: Id<"werkorders">;
     voertuigId: Id<"voertuigen">;
@@ -39,6 +48,14 @@ export type WerkorderVerrijkt = {
     | "Geannuleerd";
     afspraakDatum: number;
     totaalKosten?: number;
+    /** Of totaalKosten incl. BTW is. undefined = niet ingevuld. */
+    btwInbegrepen?: boolean;
+    /** Slotnotitie van de balie — persistent op het record (ook in logs). */
+    slotNotitie?: string;
+    /** Timestamp: klant heeft auto opgehaald. undefined = nog niet opgehaald. */
+    opgehaaldOp?: number;
+    /** Reden van annulering — aanwezig als status = "Geannuleerd". */
+    afsluitingReden?: AfsluitingReden;
     gearchiveerd?: boolean;
     tokenIdentifier: string;
     aangemaaktOp: number;
@@ -55,7 +72,10 @@ export type WerkorderLogDoc = {
     notitie?: string;
     tijdstip: number;
     tokenIdentifier: string;
+    /** Naam van de medewerker — server-side verrijkt via JOIN op medewerkers tabel. */
+    medewerkerNaam?: string;
 };
+
 
 // ---------------------------------------------------------------------------
 // Query hooks
@@ -100,6 +120,19 @@ export function useMedewerkers() {
     return useQuery(api.medewerkers.listMedewerkers);
 }
 
+/**
+ * Afgeronde orders die nog wachten op ophalen door de klant.
+ * Balie-widget: toont welke auto's klaarstaan maar nog niet opgehaald zijn.
+ */
+export function useAfgerondNietOpgehaald() {
+    return useQuery(api.werkorders.lijstAfgerondNietOpgehaald) as WerkorderVerrijkt[] | undefined;
+}
+
+/** Planning voor de balie — vandaag + N dagen (balie-only). */
+export function useLijstPlanningVoorBalie(vanafMs?: number, totMs?: number) {
+    return useQuery(api.werkorders.lijstPlanningVoorBalie, { vanafMs, totMs });
+}
+
 // ---------------------------------------------------------------------------
 // Mutation hooks
 // ---------------------------------------------------------------------------
@@ -128,11 +161,6 @@ export function useSluitWerkorderAf() {
     return useMutation(api.werkorders.sluitWerkorderAf);
 }
 
-/** Planning voor de balie — vandaag + N dagen (balie-only). */
-export function useLijstPlanningVoorBalie(vanafMs?: number, totMs?: number) {
-    return useQuery(api.werkorders.lijstPlanningVoorBalie, { vanafMs, totMs });
-}
-
 /** Archiveer een werkorder (eigenaar-only). */
 export function useArchiveerWerkorder() {
     return useMutation(api.werkorders.archiveerWerkorder);
@@ -141,4 +169,21 @@ export function useArchiveerWerkorder() {
 /** Wijs een monteur toe aan een werkorder — of ontkoppel (eigenaar/balie). */
 export function useWijsMonteurtoe() {
     return useMutation(api.werkorders.wijsMonteurtoe);
+}
+
+/**
+ * Annuleer een werkorder met een verplichte reden.
+ * Auto-archiveert de order direct — verdwijnt van het bord.
+ * Gebruik deze in plaats van useUpdateStatus voor annuleringen.
+ */
+export function useAnnuleerWerkorder() {
+    return useMutation(api.werkorders.annuleerWerkorder);
+}
+
+/**
+ * Bevestig dat de klant de auto heeft opgehaald.
+ * Vult `opgehaaldOp` — order blijft status "Afgerond".
+ */
+export function useBevestigOphalen() {
+    return useMutation(api.werkorders.bevestigOphalen);
 }

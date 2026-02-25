@@ -22,7 +22,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 // Enum-validators worden gecentraliseerd beheerd in validators.ts
-import { vKlanttype, vKlantstatus, vBrandstof, vTypeWerk, vDomeinRol, vWerkplekType, vWerkorderStatus } from "./validators";
+import { vKlanttype, vKlantstatus, vBrandstof, vTypeWerk, vDomeinRol, vWerkplekType, vWerkorderStatus, vAfsluitingReden } from "./validators";
 
 // ---------------------------------------------------------------------------
 // Schema-definitie
@@ -284,14 +284,42 @@ export default defineSchema({
         afspraakDatum: v.number(),
 
         /**
-         * Totale kosten van de werkorder (euro, excl. BTW).
+         * Totale kosten van de werkorder (euro).
          * Wordt ingevuld bij afsluiting via WerkorderAfsluitenModal.
          * Optioneel voor backward-compatibiliteit met bestaande records.
          */
         totaalKosten: v.optional(v.number()),
 
         /**
-         * Gearchiveerd door eigenaar — verbergt order van het actieve bord.
+         * Of `totaalKosten` inclusief BTW is.
+         * undefined = niet van toepassing (geen kosten ingevuld).
+         */
+        btwInbegrepen: v.optional(v.boolean()),
+
+        /**
+         * Slotnotitie van de balie bij afsluiting.
+         * Wordt ook gelogd in werkorderLogs maar hier persistent opgeslagen
+         * zodat het zichtbaar blijft na archivering.
+         */
+        slotNotitie: v.optional(v.string()),
+
+        /**
+         * Timestamp: klant heeft auto daadwerkelijk opgehaald (ms since epoch).
+         * null = nog niet opgehaald. Gevuld via `bevestigOphalen` mutatie (balie).
+         * Maakt het mogelijk om "Afgerond maar niet opgehaald" te filteren.
+         */
+        opgehaaldOp: v.optional(v.number()),
+
+        /**
+         * Reden van annulering — verplicht bij `annuleerWerkorder`.
+         * Opgeslagen voor rapportage (no-show rate, klant-annuleringen etc.).
+         */
+        afsluitingReden: v.optional(vAfsluitingReden),
+
+        /**
+         * Gearchiveerd — verbergt order van het actieve bord.
+         * Geannuleerde orders: automatisch true via `annuleerWerkorder`.
+         * Afgeronde orders: handmatig door eigenaar of balie.
          * undefined / false = zichtbaar, true = gearchiveerd.
          */
         gearchiveerd: v.optional(v.boolean()),
@@ -310,7 +338,10 @@ export default defineSchema({
         // Tenant-filter + status-filter (bijv. alle "Klaar" orders).
         .index("by_status_and_token", ["tokenIdentifier", "status"])
         // Tenant-filter + datum-range (orders van vandaag).
-        .index("by_datum_and_token", ["tokenIdentifier", "afspraakDatum"]),
+        .index("by_datum_and_token", ["tokenIdentifier", "afspraakDatum"])
+        // Index: afgeronde orders die nog niet opgehaald zijn (balie-widget).
+        // Queries: lijstAfgerondNietOpgehaald — effectief: status=Afgerond, opgehaaldOp undefined.
+        .index("by_opgehaald_and_token", ["tokenIdentifier", "opgehaaldOp"]),
 
     // ──────────────────────────────────────────────────────────────────────────
     // Tabel 6: werkorderLogs  (Audit Trail — Fase 2)

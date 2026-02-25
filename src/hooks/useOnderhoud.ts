@@ -1,8 +1,8 @@
 /**
  * src/hooks/useOnderhoud.ts
  *
- * Custom React hooks voor de `onderhoudshistorie` tabel.
- * Queries + mutations — compleet setje.
+ * Custom React hooks voor de `onderhoudshistorie` en `werkorderLogs` tabellen.
+ * Queries + mutations — compleet setje voor eigenaar én balie.
  */
 
 import { useQuery, useMutation } from "convex/react";
@@ -10,7 +10,7 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 
 // ---------------------------------------------------------------------------
-// Query hooks
+// Query hooks — Onderhoudshistorie
 // ---------------------------------------------------------------------------
 
 /**
@@ -27,21 +27,66 @@ export function useVoertuigHistorie(
 }
 
 /**
- * Haalt de meest recente onderhoudsbeurten op voor het dashboard.
- * @param limiet - Maximaal (default: 20)
+ * Correcte garage-brede statistieken — telt ALLE records, niet gelimiteerd.
+ * Gebruik dit voor KPI-blokken i.p.v. useRecenteBeurtenVerrijkt.
+ *
+ * Resultaat: { totaal, apksDezeMaand, groteBeurten, kleineBeurten, reparaties }
  */
-export function useRecenteOnderhoudsbeurten(
-    limiet: number = 20
-): Doc<"onderhoudshistorie">[] | undefined {
-    return useQuery(api.onderhoudshistorie.getRecenteOnderhoudsbeurten, { limiet });
+export function useTotaalStatistieken() {
+    return useQuery(api.onderhoudshistorie.getTotaalStatistieken);
 }
 
 /**
- * Haalt verrijkte recente beurten op met voertuig-context (kenteken, merk, model).
- * Gebruik dit voor de activiteitsfeed waar de eigenaar/balie direct het voertuig wil zien.
+ * Haalt de meest recente onderhoudsbeurten op.
+ * Ondersteunt nu datum-range filtering voor maand/kwartaal-rapportage.
+ *
+ * @param limiet   - Max aantal (default: 20)
+ * @param vanafMs  - Optionele startdatum (ms since epoch)
+ * @param totMs    - Optionele einddatum (ms since epoch)
+ */
+export function useRecenteOnderhoudsbeurten(
+    limiet: number = 20,
+    vanafMs?: number,
+    totMs?: number
+): Doc<"onderhoudshistorie">[] | undefined {
+    return useQuery(api.onderhoudshistorie.getRecenteOnderhoudsbeurten, {
+        limiet,
+        vanafMs,
+        totMs,
+    });
+}
+
+/**
+ * Verrijkte recente beurten met voertuig- én klantcontext.
+ * Gebruik dit voor de activiteitsfeed — bevat kenteken, merk/model én klantnaam.
  */
 export function useRecenteBeurtenVerrijkt(limiet: number = 20) {
     return useQuery(api.onderhoudshistorie.getRecenteBeurtenVerrijkt, { limiet });
+}
+
+// ---------------------------------------------------------------------------
+// Query hooks — Werkorder Audit Trail
+// ---------------------------------------------------------------------------
+
+/**
+ * Garage-brede chronologische activiteitsfeed — alle werkorder-acties.
+ * Verrijkt met medewerkersnaam en voertuig-context.
+ * Alleen beschikbaar voor balie+ rollen.
+ *
+ * @param limiet   - Max resultaten (default: 50)
+ * @param vanafMs  - Optionele startdatum
+ * @param totMs    - Optionele einddatum
+ */
+export function useGarageActiviteit(
+    limiet: number = 50,
+    vanafMs?: number,
+    totMs?: number
+) {
+    return useQuery(api.werkorderLogs.lijstGarageActiviteit, {
+        limiet,
+        vanafMs,
+        totMs,
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -58,7 +103,7 @@ export function useUpdateDocumentUrl() {
     return useMutation(api.onderhoudshistorie.updateDocumentUrl);
 }
 
-/** Verwijder een onderhoudsrecord (permanent). */
+/** Verwijder een onderhoudsrecord (permanent, eigenaar only). */
 export function useVerwijderOnderhoud() {
     return useMutation(api.onderhoudshistorie.verwijder);
 }

@@ -95,7 +95,7 @@ export const vWerkplekType = v.union(
  *
  * Volledig transitie-pad:
  *   Gepland → Aanwezig → Wachtend → Bezig → (Wacht op onderdelen →) Klaar → Afgerond
- *                                                                           └→ Geannuleerd
+ *                                                                    └→ Geannuleerd [auto-archiveer]
  *
  * Backward-compatibel: bestaande waarden zijn NIET hernoemd.
  * Nieuwe waarden zijn toegevoegd aan voor- en achterkant.
@@ -112,6 +112,24 @@ export const vWerkorderStatus = v.union(
 
     // ── Afgerond ──────────────────────────────────────────────────────────
     v.literal("Klaar"),              // Klaar voor ophalen door klant
-    v.literal("Afgerond"),           // Klant heeft auto opgehaald / betaald
-    v.literal("Geannuleerd"),        // Afspraak geannuleerd door klant of garage
+    v.literal("Afgerond"),           // Werkzaamheden voltooid, wacht op ophalen/betaling
+    v.literal("Geannuleerd"),        // Afspraak geannuleerd — wordt automatisch gearchiveerd
+);
+
+// ---------------------------------------------------------------------------
+// Werkorders — Afsluiting / Annulering
+// ---------------------------------------------------------------------------
+
+/**
+ * Reden van annulering van een werkorder.
+ * Verplicht bij annuleren via `annuleerWerkorder` mutatie.
+ * Wordt opgeslagen op het record voor rapportage en audit.
+ */
+export const vAfsluitingReden = v.union(
+    v.literal("Klant niet verschenen"),     // No-show
+    v.literal("Klant geannuleerd"),         // Klant belde zelf af
+    v.literal("Geen toestemming klant"),    // Klant akkoord niet gekregen voor werk
+    v.literal("Onderdelen niet leverbaar"), // Klus kon niet worden uitgevoerd
+    v.literal("Dubbele boeking"),           // Administratieve fout
+    v.literal("Overig"),                    // Vrij in te vullen via notitie
 );

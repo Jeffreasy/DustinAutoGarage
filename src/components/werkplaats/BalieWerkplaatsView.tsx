@@ -6,10 +6,12 @@
  */
 
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import WerkplaatsBord from "./WerkplaatsBord";
 import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
+import { useAfgerondNietOpgehaald, useBevestigOphalen } from "../../hooks/useWerkplaats";
 
 const DAGNAMEN = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 const MAANDNAMEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
@@ -60,6 +62,25 @@ function IconPhone() {
     return (
         <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4a2 2 0 0 1 1.99-2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.29 6.29l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+        </svg>
+    );
+}
+
+function IconCheck() {
+    return (
+        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12" />
+        </svg>
+    );
+}
+
+function IconPackage() {
+    return (
+        <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="16.5" y1="9.4" x2="7.5" y2="4.21" />
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
         </svg>
     );
 }
@@ -223,6 +244,91 @@ function PlanningsAgenda() {
 }
 
 // ---------------------------------------------------------------------------
+// WachtOpOphalenWidget — balie overzicht "klaar maar niet opgehaald"
+// ---------------------------------------------------------------------------
+
+function WachtOpOphalenWidget() {
+    const orders = useAfgerondNietOpgehaald();
+    const bevestig = useBevestigOphalen();
+    const [bezigId, setBezigId] = useState<Id<"werkorders"> | null>(null);
+
+    if (!orders || orders.length === 0) return null;
+
+    async function handleOphalen(werkorderId: Id<"werkorders">) {
+        setBezigId(werkorderId);
+        try { await bevestig({ werkorderId }); }
+        finally { setBezigId(null); }
+    }
+
+    return (
+        <section style={{
+            padding: "var(--space-4)", borderRadius: "var(--radius-lg)",
+            background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.25)",
+            display: "flex", flexDirection: "column", gap: "var(--space-3)",
+        }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <span style={{ color: "#16a34a" }}><IconPackage /></span>
+                <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
+                    Wacht op ophalen
+                </span>
+                <span style={{
+                    background: "#16a34a", color: "#fff",
+                    fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)",
+                    borderRadius: "9999px", padding: "1px 8px", minWidth: "24px", textAlign: "center",
+                }}>{orders.length}</span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                {orders.map((order) => (
+                    <div key={order._id} style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-3)",
+                        padding: "var(--space-2) var(--space-3)",
+                        background: "var(--color-surface-2)", borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--color-border)", flexWrap: "wrap",
+                    }}>
+                        <span style={{
+                            fontFamily: "var(--font-mono)", fontWeight: 700,
+                            fontSize: "var(--text-sm)", color: "var(--color-heading)",
+                            background: "var(--color-surface-4)", padding: "1px 6px",
+                            borderRadius: "var(--radius-xs)", border: "1px solid var(--color-border)",
+                        }}>{order.voertuig?.kenteken ?? "–"}</span>
+
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-body)", flex: 1 }}>
+                            {order.klant
+                                ? `${order.klant.voornaam} ${order.klant.achternaam}`
+                                : "Onbekende klant"}
+                        </span>
+
+                        {order.klant?.telefoonnummer && (
+                            <a href={`tel:${order.klant.telefoonnummer}`}
+                                style={{ fontSize: "var(--text-xs)", color: "var(--color-accent-text)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                aria-label={`Bel ${order.klant.voornaam}`}>
+                                <IconPhone /> {order.klant.telefoonnummer}
+                            </a>
+                        )}
+
+                        <button
+                            onClick={() => handleOphalen(order._id)}
+                            disabled={bezigId === order._id}
+                            className="btn btn-sm"
+                            style={{
+                                minHeight: "36px", background: "#16a34a", color: "#fff",
+                                border: "none", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)",
+                                fontWeight: "var(--weight-semibold)", cursor: "pointer",
+                                display: "inline-flex", alignItems: "center", gap: "4px",
+                            }}
+                            aria-label={`Bevestig ophalen ${order.voertuig?.kenteken ?? ""}`}
+                        >
+                            <IconCheck /> {bezigId === order._id ? "…" : "Opgehaald"}
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Hoofd-export
 // ---------------------------------------------------------------------------
 
@@ -230,6 +336,7 @@ export default function BalieWerkplaatsView() {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-8)" }}>
             <PlanningsAgenda />
+            <WachtOpOphalenWidget />
             <hr style={{ border: "none", borderTop: "1px solid var(--color-border)", margin: 0 }} />
             <section>
                 <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", margin: "0 0 var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>

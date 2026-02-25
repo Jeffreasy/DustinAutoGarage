@@ -7,8 +7,8 @@
 
 import { useState } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
-import type { WerkorderVerrijkt, WerkplekDoc } from "../../hooks/useWerkplaats";
-import { useVerplaatsNaarWerkplek, useUpdateStatus, useWijsMonteurtoe } from "../../hooks/useWerkplaats";
+import type { WerkorderVerrijkt, WerkplekDoc, AfsluitingReden } from "../../hooks/useWerkplaats";
+import { useVerplaatsNaarWerkplek, useUpdateStatus, useWijsMonteurtoe, useAnnuleerWerkorder } from "../../hooks/useWerkplaats";
 import type { DomeinRol } from "../../../convex/helpers";
 import WerkorderAfsluitenModal from "../modals/WerkorderAfsluitenModal";
 import WerkorderDetailModal from "../modals/WerkorderDetailModal";
@@ -147,10 +147,12 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
     const [toonDetail, setToonDetail] = useState(false);
     const [bezig, setBezig] = useState(false);
     const [toonAnnuleerConfirm, setToonAnnuleerConfirm] = useState(false);
+    const [annuleerReden, setAnnuleerReden] = useState<AfsluitingReden>("Klant geannuleerd");
 
     const verplaats = useVerplaatsNaarWerkplek();
     const updateStatus = useUpdateStatus();
     const wijsMonteur = useWijsMonteurtoe();
+    const annuleer = useAnnuleerWerkorder();
 
     const isMonteur = domeinRol === "monteur" || domeinRol === "balie" || domeinRol === "eigenaar";
     const isBalie = domeinRol === "balie" || domeinRol === "eigenaar";
@@ -211,8 +213,9 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
     async function handleGeannuleerd() {
         setBezig(true);
         setToonAnnuleerConfirm(false);
-        try { await updateStatus({ werkorderId: order._id, nieuweStatus: "Geannuleerd", notitie: "Geannuleerd door balie" }); }
-        finally { setBezig(false); }
+        try {
+            await annuleer({ werkorderId: order._id, afsluitingReden: annuleerReden });
+        } finally { setBezig(false); }
     }
 
     async function handleWachtOpOnderdelen() {
@@ -439,6 +442,22 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                                 <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "#991b1b", fontWeight: "var(--weight-semibold)" }}>
                                     Werkorder voor {order.voertuig?.kenteken ?? "dit voertuig"} annuleren?
                                 </p>
+                                {/* Reden dropdown */}
+                                <select
+                                    value={annuleerReden}
+                                    onChange={(e) => setAnnuleerReden(e.target.value as AfsluitingReden)}
+                                    style={{
+                                        width: "100%", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)",
+                                        border: "1px solid rgba(220,38,38,0.4)", background: "#fff8f8",
+                                        color: "#7f1d1d", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                        cursor: "pointer", minHeight: "36px",
+                                    }}
+                                    aria-label="Reden van annulering"
+                                >
+                                    {(["Klant geannuleerd", "Klant niet verschenen", "Geen toestemming klant", "Onderdelen niet leverbaar", "Dubbele boeking", "Overig"] as AfsluitingReden[]).map((r) => (
+                                        <option key={r} value={r}>{r}</option>
+                                    ))}
+                                </select>
                                 <div style={{ display: "flex", gap: "var(--space-2)" }}>
                                     <button onClick={handleGeannuleerd} disabled={bezig} className="btn btn-sm"
                                         style={{ flex: 1, minHeight: "36px", background: "#dc2626", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-xs)", cursor: "pointer" }}>

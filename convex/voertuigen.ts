@@ -291,11 +291,14 @@ export const updateKilometerstand = mutation({
 });
 
 /**
- * verwijder — Verwijder een voertuig en alle bijbehorende onderhoudshistorie.
+ * verwijder — Verwijder een voertuig en alle bijbehorende data.
  *
  * ⚠️ Cascade verwijdering — onomkeerbaar.
  * H-4 FIX: Vereist minimaal de rol "balie" — monteurs en stagiairs
  * mogen geen voertuigen met cascade-effecten verwijderen.
+ *
+ * Guard: weigert verwijdering als er nog actieve (niet-gesloten) werkorders bestaan.
+ * Actief = alles behalve "Afgerond" en "Geannuleerd".
  */
 export const verwijder = mutation({
     args: { voertuigId: v.id("voertuigen") },
@@ -308,6 +311,24 @@ export const verwijder = mutation({
             throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
         }
 
+        // Guard: verhinder verwijdering bij nog openstaande werkorders
+        const werkorders = await ctx.db
+            .query("werkorders")
+            .withIndex("by_voertuig", (q) => q.eq("voertuigId", args.voertuigId))
+            .collect();
+
+        const actieveOrders = werkorders.filter(
+            (o) => o.status !== "Afgerond" && o.status !== "Geannuleerd"
+        );
+
+        if (actieveOrders.length > 0) {
+            const statussen = actieveOrders.map((o) => o.status).join(", ");
+            throw new Error(
+                `CONFLICT: Voertuig heeft nog ${actieveOrders.length} open werkorder(s) (${statussen}). ` +
+                `Sluit of annuleer alle werkorders voordat het voertuig verwijderd kan worden.`
+            );
+        }
+
         // Cascade: verwijder gekoppelde onderhoudshistorie
         const historie = await ctx.db
             .query("onderhoudshistorie")
@@ -318,12 +339,7 @@ export const verwijder = mutation({
             await ctx.db.delete(entry._id);
         }
 
-        // 🔴 FIX #2: Cascade werkorders + werkorderLogs verwijderen.
-        const werkorders = await ctx.db
-            .query("werkorders")
-            .withIndex("by_voertuig", (q) => q.eq("voertuigId", args.voertuigId))
-            .collect();
-
+        // Cascade: verwijder werkorders + werkorderLogs (gesloten werkorders)
         for (const order of werkorders) {
             const logs = await ctx.db
                 .query("werkorderLogs")
@@ -338,3 +354,4 @@ export const verwijder = mutation({
         await ctx.db.delete(args.voertuigId);
     },
 });
+

@@ -22,7 +22,7 @@
 
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { vWerkorderStatus, vTypeWerk } from "./validators";
+import { vWerkorderStatus, vTypeWerk, vAfsluitingReden } from "./validators";
 import { requireAuth, requireDomainRole } from "./helpers";
 
 // ---------------------------------------------------------------------------
@@ -295,8 +295,13 @@ export const wijsMonteurtoe = mutation({
 /**
  * sluitWerkorderAf — markeert een werkorder als definitief afgerond.
  *
- * Zet status op "Klaar" en kopieert de klus naar `onderhoudshistorie`
- * zodat de voertuig-historiek compleet blijft.
+ * Zet status op "Afgerond" en kopieert de klus naar `onderhoudshistorie`
+ * zodat de voertuig-historiek compleet blijft. Slaat slotnotitie en
+ * btwInbegrepen-indicator op het record zelf op voor persistentie.
+ *
+ * Lifecycle na afsluiting:
+ *   Afgerond → bevestigOphalen() → opgehaaldOp gevuld
+ *   Afgerond → archiveerWerkorder() → gearchiveerd = true
  *
  * Vereist minimaal de rol "balie".
  */
@@ -307,6 +312,7 @@ export const sluitWerkorderAf = mutation({
         typeWerk: vTypeWerk,
         slotNotitie: v.optional(v.string()),
         totaalKosten: v.optional(v.number()),
+        btwInbegrepen: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         const profiel = await requireDomainRole(ctx, "balie");
@@ -314,6 +320,11 @@ export const sluitWerkorderAf = mutation({
         const order = await ctx.db.get(args.werkorderId);
         if (!order || order.tokenIdentifier !== profiel.tokenIdentifier) {
             throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
+        }
+
+        // Guard: werkorder mag niet al definitief gesloten zijn
+        if (order.status === "Afgerond" || order.status === "Geannuleerd") {
+            throw new Error(`CONFLICT: Werkorder is al definitief gesloten (${order.status}).`);
         }
 
         // M-3 FIX: valideer kmStandOnderhoud — consistent met updateKilometerstand
@@ -332,15 +343,16 @@ export const sluitWerkorderAf = mutation({
             );
         }
 
-        // Status naar Afgerond — Klaar was 'klaar voor ophalen', Afgerond is definitief gesloten
+        // Status naar Afgerond — werkzaamheden voltooid, auto wacht op ophalen
         await ctx.db.patch(args.werkorderId, {
             status: "Afgerond",
             totaalKosten: args.totaalKosten,
+            btwInbegrepen: args.btwInbegrepen,
+            slotNotitie: args.slotNotitie?.trim() || undefined,
         });
 
         // Kopieer naar onderhoudshistorie voor langetermijn-voertuighistoriek.
         // datumUitgevoerd = afsluittijdstip (Date.now()), niet de afspraakdatum.
-        // De afspraak was wanneer gepland, de uitvoering is wanneer afgesloten.
         await ctx.db.insert("onderhoudshistorie", {
             voertuigId: order.voertuigId,
             datumUitgevoerd: Date.now(),
@@ -364,16 +376,182 @@ export const sluitWerkorderAf = mutation({
         }
 
         // Definitief log-entry
+        const kostenLabel = args.totaalKosten
+            ? ` (€ ${args.totaalKosten.toFixed(2)}${args.btwInbegrepen ? " incl. BTW" : " excl. BTW"})`
+            : "";
         await ctx.db.insert("werkorderLogs", {
             werkorderId: args.werkorderId,
             monteursId: profiel._id,
-            actie: `Werkorder afgesloten — Afgerond${args.totaalKosten ? ` (€ ${args.totaalKosten.toFixed(2)})` : ""}`,
+            actie: `Werkorder afgesloten — Afgerond${kostenLabel}`,
             notitie: args.slotNotitie,
             tijdstip: Date.now(),
             tokenIdentifier: profiel.tokenIdentifier,
         });
 
         return { succes: true };
+    },
+});
+
+// ---------------------------------------------------------------------------
+// Dedicated annuleer-mutatie (vervangt raw updateStatus naar Geannuleerd)
+// ---------------------------------------------------------------------------
+
+/**
+ * annuleerWerkorder — annuleert een werkorder met een verplichte reden.
+ *
+ * Waarom een dedicated mutatie en niet `updateStatus`?
+ *   - Reden is VERPLICHT — zonder reden geen annulering (rapportage-integriteit).
+ *   - Auto-archiveert direct: `gearchiveerd: true` — order verdwijnt van bord.
+ *   - Logt met reden voor the audit trail.
+ *
+ * Vereist minimaal de rol "balie".
+ */
+export const annuleerWerkorder = mutation({
+    args: {
+        werkorderId: v.id("werkorders"),
+        afsluitingReden: vAfsluitingReden,
+        notitie: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "balie");
+
+        const order = await ctx.db.get(args.werkorderId);
+        if (!order || order.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
+        }
+
+        // Guard: al definitief gesloten orders mogen niet opnieuw worden geannuleerd
+        if (order.status === "Afgerond" || order.status === "Geannuleerd") {
+            throw new Error(`CONFLICT: Werkorder is al definitief gesloten (${order.status}).`);
+        }
+
+        // Status → Geannuleerd + auto-archiveren in één atomaire schrijfoperatie
+        await ctx.db.patch(args.werkorderId, {
+            status: "Geannuleerd",
+            afsluitingReden: args.afsluitingReden,
+            gearchiveerd: true,
+        });
+
+        const logLabel = args.notitie
+            ? `Geannuleerd (${args.afsluitingReden}) — ${args.notitie}`
+            : `Geannuleerd (${args.afsluitingReden})`;
+
+        await ctx.db.insert("werkorderLogs", {
+            werkorderId: args.werkorderId,
+            monteursId: profiel._id,
+            actie: logLabel,
+            notitie: args.notitie,
+            tijdstip: Date.now(),
+            tokenIdentifier: profiel.tokenIdentifier,
+        });
+
+        return { succes: true };
+    },
+});
+
+// ---------------------------------------------------------------------------
+// Ophaalbevestiging (balie)
+// ---------------------------------------------------------------------------
+
+/**
+ * bevestigOphalen — registreert dat de klant de auto heeft opgehaald.
+ *
+ * Vult `opgehaaldOp` met het huidige tijdstip. Werkorder-status blijft
+ * "Afgerond" — dit is een sub-stap in de afsluiting, geen statuswijziging.
+ * Na ophaalbevestiging kan de eigenaar de werkorder archiveren.
+ *
+ * Vereist minimaal de rol "balie".
+ */
+export const bevestigOphalen = mutation({
+    args: {
+        werkorderId: v.id("werkorders"),
+        notitie: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "balie");
+
+        const order = await ctx.db.get(args.werkorderId);
+        if (!order || order.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
+        }
+
+        // Guard: alleen Afgeronde orders kunnen als opgehaald worden bevestigd
+        if (order.status !== "Afgerond") {
+            throw new Error(`CONFLICT: Ophaalbevestiging is alleen mogelijk voor Afgeronde orders (huidige status: ${order.status}).`);
+        }
+
+        // Guard: voorkom dubbele bevestiging
+        if (order.opgehaaldOp !== undefined) {
+            throw new Error("CONFLICT: Auto is al bevestigd als opgehaald.");
+        }
+
+        const nu = Date.now();
+        await ctx.db.patch(args.werkorderId, { opgehaaldOp: nu });
+
+        await ctx.db.insert("werkorderLogs", {
+            werkorderId: args.werkorderId,
+            monteursId: profiel._id,
+            actie: "Auto opgehaald — bevestigd door balie",
+            notitie: args.notitie,
+            tijdstip: nu,
+            tokenIdentifier: profiel.tokenIdentifier,
+        });
+
+        return { succes: true };
+    },
+});
+
+/**
+ * lijstAfgerondNietOpgehaald — afgeronde orders die nog niet door de klant zijn opgehaald.
+ *
+ * Balie-widget: toont welke auto's klaar staan maar de klant nog niet gebeld/opgehaald is.
+ * Verrijkt met klant + voertuig voor telefonisch contact.
+ *
+ * Filter: status = "Afgerond" + opgehaaldOp = undefined + gearchiveerd = false/undefined.
+ * Vereist minimaal de rol "balie".
+ */
+export const lijstAfgerondNietOpgehaald = query({
+    args: {},
+    handler: async (ctx) => {
+        const profiel = await requireDomainRole(ctx, "balie");
+        const tokenIdentifier = profiel.tokenIdentifier;
+
+        // Gebruik status-index voor efficiënte tenant + status filter
+        const afgerond = await ctx.db
+            .query("werkorders")
+            .withIndex("by_status_and_token", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier).eq("status", "Afgerond")
+            )
+            .collect();
+
+        // Filter: nog niet opgehaald en niet gearchiveerd
+        const wachtend = afgerond.filter(
+            (o) => o.opgehaaldOp === undefined && !o.gearchiveerd
+        );
+
+        // Verrijk met klant + voertuig
+        const verrijkt = await Promise.all(
+            wachtend.map(async (order) => {
+                const voertuig = await ctx.db.get(order.voertuigId);
+                const klant = await ctx.db.get(order.klantId);
+                return {
+                    ...order,
+                    voertuig: voertuig
+                        ? { kenteken: voertuig.kenteken, merk: voertuig.merk, model: voertuig.model }
+                        : null,
+                    klant: klant
+                        ? {
+                            voornaam: klant.voornaam,
+                            achternaam: klant.achternaam,
+                            telefoonnummer: klant.telefoonnummer,
+                        }
+                        : null,
+                };
+            })
+        );
+
+        // Sorteer op afsluiting-tijdstip (opgehaald = undefined, sorteer op aangemaaktOp als proxy)
+        return verrijkt.sort((a, b) => a.aangemaaktOp - b.aangemaaktOp);
     },
 });
 
