@@ -127,9 +127,15 @@ export function useMedewerkers() {
 /**
  * Afgeronde orders die nog wachten op ophalen door de klant.
  * Balie-widget: toont welke auto's klaarstaan maar nog niet opgehaald zijn.
+ *
+ * @param enabled - Geef `false` mee voor rollen zonder balie-rechten (monteur, stagiair).
+ *                  Standaard `true` (backwards-compat voor BalieWerkplaatsView).
  */
-export function useAfgerondNietOpgehaald() {
-    return useQuery(api.werkorders.lijstAfgerondNietOpgehaald) as WerkorderVerrijkt[] | undefined;
+export function useAfgerondNietOpgehaald(enabled = true) {
+    return useQuery(
+        api.werkorders.lijstAfgerondNietOpgehaald,
+        enabled ? {} : "skip"
+    ) as WerkorderVerrijkt[] | undefined;
 }
 
 /** Planning voor de balie — vandaag + N dagen (balie-only). */

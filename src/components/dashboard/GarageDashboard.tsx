@@ -75,9 +75,10 @@ function SectionLabel({ icon, children }: { icon: React.ReactNode; children: Rea
 
 function KPIStrip() {
     const { isMobile } = useResponsive();
+    const { isBalie, isEigenaar } = useRol();
     const stats = useTotaalStatistieken();
     const werkorders = useWerkorders();
-    const ophalen = useAfgerondNietOpgehaald();
+    const ophalen = useAfgerondNietOpgehaald(isBalie || isEigenaar);
     const apkAlerts = useApkWaarschuwingen(14);
 
     const actief = werkorders?.filter(o =>
@@ -381,9 +382,9 @@ function RecenteBeurtFeed() {
 // Wacht op Ophalen widget
 // ---------------------------------------------------------------------------
 
-function WachtOpOphalen() {
+function WachtOpOphalen({ enabled }: { enabled: boolean }) {
     const { isMobile } = useResponsive();
-    const orders = useAfgerondNietOpgehaald();
+    const orders = useAfgerondNietOpgehaald(enabled);
     const bevestig = useBevestigOphalen();
     const [bezigId, setBezigId] = useState<Id<"werkorders"> | null>(null);
 
@@ -682,7 +683,7 @@ export default function GarageDashboard() {
                             onNieuweOrder={() => setToonOrderModal(true)}
                         />
                     )}
-                    <WachtOpOphalen />
+                    <WachtOpOphalen enabled={isBalie || isEigenaar} />
                     <ApkAlerts />
                 </div>
             </div>

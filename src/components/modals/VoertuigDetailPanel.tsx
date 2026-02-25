@@ -95,7 +95,10 @@ function SectieKop({ titel, icoon }: { titel: string; icoon: string }) {
 // ---------------------------------------------------------------------------
 
 function PanelInhoud({ voertuig, onSluit }: Props) {
-    const klant = useQuery(api.klanten.getById, { klantId: voertuig.klantId });
+    const klant = useQuery(
+        api.klanten.getById,
+        voertuig.klantId ? { klantId: voertuig.klantId } : "skip"
+    );
     const beurten = useQuery(api.onderhoudshistorie.getHistorie, { voertuigId: voertuig._id });
 
     const recenteBeurten = (beurten ?? []).slice(0, 5);
