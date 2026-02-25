@@ -633,6 +633,52 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
 // MedewerkersContent
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// TenantRepairBanner — eenmalig zichtbaar als tokenIdentifiers niet kloppen
+// ---------------------------------------------------------------------------
+
+function TenantRepairBanner() {
+    const fixeer = useMutation(api.medewerkers.fixeerTenantTokens);
+    const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+    const [resultaat, setResultaat] = useState("");
+
+    async function handleFix() {
+        setStatus("loading");
+        try {
+            const res = await fixeer({});
+            setStatus("ok");
+            setResultaat(`${res.bijgewerkt} records gerepareerd, ${res.overgeslagen} al correct.`);
+        } catch (err) {
+            setStatus("error");
+            setResultaat(err instanceof Error ? err.message : "Onbekende fout");
+        }
+    }
+
+    if (status === "ok") {
+        return (
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-lg)", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.4)", color: "#065f46", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)" }}>
+                <IconCheck /> {resultaat} — herlaad de pagina om het resultaat te zien.
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-lg)", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.4)", fontSize: "var(--text-sm)", flexWrap: "wrap" }} role="alert">
+            <span style={{ flex: 1, color: "#92400e", minWidth: "200px" }}>
+                <strong>Niet alle medewerkers zichtbaar?</strong> Oude records gebruiken nog de verkeerde tenant-koppeling. Klik om dit eenmalig te repareren.
+            </span>
+            {status === "error" && <span style={{ color: "#991b1b", fontSize: "var(--text-xs)" }}>{resultaat}</span>}
+            <button className="btn btn-ghost btn-sm" onClick={handleFix} disabled={status === "loading"} style={{ borderColor: "rgba(251,191,36,0.5)", color: "#92400e" }}>
+                {status === "loading" ? "Bezig…" : "Repareer records"}
+            </button>
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// MedewerkersContent
+// ---------------------------------------------------------------------------
+
 function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
     const isAdmin = identityRole === "admin";
     const { isEigenaar, domeinRol, isLoading, isNietGekoppeld } = useRol();
@@ -641,6 +687,10 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
     const alleMedewerkers = useQuery(api.medewerkers.listMedewerkers, kanLijstZien ? {} : "skip");
     const medewerkers = kanLijstZien ? alleMedewerkers : null;
     const [geselecteerdProfielId, setGeselecteerdProfielId] = useState<Id<"medewerkers"> | null>(null);
+
+    // Toon repair banner voor eigenaar als de lijst slechts 1 record bevat (zichzelf)
+    // terwijl er meer medewerkers zouden moeten zijn (herkent stale token bug)
+    const toonRepairBanner = isEigenaar && Array.isArray(medewerkers) && medewerkers.length === 1;
 
     if (isLoading) return <Spinner />;
 
@@ -686,6 +736,9 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
                     </div>
                 </section>
             )}
+
+            {/* Repair banner — zichtbaar voor eigenaar als tokens niet kloppen */}
+            {toonRepairBanner && <TenantRepairBanner />}
 
             {/* Medewerkers lijst */}
             {(isEigenaar || domeinRol === "balie") && (

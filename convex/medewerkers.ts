@@ -232,9 +232,17 @@ export const registreerMedewerker = mutation({
         const [, sub] = targetTokenIdentifier.split("|");
         const userId = sub ?? targetTokenIdentifier;
 
+        // Sla de TENANT-ANCHOR tokenIdentifier op (eigenaar's token), niet de eigen JWT van de
+        // nieuwe medewerker. Dit zorgt dat listMedewerkers — die filtert op
+        // profiel.tokenIdentifier — alle medewerkers van dezelfde tenant vindt.
+        //
+        // acterendeProfiel?.tokenIdentifier = eigenaar's JWT (de anchor voor de hele garage)
+        // Fallback = eigen token (cold-start: nog geen eigenaar aanwezig)
+        const tenantTokenIdentifier = acterendeProfiel?.tokenIdentifier ?? targetTokenIdentifier;
+
         await ctx.db.insert("medewerkers", {
             userId,
-            tokenIdentifier: targetTokenIdentifier,
+            tokenIdentifier: tenantTokenIdentifier,
             domeinRol,
             naam,
             actief: true,
@@ -537,5 +545,69 @@ export const updateCVData = mutation({
 
         await ctx.db.patch(doelId, patch);
         return { success: true };
+    },
+});
+
+// ---------------------------------------------------------------------------
+// Tenant repair mutation
+// ---------------------------------------------------------------------------
+
+/**
+ * fixeerTenantTokens — eenmalige reparatie voor bestaande medewerker-records
+ * die met een verkeerde tokenIdentifier zijn aangemaakt (vóór de fix in
+ * registreerMedewerker).
+ *
+ * Zoekt de eigenaar van de tenant op, en werkt alle andere records bij zodat
+ * ze dezelfde tokenIdentifier (tenant-anchor) als de eigenaar opslaan.
+ *
+ * Vereist domeinrol: "eigenaar".
+ * Idempotent: al-correct records worden overgeslagen.
+ */
+export const fixeerTenantTokens = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const eigenaar = await requireDomainRole(ctx, "eigenaar");
+        const anchorToken = eigenaar.tokenIdentifier;
+
+        // Haal ALLE medewerker-records op via de eigenaar's userId
+        // (de eigenaar is via ensureEigenaar altijd correct opgeslagen)
+        const alleRecords = await ctx.db
+            .query("medewerkers")
+            .collect();
+
+        let bijgewerkt = 0;
+        let overgeslagen = 0;
+
+        for (const record of alleRecords) {
+            // Alleen records van dezelfde tenant repareren:
+            // identificeer via userId-prefix (de userId is correct opgeslagen)
+            // Skip de eigenaar zelf (die is al correct)
+            if (record._id === eigenaar._id) {
+                overgeslagen++;
+                continue;
+            }
+
+            // Skip records die al de juiste anchor hebben
+            if (record.tokenIdentifier === anchorToken) {
+                overgeslagen++;
+                continue;
+            }
+
+            // Verifieer dat dit record tot dezelfde LaventeCare-installatie behoort
+            // via de issuer prefix (het stuk vóór het '|' teken in de tokenIdentifier)
+            const eigenaarIssuer = anchorToken.split("|")[0];
+            const recordIssuer = record.tokenIdentifier.split("|")[0];
+
+            if (eigenaarIssuer !== recordIssuer) {
+                // Andere tenant / andere LaventeCare-installatie — overslaan
+                overgeslagen++;
+                continue;
+            }
+
+            await ctx.db.patch(record._id, { tokenIdentifier: anchorToken });
+            bijgewerkt++;
+        }
+
+        return { success: true, bijgewerkt, overgeslagen };
     },
 });
