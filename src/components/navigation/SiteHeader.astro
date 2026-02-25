@@ -3,7 +3,7 @@
  * src/components/navigation/SiteHeader.astro
  *
  * Desktop site-header: logo, navigation links, user info,
- * ThemeToggle, logout button en hamburger toggle (mobile only).
+ * ThemeToggle, profiel-dropdown en hamburger toggle (mobile only).
  *
  * Props worden doorgegeven vanuit BaseLayout.astro.
  */
@@ -21,6 +21,10 @@ export interface Props {
 }
 
 const { user, isAdmin, isActief } = Astro.props;
+
+// Eerste letter van de naam voor de avatar
+const avatarInitiaal = (user?.full_name ?? user?.email ?? "?").charAt(0).toUpperCase();
+const weergaveNaam = user?.full_name ?? user?.email ?? "";
 ---
 
 <header class="site-header no-print" role="banner">
@@ -122,28 +126,115 @@ const { user, isAdmin, isActief } = Astro.props;
 
         <!-- Acties rechts -->
         <div class="site-header-actions">
-            {
-                user && (
-                    <span
-                        class="nav-user-name hide-mobile"
-                        title={user.email ?? ""}
-                    >
-                        {user.full_name ?? user.email}
-                    </span>
-                )
-            }
-
             <ThemeToggle />
 
+            <!-- Profiel-avatar knop + dropdown (desktop) -->
             {
                 user && (
-                    <a
-                        href="/logout"
-                        class="btn btn-ghost btn-sm no-print hide-mobile"
-                        aria-label="Uitloggen"
-                    >
-                        Uitloggen
-                    </a>
+                    <div class="profile-menu hide-mobile" id="profile-menu">
+                        <button
+                            id="profile-menu-btn"
+                            class="profile-avatar-btn"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            aria-controls="profile-dropdown"
+                            aria-label={`Profielinstellingen van ${weergaveNaam}`}
+                            type="button"
+                            title={weergaveNaam}
+                        >
+                            <span class="profile-avatar-initials" aria-hidden="true">
+                                {avatarInitiaal}
+                            </span>
+                            <span class="profile-avatar-name">{weergaveNaam}</span>
+                            <!-- Chevron icon -->
+                            <svg
+                                class="profile-chevron"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown panel -->
+                        <div
+                            id="profile-dropdown"
+                            class="profile-dropdown"
+                            role="menu"
+                            aria-hidden="true"
+                        >
+                            <!-- User info header -->
+                            <div class="profile-dropdown-header">
+                                <div class="profile-dropdown-avatar" aria-hidden="true">
+                                    {avatarInitiaal}
+                                </div>
+                                <div class="profile-dropdown-info">
+                                    <span class="profile-dropdown-name">{weergaveNaam}</span>
+                                    <span class="profile-dropdown-email">{user.email}</span>
+                                </div>
+                            </div>
+
+                            <div class="profile-dropdown-divider" />
+
+                            <!-- Menu items -->
+                            <a
+                                href="/medewerkers"
+                                class="profile-dropdown-item"
+                                role="menuitem"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                Mijn profiel
+                            </a>
+
+                            <div class="profile-dropdown-divider" />
+
+                            <a
+                                href="/logout"
+                                class="profile-dropdown-item profile-dropdown-item--danger"
+                                role="menuitem"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                    <polyline points="16 17 21 12 16 7" />
+                                    <line x1="21" y1="12" x2="9" y2="12" />
+                                </svg>
+                                Uitloggen
+                            </a>
+                        </div>
+                    </div>
                 )
             }
 
@@ -167,6 +258,70 @@ const { user, isAdmin, isActief } = Astro.props;
         </div>
     </div>
 </header>
+
+<!-- Profile dropdown open/close logica -->
+<script>
+    (function () {
+        const btn = document.getElementById("profile-menu-btn");
+        const dropdown = document.getElementById("profile-dropdown");
+        const menu = document.getElementById("profile-menu");
+
+        if (!btn || !dropdown) return;
+
+        function openDropdown() {
+            dropdown!.setAttribute("aria-hidden", "false");
+            dropdown!.classList.add("profile-dropdown--open");
+            btn!.setAttribute("aria-expanded", "true");
+            btn!.classList.add("is-open");
+            // Focus eerste menu-item
+            const first = dropdown!.querySelector<HTMLElement>("[role='menuitem']");
+            if (first) setTimeout(() => first.focus(), 30);
+        }
+
+        function closeDropdown() {
+            dropdown!.setAttribute("aria-hidden", "true");
+            dropdown!.classList.remove("profile-dropdown--open");
+            btn!.setAttribute("aria-expanded", "false");
+            btn!.classList.remove("is-open");
+        }
+
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = dropdown.getAttribute("aria-hidden") === "false";
+            isOpen ? closeDropdown() : openDropdown();
+        });
+
+        // Sluit bij klik buiten dropdown
+        document.addEventListener("click", (e) => {
+            if (menu && !menu.contains(e.target as Node)) {
+                closeDropdown();
+            }
+        });
+
+        // Sluit bij Escape
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && dropdown.getAttribute("aria-hidden") === "false") {
+                closeDropdown();
+                btn.focus();
+            }
+        });
+
+        // Keyboard navigatie in dropdown (pijltjes)
+        dropdown.addEventListener("keydown", (e) => {
+            const items = Array.from(dropdown.querySelectorAll<HTMLElement>("[role='menuitem']"));
+            const idx = items.indexOf(document.activeElement as HTMLElement);
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                items[(idx + 1) % items.length]?.focus();
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                items[(idx - 1 + items.length) % items.length]?.focus();
+            } else if (e.key === "Tab") {
+                closeDropdown();
+            }
+        });
+    })();
+</script>
 
 <style>
     /* ── Site-header ──────────────────────────────────────────────────────── */
@@ -247,13 +402,185 @@ const { user, isAdmin, isActief } = Astro.props;
         flex-shrink: 0;
     }
 
-    .nav-user-name {
+    /* ── Profiel menu container ───────────────────────────────────────────── */
+    .profile-menu {
+        position: relative;
+    }
+
+    /* ── Avatar knop ─────────────────────────────────────────────────────── */
+    .profile-avatar-btn {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        color: var(--color-body);
+        transition:
+            background var(--transition-base),
+            border-color var(--transition-base);
+        max-width: 200px;
+    }
+    .profile-avatar-btn:hover,
+    .profile-avatar-btn.is-open {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.06));
+        border-color: var(--glass-border, var(--color-border));
+    }
+
+    .profile-avatar-initials {
+        width: 30px;
+        height: 30px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, var(--color-accent, #6366f1), #7c3aed);
+        color: #fff;
         font-size: var(--text-xs);
-        color: var(--color-muted);
-        max-width: 160px;
+        font-weight: var(--weight-bold);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
+    }
+
+    .profile-avatar-name {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        color: var(--color-heading);
+        max-width: 120px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .profile-chevron {
+        color: var(--color-muted);
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+    }
+    .profile-avatar-btn.is-open .profile-chevron {
+        transform: rotate(180deg);
+    }
+
+    /* ── Dropdown panel ──────────────────────────────────────────────────── */
+    .profile-dropdown {
+        position: absolute;
+        top: calc(100% + var(--space-2));
+        right: 0;
+        min-width: 220px;
+        background: var(--color-surface);
+        border: 1px solid var(--glass-border, var(--color-border));
+        border-radius: var(--radius-xl);
+        box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.25),
+            0 2px 8px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+        z-index: var(--z-dropdown, 400);
+        /* Animatie: verborgen standaard */
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+        pointer-events: none;
+        transition:
+            opacity 0.15s ease,
+            transform 0.15s ease;
+    }
+    .profile-dropdown--open {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    /* Header van dropdown */
+    .profile-dropdown-header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4) var(--space-4) var(--space-3);
+    }
+
+    .profile-dropdown-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, var(--color-accent, #6366f1), #7c3aed);
+        color: #fff;
+        font-size: var(--text-sm);
+        font-weight: var(--weight-bold);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+
+    .profile-dropdown-info {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .profile-dropdown-name {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-semibold);
+        color: var(--color-heading);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .profile-dropdown-email {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .profile-dropdown-divider {
+        height: 1px;
+        background: var(--color-border);
+        margin: 0;
+    }
+
+    /* Menu items */
+    .profile-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        width: 100%;
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        color: var(--color-body);
+        text-decoration: none;
+        transition:
+            background var(--transition-base),
+            color var(--transition-base);
+        cursor: pointer;
+        border: none;
+        background: none;
+        text-align: left;
+    }
+    .profile-dropdown-item:hover,
+    .profile-dropdown-item:focus-visible {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+        color: var(--color-heading);
+        outline: none;
+    }
+    .profile-dropdown-item:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--color-accent);
+        border-radius: 0;
+    }
+
+    .profile-dropdown-item--danger {
+        color: var(--color-muted);
+    }
+    .profile-dropdown-item--danger:hover,
+    .profile-dropdown-item--danger:focus-visible {
+        background: rgba(239, 68, 68, 0.08);
+        color: #ef4444;
     }
 
     /* ── Hamburger knop ───────────────────────────────────────────────────── */

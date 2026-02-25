@@ -19,6 +19,10 @@ export interface Props {
 }
 
 const { user, isAdmin, isActief } = Astro.props;
+
+// Eerste letter voor de avatar
+const avatarInitiaal = (user?.full_name ?? user?.email ?? "?").charAt(0).toUpperCase();
+const weergaveNaam = user?.full_name ?? user?.email ?? "";
 ---
 
 {
@@ -63,13 +67,38 @@ const { user, isAdmin, isActief } = Astro.props;
                     </button>
                 </div>
 
-                <!-- Gebruikersinfo -->
-                <div class="mobile-menu-user">
-                    <span class="mobile-user-name">
-                        {user.full_name ?? user.email}
-                    </span>
-                    <span class="mobile-user-email">{user.email}</span>
-                </div>
+                <!-- Gebruikers profiel sectie -->
+                <a
+                    href="/medewerkers"
+                    class="mobile-profile-link"
+                    aria-label={`Profiel van ${weergaveNaam} openen`}
+                >
+                    <!-- Avatar -->
+                    <div class="mobile-profile-avatar" aria-hidden="true">
+                        {avatarInitiaal}
+                    </div>
+                    <!-- Tekst -->
+                    <div class="mobile-profile-info">
+                        <span class="mobile-user-name">{weergaveNaam}</span>
+                        <span class="mobile-user-email">{user.email}</span>
+                    </div>
+                    <!-- Pijltje rechts -->
+                    <svg
+                        class="mobile-profile-arrow"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                </a>
 
                 <!-- Navigatielinks -->
                 <nav class="mobile-nav" aria-label="Mobiele navigatie">
@@ -325,15 +354,49 @@ const { user, isAdmin, isActief } = Astro.props;
         color: var(--color-heading);
     }
 
-    /* Gebruikersinfo */
-    .mobile-menu-user {
+    /* Profiel link sectie in drawer */
+    .mobile-profile-link {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        text-decoration: none;
+        transition: background var(--transition-base);
+        flex-shrink: 0;
+    }
+    .mobile-profile-link:hover {
+        background: var(--glass-bg, rgba(255, 255, 255, 0.04));
+    }
+
+    .mobile-profile-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, var(--color-accent, #6366f1), #7c3aed);
+        color: #fff;
+        font-size: var(--text-sm);
+        font-weight: var(--weight-bold);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+
+    .mobile-profile-info {
+        flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 2px;
-        padding: var(--space-4) var(--space-5);
-        border-bottom: 1px solid var(--color-border);
+    }
+
+    .mobile-profile-arrow {
+        color: var(--color-muted);
         flex-shrink: 0;
     }
+
     .mobile-user-name {
         font-size: var(--text-sm);
         font-weight: var(--weight-semibold);
