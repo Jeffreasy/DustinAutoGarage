@@ -281,6 +281,13 @@ export const wijzigDomeinRol = mutation({
             );
         }
 
+        // Guard: peer-eigenaar bescherming — eigenaar A mag eigenaar B niet wijzigen
+        if (doelMedewerker._id !== acteert._id && doelMedewerker.domeinRol === "eigenaar") {
+            throw new Error(
+                "FORBIDDEN: Je kunt de rol van een andere eigenaar niet wijzigen."
+            );
+        }
+
         await ctx.db.patch(medewerkerId, { domeinRol: nieuweDomeinRol });
         return { success: true };
     },
@@ -314,6 +321,13 @@ export const deactiveerMedewerker = mutation({
         // H-2 FIX: cross-tenant IDOR guard
         if (!doelMedewerker || doelMedewerker.tokenIdentifier !== acteert.tokenIdentifier) {
             throw new Error("FORBIDDEN: Medewerker niet gevonden of behoort tot andere garage.");
+        }
+
+        // Guard: peer-eigenaar bescherming — eigenaar A mag eigenaar B niet deactiveren
+        if (doelMedewerker.domeinRol === "eigenaar") {
+            throw new Error(
+                "FORBIDDEN: Je kunt een andere eigenaar niet deactiveren."
+            );
         }
 
         await ctx.db.patch(medewerkerId, { actief: false });

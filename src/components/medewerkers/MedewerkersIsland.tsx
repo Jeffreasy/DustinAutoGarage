@@ -564,61 +564,71 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
 
                 {/* Eigenaar-acties */}
                 {isActerendEigenaar && !isZichzelf && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
-                            <select
-                                aria-label={`Wijzig garage-functie van ${medewerker.naam}`}
-                                className="select"
-                                style={{ width: "auto", minWidth: "160px", fontSize: "var(--text-xs)", minHeight: "var(--control-height-sm)" }}
-                                value={medewerker.domeinRol}
-                                onChange={(e) => handleRolWijziging(e.target.value as DomeinRol)}
-                                disabled={bezig}
-                            >
-                                {(Object.keys(ROL_LABELS) as DomeinRol[]).map((r) => (
-                                    <option key={r} value={r}>{ROL_LABELS[r]}</option>
-                                ))}
-                            </select>
+                    medewerker.domeinRol === "eigenaar" ? (
+                        /* Peer-eigenaar: geen wijzigknoppen, alleen leesstatus */
+                        <span style={{
+                            fontSize: "var(--text-xs)", color: "var(--color-muted)",
+                            fontStyle: "italic",
+                        }}>
+                            Mede-eigenaar — rol kan niet worden gewijzigd
+                        </span>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                            <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+                                <select
+                                    aria-label={`Wijzig garage-functie van ${medewerker.naam}`}
+                                    className="select"
+                                    style={{ width: "auto", minWidth: "160px", fontSize: "var(--text-xs)", minHeight: "var(--control-height-sm)" }}
+                                    value={medewerker.domeinRol}
+                                    onChange={(e) => handleRolWijziging(e.target.value as DomeinRol)}
+                                    disabled={bezig}
+                                >
+                                    {(Object.keys(ROL_LABELS) as DomeinRol[]).map((r) => (
+                                        <option key={r} value={r}>{ROL_LABELS[r]}</option>
+                                    ))}
+                                </select>
 
-                            {medewerker.actief ? (
-                                <button
-                                    className="btn btn-danger btn-sm"
-                                    onClick={() => setBevestigDeactiveer(true)}
-                                    disabled={bezig}
-                                    aria-label={`Deactiveer ${medewerker.naam}`}
-                                >
-                                    Deactiveer
-                                </button>
-                            ) : (
-                                <button
-                                    className="btn btn-ghost btn-sm"
-                                    onClick={handleAktiveer}
-                                    disabled={bezig}
-                                    aria-label={`Heractiveer ${medewerker.naam}`}
-                                >
-                                    Heractiveer
-                                </button>
+                                {medewerker.actief ? (
+                                    <button
+                                        className="btn btn-danger btn-sm"
+                                        onClick={() => setBevestigDeactiveer(true)}
+                                        disabled={bezig}
+                                        aria-label={`Deactiveer ${medewerker.naam}`}
+                                    >
+                                        Deactiveer
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={handleAktiveer}
+                                        disabled={bezig}
+                                        aria-label={`Heractiveer ${medewerker.naam}`}
+                                    >
+                                        Heractiveer
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Inline bevestigingsdialog — vervangt confirm() */}
+                            {bevestigDeactiveer && (
+                                <div style={{
+                                    display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap",
+                                    padding: "var(--space-3)", borderRadius: "var(--radius-md)",
+                                    background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)",
+                                }}>
+                                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-medium)", flex: 1 }}>
+                                        Weet je zeker dat je {medewerker.naam} wilt deactiveren?
+                                    </span>
+                                    <button onClick={handleDeactiveer} className="btn btn-danger btn-sm" disabled={bezig}>
+                                        Ja, deactiveer
+                                    </button>
+                                    <button onClick={() => setBevestigDeactiveer(false)} className="btn btn-ghost btn-sm">
+                                        Annuleren
+                                    </button>
+                                </div>
                             )}
                         </div>
-
-                        {/* Inline bevestigingsdialog — vervangt confirm() */}
-                        {bevestigDeactiveer && (
-                            <div style={{
-                                display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap",
-                                padding: "var(--space-3)", borderRadius: "var(--radius-md)",
-                                background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)",
-                            }}>
-                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-medium)", flex: 1 }}>
-                                    Weet je zeker dat je {medewerker.naam} wilt deactiveren?
-                                </span>
-                                <button onClick={handleDeactiveer} className="btn btn-danger btn-sm" disabled={bezig}>
-                                    Ja, deactiveer
-                                </button>
-                                <button onClick={() => setBevestigDeactiveer(false)} className="btn btn-ghost btn-sm">
-                                    Annuleren
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    )
                 )}
 
                 {/* Inline foutmelding */}

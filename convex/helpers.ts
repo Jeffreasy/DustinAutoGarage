@@ -124,7 +124,7 @@ export async function getDomeinProfiel(
             q.eq("userId", identity.subject)
         )
         .filter((q) => q.eq(q.field("actief"), true))
-        .unique();
+        .first(); // .first() i.p.v. .unique() — crasht niet bij duplicate records
 
     if (viaUserId) return viaUserId;
 
@@ -135,7 +135,7 @@ export async function getDomeinProfiel(
             q.eq("tokenIdentifier", identity.tokenIdentifier)
         )
         .filter((q) => q.eq(q.field("actief"), true))
-        .unique();
+        .first(); // .first() i.p.v. .unique() — veilig bij meerdere records
 
     return viaToken ?? null;
 }

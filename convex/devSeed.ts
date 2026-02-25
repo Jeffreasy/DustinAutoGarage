@@ -18,6 +18,60 @@ import { v } from "convex/values";
 import { vDomeinRol } from "./validators";
 import { requireDomainRole } from "./helpers";
 
+// ── 0. Diagnostics: dump records van eigen tenant (eigenaar-only) ─────────────
+
+export const dumpMedewerkers = query({
+    args: {},
+    handler: async (ctx) => {
+        // Guard: alleen eigenaar mag tenant-data inzien
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+        const identity = await ctx.auth.getUserIdentity();
+
+        // Alleen eigen tenant-records — nooit cross-tenant lekkage
+        const alle = await ctx.db
+            .query("medewerkers")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", profiel.tokenIdentifier)
+            )
+            .collect();
+
+        return {
+            callerSubject: identity?.subject ?? null,
+            callerTokenIdentifier: identity?.tokenIdentifier ?? null,
+            records: alle.map(m => ({
+                naam: m.naam,
+                domeinRol: m.domeinRol,
+                userId: m.userId,
+                tokenIdentifier: m.tokenIdentifier,
+                actief: m.actief,
+            })),
+        };
+    },
+});
+
+// Patcht alle records met een lege tokenIdentifier naar de juiste tenant-anchor.
+// Vereist eigenaar-rol — beschermt tegen unauthenticated data-mutaties.
+export const patchLegeTokens = mutation({
+    args: {},
+    handler: async (ctx) => {
+        // Guard: alleen eigenaar mag tokens repareren
+        await requireDomainRole(ctx, "eigenaar");
+        const alle = await ctx.db.query("medewerkers").collect();
+        // Anchor = eigenaar record met niet-lege tokenIdentifier
+        const anchor = alle.find(m => m.domeinRol === "eigenaar" && m.tokenIdentifier !== "");
+        if (!anchor) return { success: false, reden: "Geen eigenaar met geldig token gevonden." };
+
+        let bijgewerkt = 0;
+        for (const m of alle) {
+            if (m.tokenIdentifier === "" || m.tokenIdentifier == null) {
+                await ctx.db.patch(m._id, { tokenIdentifier: anchor.tokenIdentifier });
+                bijgewerkt++;
+            }
+        }
+        return { success: true, anchor: anchor.tokenIdentifier, bijgewerkt };
+    },
+});
+
 // ── 1. Medewerker aanmaken / bijwerken ────────────────────────────────────────
 
 export const seedDevMedewerker = mutation({
@@ -34,14 +88,28 @@ export const seedDevMedewerker = mutation({
         // - anderen: eigenaar's tokenIdentifier als gedeeld tenant-anchor
         let tenantTokenIdentifier = identity.tokenIdentifier;
 
-        if (domeinRol !== "eigenaar") {
-            const eigenaar = await ctx.db
-                .query("medewerkers")
-                .collect()
-                .then(all => all.find(m => m.domeinRol === "eigenaar" && m.actief));
+        // Zoek bestaande eigenaar voor tenant-anchor én rol-escalation check
+        const bestaandeEigenaar = await ctx.db
+            .query("medewerkers")
+            .collect()
+            .then(all => all.find(m => m.domeinRol === "eigenaar" && m.actief));
 
-            if (eigenaar) {
-                tenantTokenIdentifier = eigenaar.tokenIdentifier;
+        if (domeinRol === "eigenaar" && bestaandeEigenaar) {
+            // Role-escalation guard: eigenaar-rol toewijzen als er al een eigenaar bestaat
+            // mag alleen via adminRegistreerMedewerker (door de eigenaar zelf).
+            // seedDevMedewerker mag dit alleen als er NOG GEEN eigenaar is (cold-start).
+            const isZichzelfEigenaar = bestaandeEigenaar.userId === identity.subject;
+            if (!isZichzelfEigenaar) {
+                throw new Error(
+                    "FORBIDDEN: Er is al een eigenaar voor deze tenant. " +
+                    "Gebruik adminRegistreerMedewerker (eigenaar-only) om een tweede eigenaar toe te voegen."
+                );
+            }
+        }
+
+        if (domeinRol !== "eigenaar") {
+            if (bestaandeEigenaar) {
+                tenantTokenIdentifier = bestaandeEigenaar.tokenIdentifier;
             }
             // Als er nog geen eigenaar is, gebruik eigen tokenIdentifier als tijdelijk anchor.
             // fixTenantTokens kan later alle records rechtzetten.
@@ -163,15 +231,13 @@ export const fixTenantTokens = mutation({
         }
 
         const patches: string[] = [];
-        const deletions: string[] = [];
 
         for (const m of medewerkers) {
             if (m._id === correcteEigenaar._id) continue;
 
-            if (m.domeinRol === "eigenaar") {
-                await ctx.db.delete(m._id);
-                deletions.push(`${m.naam} (${m.userId})`);
-            } else if (m.tokenIdentifier !== dataToken) {
+            // Patch alle records (ook extra eigenaars) naar de juiste tenant-anchor.
+            // Meerdere eigenaars zijn geldig — we verwijderen ze NIET meer.
+            if (m.tokenIdentifier !== dataToken) {
                 await ctx.db.patch(m._id, { tokenIdentifier: dataToken });
                 patches.push(`${m.naam} (${m.domeinRol})`);
             }
@@ -182,7 +248,115 @@ export const fixTenantTokens = mutation({
             correcteEigenaar: correcteEigenaar.naam,
             dataToken,
             gepatch: patches,
-            verwijderd: deletions,
         };
     },
 });
+
+
+// ── 4. Admin: registreer medewerker via LaventeCare userId (eigenaar-only) ─────
+
+/**
+ * adminRegistreerMedewerker — maakt een medewerker-record aan voor een gebruiker
+ * die nog NIET heeft ingelogd, aan de hand van hun LaventeCare userId (UUID).
+ *
+ * Bouwt tokenIdentifier op als `{issuer}|{userId}` — identiek aan wat LaventeCare JWTs
+ * aanmaken. Slaat de eigenaar's tokenIdentifier op als tenant-anchor zodat
+ * listMedewerkers de nieuwe medewerker direct teruggeeft.
+ *
+ * Vereist domeinrol: "eigenaar". Idempotent via userId check.
+ */
+export const adminRegistreerMedewerker = mutation({
+    args: {
+        userId: v.string(),
+        naam: v.string(),
+        domeinRol: vDomeinRol,
+        issuer: v.optional(v.string()),
+    },
+    handler: async (ctx, { userId, naam, domeinRol, issuer }) => {
+        const eigenaar = await requireDomainRole(ctx, "eigenaar");
+
+        // Idempotentie-check
+        const bestaand = await ctx.db
+            .query("medewerkers")
+            .withIndex("by_userId", (q) => q.eq("userId", userId))
+            .first();
+
+        if (bestaand) {
+            throw new Error(
+                `CONFLICT: Record bestaat al voor userId '${userId}' (${bestaand.naam}, ${bestaand.domeinRol}).`
+            );
+        }
+
+        const id = await ctx.db.insert("medewerkers", {
+            userId,
+            tokenIdentifier: eigenaar.tokenIdentifier, // tenant-anchor
+            domeinRol,
+            naam,
+            actief: true,
+            aangemaaktOp: Date.now(),
+        });
+
+        return { success: true, id, userId, domeinRol };
+    },
+});
+
+
+// ── 5. Opruimen van duplicate userId records (eigenaar-only) ──────────────────
+
+/**
+ * cleanupDuplicateUserIds — verwijdert dubbele medewerker-records voor dezelfde userId.
+ *
+ * Ontstaat wanneer een user zichzelf registreert via ensureEigenaar/registreerMedewerker
+ * NADAT de eigenaar al een record aanmaakte via adminRegistreerMedewerker.
+ *
+ * Strategie: behoud het record met de correcte tenant-anchor tokenIdentifier.
+ * Verwijder de rest. getDomeinProfiel (.unique()) stopt dan met crashen.
+ *
+ * Vereist domeinrol: "eigenaar".
+ */
+export const cleanupDuplicateUserIds = mutation({
+    args: {},
+    handler: async (ctx) => {
+        // Guard: alleen eigenaar mag duplicate records opruimen
+        const acteert = await requireDomainRole(ctx, "eigenaar");
+        const anchorToken = acteert.tokenIdentifier;
+
+        // Haal alleen eigen tenant-records op (scoped via anchor-token)
+        const alle = await ctx.db
+            .query("medewerkers")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", anchorToken)
+            )
+            .collect();
+        const eigenaar = alle.find(m => m.domeinRol === "eigenaar" && m.actief);
+        if (!eigenaar) return { success: false, reden: "Geen actieve eigenaar gevonden." };
+
+        // Groepeer op userId
+        const perUser = new Map<string, typeof alle>();
+        for (const m of alle) {
+            const groep = perUser.get(m.userId) ?? [];
+            groep.push(m);
+            perUser.set(m.userId, groep);
+        }
+
+        const verwijderd: string[] = [];
+
+        for (const [userId, records] of perUser.entries()) {
+            if (records.length <= 1) continue; // geen duplicaat
+
+            // Behoud het record met de anchor-token; verwijder de rest
+            const correct = records.find(r => r.tokenIdentifier === anchorToken)
+                ?? records[0]; // fallback: behoud de eerste
+
+            for (const r of records) {
+                if (r._id === correct._id) continue;
+                await ctx.db.delete(r._id);
+                verwijderd.push(`${r.naam} (userId: ${userId}, rol: ${r.domeinRol})`);
+            }
+        }
+
+        return { success: true, verwijderd, aantalVerwijderd: verwijderd.length };
+    },
+});
+
+
