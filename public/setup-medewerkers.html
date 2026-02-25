@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🔧 Dev Login — Dustin Garage</title>
+    <title>🔑 Medewerker Setup — Dustin Garage</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
@@ -41,7 +41,6 @@
             padding: 24px 16px 48px;
         }
 
-        /* ── Animated background grid ── */
         body::before {
             content: '';
             position: fixed;
@@ -61,7 +60,6 @@
             margin: 0 auto;
         }
 
-        /* ── Header ── */
         header {
             display: flex;
             align-items: center;
@@ -100,37 +98,28 @@
             margin-top: 1px;
         }
 
-        .dev-badge {
-            font-family: var(--mono);
-            font-size: 11px;
-            padding: 4px 10px;
-            background: rgba(245, 158, 11, 0.12);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            border-radius: 6px;
-            color: var(--warning);
-            letter-spacing: 0.05em;
-        }
-
-        /* ── Config bar ── */
-        .config-bar {
+        /* ── URL Config ── */
+        .url-bar {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 28px;
+            gap: 10px;
+            margin-bottom: 10px;
             padding: 12px 16px;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--border);
             border-radius: 10px;
+            flex-wrap: wrap;
         }
 
-        .config-bar label {
+        .url-bar label {
             font-size: 12px;
             color: var(--muted);
             white-space: nowrap;
         }
 
-        .config-bar input {
+        .url-bar input {
             flex: 1;
+            min-width: 200px;
             font-family: var(--mono);
             font-size: 12px;
             padding: 6px 10px;
@@ -142,8 +131,38 @@
             transition: border-color 0.15s;
         }
 
-        .config-bar input:focus {
+        .url-bar input:focus {
             border-color: var(--accent);
+        }
+
+        .url-presets {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 5px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--body);
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+
+        .preset-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .preset-btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(16, 185, 129, 0.08);
         }
 
         /* ── Status banner ── */
@@ -186,7 +205,6 @@
             color: #f87171;
         }
 
-        /* ── Section title ── */
         .section-title {
             font-size: 11px;
             font-weight: 600;
@@ -346,6 +364,14 @@
         }
 
         /* ── Credentials table ── */
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+
         .creds-table {
             width: 100%;
             border-collapse: collapse;
@@ -382,15 +408,22 @@
             color: var(--accent);
         }
 
-        .table-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 32px;
+        /* ── Info box ── */
+        .info-box {
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--body);
+            margin-bottom: 28px;
         }
 
-        /* ── Footer ── */
+        .info-box strong {
+            color: var(--heading);
+        }
+
         footer {
             text-align: center;
             font-size: 11px;
@@ -399,7 +432,6 @@
             border-top: 1px solid var(--border);
         }
 
-        /* Spinner */
         @keyframes spin {
             to {
                 transform: rotate(360deg);
@@ -420,38 +452,46 @@
 <body>
     <div class="wrapper">
 
-        <!-- Header -->
         <header>
             <div class="logo">
-                <div class="logo-icon">🔧</div>
+                <div class="logo-icon">🔑</div>
                 <div>
                     <h1>Dustin Auto Garage</h1>
-                    <p>Developer Login Panel</p>
+                    <p>Medewerker Setup &amp; Rol-activatie</p>
                 </div>
             </div>
-            <span class="dev-badge">⚠ DEV ONLY</span>
         </header>
 
-        <!-- Config: app base URL -->
-        <div class="config-bar">
+        <!-- URL config -->
+        <div class="url-bar">
             <label for="base-url">App URL</label>
-            <input id="base-url" type="text" value="http://localhost:4321" placeholder="https://your-app.com" />
+            <input id="base-url" type="text" value="http://localhost:4321" placeholder="https://your-app.vercel.app" />
+        </div>
+        <div class="url-presets">
+            <span style="font-size:11px;color:var(--muted);align-self:center;">Snelkoppelingen:</span>
+            <button class="preset-btn active" data-url="http://localhost:4321">🔧 Localhost</button>
+            <button class="preset-btn" data-url="https://dustin-auto-garage.vercel.app">🚀 Vercel (prod)</button>
+        </div>
+
+        <!-- Info -->
+        <div class="info-box">
+            <strong>Hoe werkt dit?</strong> Log in met het account van de medewerker die je wilt activeren.
+            Na een geslaagde login wordt de garage-rol automatisch opgeslagen in Convex.
+            Dit werkt zowel lokaal als op Vercel. De eigenaar moet als eerste worden aangemaakt.
         </div>
 
         <!-- Status banner -->
         <div id="status-banner"></div>
 
-        <!-- Role cards -->
-        <p class="section-title">Klik om direct in te loggen</p>
+        <p class="section-title">Klik om in te loggen en rol te activeren</p>
         <div class="role-grid" id="role-grid"></div>
 
-        <!-- Full credentials table -->
-        <p class="section-title">Alle testaccounts</p>
+        <p class="section-title">Alle accounts</p>
         <div class="table-card">
             <table class="creds-table">
                 <thead>
                     <tr>
-                        <th>Rol (Garage)</th>
+                        <th>Garage Rol</th>
                         <th>LaventeCare Rol</th>
                         <th>E-mail</th>
                         <th>Wachtwoord</th>
@@ -463,12 +503,11 @@
         </div>
 
         <footer>
-            Dev Login Panel · Dustin Auto Garage · Alleen zichtbaar in ontwikkelmodus
+            Medewerker Setup · Dustin Auto Garage · Houd deze pagina intern
         </footer>
     </div>
 
     <script>
-        // ── Dev accounts config ────────────────────────────────────────────────────
         const ACCOUNTS = [
             {
                 id: 'eigenaar',
@@ -481,7 +520,7 @@
                 password: 'Dev@eigenaar2026!',
                 color: '#f59e0b',
                 colorBg: 'rgba(245,158,11,0.1)',
-                access: 'Financiën, alles',
+                access: 'Alles',
             },
             {
                 id: 'balie',
@@ -494,7 +533,7 @@
                 password: 'Dev@balie2026!',
                 color: '#10b981',
                 colorBg: 'rgba(16,185,129,0.1)',
-                access: 'Klanten, voertuigen, RDW',
+                access: 'Klanten, voertuigen',
             },
             {
                 id: 'monteur',
@@ -524,79 +563,80 @@
             },
         ];
 
-        // ── Render role cards ─────────────────────────────────────────────────────
+        // ── URL preset knoppen ─────────────────────────────────────────────────
+        const urlInput = document.getElementById('base-url');
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                urlInput.value = btn.dataset.url;
+                document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        urlInput.addEventListener('input', () => {
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.url === urlInput.value.trim());
+            });
+        });
+
+        // ── Render cards + tabel ───────────────────────────────────────────────
         const grid = document.getElementById('role-grid');
         const tbody = document.getElementById('creds-tbody');
 
         ACCOUNTS.forEach(acc => {
-            // Card
             const card = document.createElement('div');
             card.className = 'role-card';
             card.style.setProperty('--card-color', acc.color);
             card.style.setProperty('--card-color-bg', acc.colorBg);
-
             card.innerHTML = `
-        <div class="role-header">
-            <div class="role-icon">${acc.icon}</div>
-            <div>
-                <div class="role-name">${acc.name}</div>
-                <div class="role-subtitle">${acc.subtitle}</div>
-            </div>
-        </div>
-        <div class="role-badges">
-            <span class="badge lc">LC: ${acc.lcRole}</span>
-            <span class="badge garage">${acc.garageRole}</span>
-        </div>
-        <div class="creds">
-            <div><span class="label">email  </span><span class="val">${acc.email}</span></div>
-            <div><span class="label">pass   </span><span class="pass">${acc.password}</span></div>
-        </div>
-        <button class="btn-login-card" data-id="${acc.id}" style="background:${acc.color}">
-            🔑 Login als ${acc.name}
-        </button>
-    `;
+                <div class="role-header">
+                    <div class="role-icon">${acc.icon}</div>
+                    <div>
+                        <div class="role-name">${acc.name}</div>
+                        <div class="role-subtitle">${acc.subtitle}</div>
+                    </div>
+                </div>
+                <div class="role-badges">
+                    <span class="badge lc">LC: ${acc.lcRole}</span>
+                    <span class="badge garage">${acc.garageRole}</span>
+                </div>
+                <div class="creds">
+                    <div><span class="label">email  </span><span class="val">${acc.email}</span></div>
+                    <div><span class="label">pass   </span><span class="pass">${acc.password}</span></div>
+                </div>
+                <button class="btn-login-card" data-id="${acc.id}" style="background:${acc.color}">
+                    🔑 Activeer ${acc.name}
+                </button>
+            `;
             grid.appendChild(card);
 
-            // Table row
             const tr = document.createElement('tr');
             tr.innerHTML = `
-        <td>${acc.icon} ${acc.name}</td>
-        <td>${acc.lcRole}</td>
-        <td>${acc.email}</td>
-        <td class="pw">${acc.password}</td>
-        <td>${acc.access}</td>
-    `;
+                <td>${acc.icon} ${acc.name}</td>
+                <td>${acc.lcRole}</td>
+                <td>${acc.email}</td>
+                <td class="pw">${acc.password}</td>
+                <td>${acc.access}</td>
+            `;
             tbody.appendChild(tr);
         });
 
-        // ── Login logic ────────────────────────────────────────────────────────────
+        // ── Login & seed logica ────────────────────────────────────────────────
         const banner = document.getElementById('status-banner');
+        const CONVEX_URL = 'https://rosy-seahorse-403.eu-west-1.convex.cloud';
 
         function showBanner(type, msg) {
             banner.className = type;
             banner.innerHTML = (type === 'success' ? '✅ ' : '❌ ') + msg;
             banner.style.display = 'flex';
-            if (type === 'success') {
-                setTimeout(() => banner.style.display = 'none', 4000);
-            }
+            if (type === 'success') setTimeout(() => banner.style.display = 'none', 5000);
         }
 
         function getBaseUrl() {
-            return document.getElementById('base-url').value.trim().replace(/\/$/, '');
+            return urlInput.value.trim().replace(/\/$/, '');
         }
 
-        // ── Config ─────────────────────────────────────────────────────────────────
-        const CONVEX_URL = 'https://rosy-seahorse-403.eu-west-1.convex.cloud';
-
-        // LaventeCare rol → garage domeinRol mapping
-        const LC_ROL_MAP = {
-            admin: 'eigenaar',
-            editor: 'balie',
-            user: 'monteur',
-            viewer: 'stagiair',
-        };
-
-        async function seedConvexMedewerker(base, acc, jwt) {
+        async function seedConvexMedewerker(acc, jwt) {
             try {
                 const res = await fetch(`${CONVEX_URL}/api/mutation`, {
                     method: 'POST',
@@ -606,10 +646,7 @@
                     },
                     body: JSON.stringify({
                         path: 'devSeed:seedDevMedewerker',
-                        args: {
-                            naam: acc.name,
-                            domeinRol: acc.garageRole,
-                        },
+                        args: { naam: acc.name, domeinRol: acc.garageRole },
                     }),
                 });
                 const data = await res.json().catch(() => ({}));
@@ -638,17 +675,17 @@
                 const data = await res.json().catch(() => ({}));
 
                 if (!res.ok) {
-                    showBanner('error', data.error ?? `Login mislukt (${res.status}). Account aangemaakt? Voer het seed script uit.`);
+                    showBanner('error', data.error ?? `Login mislukt (${res.status}). Account al aangemaakt in LaventeCare?`);
                     return;
                 }
 
                 if (data.mfa_required) {
-                    showBanner('error', 'MFA vereist — schakel MFA uit voor dev accounts.');
+                    showBanner('error', 'MFA vereist — schakel MFA uit voor deze accounts.');
                     return;
                 }
 
-                // Stap 2: JWT ophalen voor Convex
-                btn.innerHTML = `<div class="spinner"></div> Convex seeden…`;
+                // Stap 2: JWT ophalen voor Convex medewerker seeding
+                btn.innerHTML = `<div class="spinner"></div> Rol activeren in Convex…`;
                 const tokenRes = await fetch(`${base}/api/auth/token`, {
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
@@ -657,52 +694,26 @@
                 const jwt = tokenData.token ?? tokenData.access_token;
 
                 if (jwt) {
-                    const seedResult = await seedConvexMedewerker(base, acc, jwt);
-                    const actie = seedResult?.value?.action ?? seedResult?.action ?? '?';
-                    console.log(`[DevSeed] ${acc.email} → medewerker ${actie}`);
-
-                    // Als eigenaar: ook garage data seeden (idempotent)
-                    if (acc.id === 'eigenaar') {
-                        btn.innerHTML = `<div class="spinner"></div> Data seeden…`;
-                        try {
-                            const garageRes = await fetch(`${CONVEX_URL}/api/mutation`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${jwt}`,
-                                },
-                                body: JSON.stringify({
-                                    path: 'devSeed:seedGarageData',
-                                    args: {},
-                                }),
-                            });
-                            const garageData = await garageRes.json().catch(() => ({}));
-                            const r = garageData?.value ?? garageData;
-                            if (r?.skipped) {
-                                console.log('[DevSeed] Garage data bestaat al — skip');
-                            } else if (r?.seeded) {
-                                console.log(`[DevSeed] Aangemaakt: ${r.klanten} klanten, ${r.voertuigen} voertuigen, ${r.werkorders} werkorders`);
-                            }
-                        } catch (e) {
-                            console.warn('[DevSeed] Garage data seed mislukt:', e);
-                        }
-                    }
+                    const result = await seedConvexMedewerker(acc, jwt);
+                    const actie = result?.value?.action ?? result?.action ?? 'onbekend';
+                    console.log(`[Setup] ${acc.email} → medewerker ${actie}`);
+                    showBanner('success', `${acc.icon} ${acc.name} geactiveerd (${actie}) — doorsturen naar dashboard…`);
+                } else {
+                    showBanner('success', `Ingelogd als ${acc.name} — JWT niet beschikbaar voor Convex seeding.`);
                 }
 
-                showBanner('success', `✅ Ingelogd als ${acc.name} — doorsturen naar app…`);
                 setTimeout(() => {
-                    window.location.href = `${base}/voertuigen`;
-                }, 600);
+                    window.location.href = `${base}/klanten`;
+                }, 1200);
 
             } catch (err) {
-                showBanner('error', `Verbinding mislukt: ${err.message}. Draait de dev server op ${base}?`);
+                showBanner('error', `Verbinding mislukt: ${err.message}. Draait de app op ${base}?`);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = origHtml;
             }
         }
 
-        // Event delegation
         grid.addEventListener('click', e => {
             const btn = e.target.closest('button[data-id]');
             if (!btn) return;
