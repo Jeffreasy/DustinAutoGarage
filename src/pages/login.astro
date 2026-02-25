@@ -3,10 +3,19 @@
  * src/pages/login.astro
  *
  * Publieke login pagina — authenticeert via de lokale BFF proxy.
- * De proxy (/api/auth/login) stuurt het request door naar LaventeCare
- * en sanitizeert de Set-Cookie headers voor localhost.
- *
- * Design System: alle waarden bouwen op design-tokens.css.
+ * ui-ux-pro-max audit fixes (2026-02-25):
+ *   - SVG icon ipv emoji 🔧
+ *   - Input padding verhoogd (44px touch target)
+ *   - Error box met CSS transitie i.p.v. display:none toggle
+ *   - Wachtwoord show/hide toggle
+ *   - autocomplete="username" op e-mailveldd
+ *   - MFA auto-submit bij 6 tekens
+ *   - prefers-reduced-motion guard
+ *   - Loading spinner op submit knop
+ *   - Responsive card padding (kleiner op mobiel)
+ *   - "Wachtwoord vergeten" link
+ *   - Formeel → informeel taalgebruik
+ *   - Meta description, autocapitalize, spellcheck, focus-trap
  */
 
 import "../styles/design-tokens.css";
@@ -19,6 +28,10 @@ import "../styles/components.css";
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Log in op het werkplaatsportaal van Dustin Auto Garage."
+        />
         <title>Inloggen — Dustin Auto Garage</title>
 
         <!-- Anti-flash: zet theme VOOR eerste paint -->
@@ -46,6 +59,7 @@ import "../styles/components.css";
         />
 
         <style>
+            /* ── Base ── */
             body {
                 font-family: var(--font-sans);
                 background-color: var(--color-bg);
@@ -60,13 +74,15 @@ import "../styles/components.css";
                     color var(--transition-slow);
             }
 
+            /* ── Card ── */
             .login-card {
                 background: var(--glass-bg);
                 backdrop-filter: blur(20px) saturate(180%);
                 -webkit-backdrop-filter: blur(20px) saturate(180%);
                 border: 1px solid var(--glass-border);
                 border-radius: var(--radius-2xl);
-                padding: var(--space-8) var(--space-8);
+                /* Fix #9: kleinere padding op mobiel */
+                padding: var(--space-6) var(--space-5);
                 width: 100%;
                 max-width: var(--card-max-width-sm);
                 box-shadow: var(--glass-shadow), var(--shadow-xl);
@@ -74,7 +90,13 @@ import "../styles/components.css";
                 overflow: hidden;
             }
 
-            /* Top glare accent lijn */
+            @media (min-width: 480px) {
+                .login-card {
+                    padding: var(--space-8) var(--space-8);
+                }
+            }
+
+            /* Glare accent lijn bovenaan */
             .login-card::before {
                 content: "";
                 position: absolute;
@@ -93,6 +115,7 @@ import "../styles/components.css";
                 pointer-events: none;
             }
 
+            /* ── Branding ── */
             .login-logo {
                 font-size: var(--text-lg);
                 font-weight: var(--weight-bold);
@@ -109,6 +132,7 @@ import "../styles/components.css";
                 margin-bottom: var(--space-6);
             }
 
+            /* ── Form ── */
             .form-group {
                 display: flex;
                 flex-direction: column;
@@ -124,11 +148,12 @@ import "../styles/components.css";
                 text-transform: uppercase;
             }
 
+            /* Fix #2: verhoogde padding voor 44px touch target */
             input[type="email"],
             input[type="password"],
             input[type="text"] {
                 width: 100%;
-                padding: var(--space-2) var(--space-3);
+                padding: var(--space-3) var(--space-4);
                 background: var(--glass-bg-subtle);
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
@@ -137,7 +162,8 @@ import "../styles/components.css";
                 color: var(--color-heading);
                 font-size: var(--text-sm);
                 font-family: var(--font-sans);
-                min-height: var(--control-height);
+                min-height: 44px;
+                box-sizing: border-box;
                 transition:
                     border-color var(--transition-fast),
                     box-shadow var(--transition-fast),
@@ -148,17 +174,69 @@ import "../styles/components.css";
             input::placeholder {
                 color: var(--color-muted);
             }
-
             input:hover:not(:disabled) {
                 border-color: var(--color-border-hover);
             }
-
             input:focus {
                 border-color: var(--color-border-focus);
                 box-shadow: var(--focus-ring);
                 background: var(--color-surface);
             }
 
+            /* ── Wachtwoord wrapper met show/hide ── */
+            .password-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+
+            .password-wrapper input {
+                padding-right: var(--space-10, 2.5rem);
+            }
+
+            .toggle-password {
+                position: absolute;
+                right: var(--space-3);
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: var(--color-muted);
+                padding: var(--space-1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: var(--radius-sm);
+                transition: color var(--transition-fast);
+                min-height: 32px;
+                min-width: 32px;
+            }
+
+            .toggle-password:hover {
+                color: var(--color-heading);
+            }
+            .toggle-password:focus-visible {
+                outline: 2px solid var(--color-accent);
+                outline-offset: 2px;
+            }
+
+            /* ── Vergeten link ── */
+            .forgot-link {
+                display: block;
+                font-size: var(--text-xs);
+                color: var(--color-muted);
+                text-align: right;
+                text-decoration: none;
+                margin-top: calc(var(--space-1) * -1);
+                margin-bottom: var(--space-4);
+                transition: color var(--transition-fast);
+            }
+            .forgot-link:hover {
+                color: var(--color-accent-text);
+            }
+
+            /* ── Submit knop ── */
             .btn-login {
                 width: 100%;
                 padding: var(--space-3) var(--space-4);
@@ -170,8 +248,12 @@ import "../styles/components.css";
                 border: 1px solid transparent;
                 border-radius: var(--radius-md);
                 cursor: pointer;
-                min-height: var(--control-height);
+                min-height: 44px;
                 box-shadow: var(--shadow-glow-sm);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: var(--space-2);
                 transition:
                     background var(--transition-fast),
                     box-shadow var(--transition-fast),
@@ -188,27 +270,76 @@ import "../styles/components.css";
                 transform: translateY(0);
                 box-shadow: var(--shadow-glow-sm);
             }
-
             .btn-login:disabled {
                 opacity: 0.5;
                 cursor: not-allowed;
             }
 
-            .error-box {
+            /* Fix #7: prefers-reduced-motion */
+            @media (prefers-reduced-motion: reduce) {
+                .btn-login {
+                    transition: none;
+                }
+                .btn-login:hover {
+                    transform: none;
+                }
+                .error-box {
+                    transition: none;
+                }
+            }
+
+            /* ── Spinner (Fix #8) ── */
+            .spinner {
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                flex-shrink: 0;
                 display: none;
+            }
+
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .spinner {
+                    animation: none;
+                    opacity: 0.6;
+                }
+            }
+
+            /* ── Error box (Fix #3: animatie i.p.v. display toggle) ── */
+            .error-box {
                 background: var(--color-error-bg);
                 border: 1px solid var(--color-error-border);
                 color: var(--color-error);
                 border-radius: var(--radius-md);
-                padding: var(--space-3) var(--space-4);
+                padding: 0 var(--space-4);
                 font-size: var(--text-sm);
-                margin-bottom: var(--space-4);
+                /* Start verborgen via opacity+max-height */
+                max-height: 0;
+                opacity: 0;
+                overflow: hidden;
+                margin-bottom: 0;
+                transition:
+                    max-height 220ms ease,
+                    opacity 200ms ease,
+                    padding 200ms ease,
+                    margin-bottom 200ms ease;
             }
 
             .error-box.visible {
-                display: block;
+                max-height: 120px;
+                opacity: 1;
+                padding: var(--space-3) var(--space-4);
+                margin-bottom: var(--space-4);
             }
 
+            /* ── MFA ── */
             .mfa-hint {
                 font-size: var(--text-sm);
                 color: var(--color-muted);
@@ -219,51 +350,159 @@ import "../styles/components.css";
             .mfa-spacing {
                 margin-bottom: var(--space-4);
             }
+
+            /* MFA 6-digit progress indicator */
+            .mfa-progress {
+                display: flex;
+                justify-content: center;
+                gap: var(--space-2);
+                margin-bottom: var(--space-3);
+            }
+
+            .mfa-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--color-border);
+                transition: background 150ms ease;
+            }
+
+            .mfa-dot.filled {
+                background: var(--color-accent);
+            }
         </style>
     </head>
 
     <body>
-        <div class="login-card">
-            <p class="login-logo">🔧 Dustin Auto Garage</p>
-            <p class="login-subtitle">Log in op uw werkplaatsportaal</p>
+        <div class="login-card" role="main">
+            <!-- Fix #1: SVG icon ipv emoji 🔧 -->
+            <p class="login-logo">
+                <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                    ></path>
+                </svg>
+                Dustin Auto Garage
+            </p>
+            <!-- Fix #11: informeel taalgebruik -->
+            <p class="login-subtitle">Log in op je werkplaatsportaal</p>
 
-            <div id="error-box" class="error-box" role="alert"></div>
+            <div
+                id="error-box"
+                class="error-box"
+                role="alert"
+                aria-live="assertive"
+                aria-atomic="true"
+            >
+            </div>
 
             <form id="login-form" novalidate>
                 <div class="form-group">
+                    <!-- Fix #5: autocomplete="username", Fix #14+15 -->
                     <label for="email">E-mailadres</label>
                     <input
                         id="email"
                         type="email"
                         name="email"
                         placeholder="jan@jansen.nl"
-                        autocomplete="email"
+                        autocomplete="username"
+                        autocapitalize="none"
+                        spellcheck="false"
                         required
                     />
                 </div>
 
                 <div class="form-group">
                     <label for="password">Wachtwoord</label>
-                    <input
-                        id="password"
-                        type="password"
-                        name="password"
-                        placeholder="••••••••"
-                        autocomplete="current-password"
-                        required
-                    />
+                    <!-- Fix #4: wachtwoord show/hide wrapper -->
+                    <div class="password-wrapper">
+                        <input
+                            id="password"
+                            type="password"
+                            name="password"
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                            required
+                        />
+                        <button
+                            type="button"
+                            class="toggle-password"
+                            id="toggle-pwd"
+                            aria-label="Wachtwoord tonen"
+                            aria-pressed="false"
+                        >
+                            <!-- Eye icon (zichtbaar als wachtwoord verborgen) -->
+                            <svg
+                                id="icon-eye"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                                ></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <!-- Eye-off icon (zichtbaar als wachtwoord zichtbaar) -->
+                            <svg
+                                id="icon-eye-off"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                                style="display:none"
+                            >
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                                ></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                <button type="submit" id="submit-btn" class="btn-login"
-                    >Inloggen</button
+                <!-- Fix #10: wachtwoord vergeten link -->
+                <a
+                    href="mailto:beheerder@dustinautogarage.nl?subject=Wachtwoord%20vergeten"
+                    class="forgot-link"
                 >
+                    Wachtwoord vergeten? Neem contact op met de beheerder
+                </a>
+
+                <button type="submit" id="submit-btn" class="btn-login">
+                    <!-- Fix #8: spinner -->
+                    <span class="spinner" id="login-spinner" aria-hidden="true"
+                    ></span>
+                    <span id="submit-label">Inloggen</span>
+                </button>
             </form>
 
-            <!-- MFA stap — verborgen tot backend mfa_required stuurt -->
+            <!-- MFA stap -->
             <div id="mfa-step" style="display:none">
                 <p class="mfa-hint">
-                    Voor uw veiligheid is verificatie vereist.<br />
-                    Klik op de knop om een code naar uw e-mailadres te sturen.
+                    Voor je veiligheid is verificatie vereist.<br />
+                    Klik op de knop om een code naar je e-mailadres te sturen.
                 </p>
                 <button
                     type="button"
@@ -273,8 +512,17 @@ import "../styles/components.css";
                     Stuur verificatiecode
                 </button>
 
-                <div class="form-group">
-                    <label for="mfa-code">Verificatiecode</label>
+                <div class="form-group" style="margin-top: var(--space-4)">
+                    <label for="mfa-code">Verificatiecode (6 cijfers)</label>
+                    <!-- MFA voortgangsbolletjes -->
+                    <div class="mfa-progress" aria-hidden="true">
+                        <span class="mfa-dot" id="dot-0"></span>
+                        <span class="mfa-dot" id="dot-1"></span>
+                        <span class="mfa-dot" id="dot-2"></span>
+                        <span class="mfa-dot" id="dot-3"></span>
+                        <span class="mfa-dot" id="dot-4"></span>
+                        <span class="mfa-dot" id="dot-5"></span>
+                    </div>
                     <input
                         id="mfa-code"
                         type="text"
@@ -282,39 +530,126 @@ import "../styles/components.css";
                         maxlength="6"
                         placeholder="123456"
                         autocomplete="one-time-code"
+                        autocapitalize="none"
+                        spellcheck="false"
                     />
                 </div>
 
-                <button type="button" id="mfa-submit-btn" class="btn-login"
-                    >Verifiëren</button
-                >
+                <button type="button" id="mfa-submit-btn" class="btn-login">
+                    <span class="spinner" id="mfa-spinner" aria-hidden="true"
+                    ></span>
+                    <span id="mfa-label">Verifiëren</span>
+                </button>
             </div>
         </div>
 
         <script is:inline>
-            // ── State ────────────────────────────────────────────────────────
-            let mfaRequired = false;
+            // ── Helpers ──────────────────────────────────────────────────────
+
+            function showError(msg) {
+                err.textContent = msg;
+                err.classList.add("visible");
+            }
+
+            function hideError() {
+                err.classList.remove("visible");
+            }
+
+            function setLoading(
+                btnEl,
+                spinnerEl,
+                labelEl,
+                loading,
+                loadingText,
+                idleText,
+            ) {
+                btnEl.disabled = loading;
+                spinnerEl.style.display = loading ? "block" : "none";
+                labelEl.textContent = loading ? loadingText : idleText;
+            }
 
             // ── Elements ─────────────────────────────────────────────────────
             const form = document.getElementById("login-form");
             const btn = document.getElementById("submit-btn");
+            const spinner = document.getElementById("login-spinner");
+            const label = document.getElementById("submit-label");
             const err = document.getElementById("error-box");
             const mfaStep = document.getElementById("mfa-step");
             const mfaCode = document.getElementById("mfa-code");
             const sendBtn = document.getElementById("send-code-btn");
             const mfaBtn = document.getElementById("mfa-submit-btn");
+            const mfaSpinner = document.getElementById("mfa-spinner");
+            const mfaLabel = document.getElementById("mfa-label");
 
-            // ── Stap 1: Inloggen (e-mail + wachtwoord) ───────────────────────
+            // Fix #4: wachtwoord toggle
+            const togglePwd = document.getElementById("toggle-pwd");
+            const pwdInput = document.getElementById("password");
+            const iconEye = document.getElementById("icon-eye");
+            const iconEyeOff = document.getElementById("icon-eye-off");
+
+            togglePwd.addEventListener("click", () => {
+                const isHidden = pwdInput.type === "password";
+                pwdInput.type = isHidden ? "text" : "password";
+                iconEye.style.display = isHidden ? "none" : "";
+                iconEyeOff.style.display = isHidden ? "" : "none";
+                togglePwd.setAttribute(
+                    "aria-label",
+                    isHidden ? "Wachtwoord verbergen" : "Wachtwoord tonen",
+                );
+                togglePwd.setAttribute(
+                    "aria-pressed",
+                    isHidden ? "true" : "false",
+                );
+            });
+
+            // Fix #12: focus-trap binnen de card
+            const card = document.querySelector(".login-card");
+            card.addEventListener("keydown", (e) => {
+                if (e.key !== "Tab") return;
+                const focusable = Array.from(
+                    card.querySelectorAll(
+                        'button:not(:disabled), input:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+                    ),
+                ).filter((el) => el.offsetParent !== null);
+                if (!focusable.length) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (
+                    e.shiftKey
+                        ? document.activeElement === first
+                        : document.activeElement === last
+                ) {
+                    e.preventDefault();
+                    (e.shiftKey ? last : first).focus();
+                }
+            });
+
+            // Fix #6: MFA auto-submit + progress dots
+            mfaCode.addEventListener("input", () => {
+                const val = mfaCode.value.replace(/\D/g, "");
+                mfaCode.value = val;
+                for (let i = 0; i < 6; i++) {
+                    document
+                        .getElementById("dot-" + i)
+                        .classList.toggle("filled", i < val.length);
+                }
+                if (val.length === 6) {
+                    mfaBtn.click();
+                }
+            });
+
+            let mfaRequired = false;
+
+            // ── Stap 1: Inloggen ─────────────────────────────────────────────
             form.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 if (mfaRequired) return;
 
-                btn.disabled = true;
-                btn.textContent = "Bezig…";
-                err.classList.remove("visible");
+                setLoading(btn, spinner, label, true, "Bezig…", "Inloggen");
+                hideError();
 
                 const email = document.getElementById("email").value.trim();
-                const password = document.getElementById("password").value;
+                const password = pwdInput.value;
 
                 try {
                     const res = await fetch("/api/auth/login", {
@@ -327,9 +662,7 @@ import "../styles/components.css";
                     const data = await res.json().catch(() => ({}));
 
                     if (!res.ok) {
-                        err.textContent =
-                            data.error ?? "Ongeldige inloggegevens.";
-                        err.classList.add("visible");
+                        showError(data.error ?? "Ongeldige inloggegevens.");
                         return;
                     }
 
@@ -342,12 +675,9 @@ import "../styles/components.css";
 
                     window.location.href = "/dashboard";
                 } catch {
-                    err.textContent =
-                        "Verbinding mislukt. Controleer uw internet.";
-                    err.classList.add("visible");
+                    showError("Verbinding mislukt. Controleer je internet.");
                 } finally {
-                    btn.disabled = false;
-                    btn.textContent = "Inloggen";
+                    setLoading(btn, spinner, label, false, "", "Inloggen");
                 }
             });
 
@@ -355,7 +685,7 @@ import "../styles/components.css";
             sendBtn.addEventListener("click", async () => {
                 sendBtn.disabled = true;
                 sendBtn.textContent = "Versturen…";
-                err.classList.remove("visible");
+                hideError();
 
                 try {
                     const res = await fetch("/api/auth/mfa/send-email", {
@@ -370,14 +700,12 @@ import "../styles/components.css";
                         mfaCode.focus();
                     } else {
                         const d = await res.json().catch(() => ({}));
-                        err.textContent = d.error ?? "Kon geen code versturen.";
-                        err.classList.add("visible");
+                        showError(d.error ?? "Kon geen code versturen.");
                         sendBtn.disabled = false;
                         sendBtn.textContent = "Stuur nieuwe code";
                     }
                 } catch {
-                    err.textContent = "Verbinding mislukt.";
-                    err.classList.add("visible");
+                    showError("Verbinding mislukt.");
                     sendBtn.disabled = false;
                     sendBtn.textContent = "Probeer opnieuw";
                 }
@@ -391,9 +719,15 @@ import "../styles/components.css";
                     return;
                 }
 
-                mfaBtn.disabled = true;
-                mfaBtn.textContent = "Verifiëren…";
-                err.classList.remove("visible");
+                setLoading(
+                    mfaBtn,
+                    mfaSpinner,
+                    mfaLabel,
+                    true,
+                    "Verifiëren…",
+                    "Verifiëren",
+                );
+                hideError();
 
                 try {
                     const res = await fetch("/api/auth/mfa/verify", {
@@ -407,17 +741,28 @@ import "../styles/components.css";
                         window.location.href = "/dashboard";
                     } else {
                         const d = await res.json().catch(() => ({}));
-                        err.textContent =
-                            d.error ?? "Ongeldige code. Probeer opnieuw.";
-                        err.classList.add("visible");
-                        mfaBtn.disabled = false;
-                        mfaBtn.textContent = "Verifiëren";
+                        showError(
+                            d.error ?? "Ongeldige code. Probeer opnieuw.",
+                        );
+                        setLoading(
+                            mfaBtn,
+                            mfaSpinner,
+                            mfaLabel,
+                            false,
+                            "",
+                            "Verifiëren",
+                        );
                     }
                 } catch {
-                    err.textContent = "Verbinding mislukt.";
-                    err.classList.add("visible");
-                    mfaBtn.disabled = false;
-                    mfaBtn.textContent = "Verifiëren";
+                    showError("Verbinding mislukt.");
+                    setLoading(
+                        mfaBtn,
+                        mfaSpinner,
+                        mfaLabel,
+                        false,
+                        "",
+                        "Verifiëren",
+                    );
                 }
             });
         </script>
