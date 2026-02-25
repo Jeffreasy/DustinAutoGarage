@@ -71,17 +71,20 @@ export async function requireAuth(
         return mijnRecord.tokenIdentifier;
     }
 
-    // Stap 3: andere rol (balie/monteur/stagiair) — zoek eigenaar op ALS TENANT ANCHOR
-    // Tenant-scope: filter op hetzelfde issuer-prefix als de ingelogde gebruiker.
-    // Een Convex tokenIdentifier heeft format "https://issuer.example.com|sub".
-    // De issuer is het deel vóór de laatste "|" — alle medewerkers van dezelfde tenant
-    // hebben dezelfde issuer in hun tokenIdentifier.
+    // Stap 3a: niet-eigenaar met een bestaand medewerkerrecord —
+    // seedDevMedewerker heeft de juiste eigenaar-tokenIdentifier al opgeslagen.
+    // Dit is de snelle, correcte route voor balie/monteur/stagiair.
+    if (mijnRecord?.tokenIdentifier) {
+        return mijnRecord.tokenIdentifier;
+    }
+
+    // Stap 3b: geen medewerkerrecord (cold-start: eerste keer inloggen vóór seeding)
+    // Zoek de eigenaar via issuer-prefix als fallback.
     const issuerPrefix = identity.tokenIdentifier.includes("|")
         ? identity.tokenIdentifier.substring(0, identity.tokenIdentifier.lastIndexOf("|") + 1)
         : "";
 
     if (issuerPrefix) {
-        // Geoptimaliseerd pad: zoek eigenaar binnen dezelfde tenant (issuer-prefix match)
         const eigenaarInTenant = await ctx.db
             .query("medewerkers")
             .filter((q) =>
@@ -96,7 +99,7 @@ export async function requireAuth(
         if (eigenaarInTenant) return eigenaarInTenant.tokenIdentifier;
     }
 
-    // Stap 4: geen eigenaar gevonden (cold-start) — raw JWT als fallback
+    // Stap 4: totale cold-start — raw JWT als fallback
     return identity.tokenIdentifier;
 }
 
