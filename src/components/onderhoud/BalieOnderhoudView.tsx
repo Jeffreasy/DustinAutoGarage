@@ -377,6 +377,9 @@ export default function BalieOnderhoudView() {
             <div style={{
                 display: "flex", gap: "var(--space-1)",
                 borderBottom: "2px solid var(--color-border)",
+                overflowX: "auto",
+                scrollbarWidth: "none",
+                WebkitOverflowScrolling: "touch" as never,
             }}>
                 {TABS.map((tab) => (
                     <button
@@ -384,13 +387,15 @@ export default function BalieOnderhoudView() {
                         onClick={() => { setActieveTab(tab.id); if (tab.id !== "voertuig") setGeselecteerdVoertuig(null); }}
                         style={{
                             display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
-                            padding: "var(--space-2) var(--space-4)",
+                            padding: "var(--space-2) var(--space-3)",
                             fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)",
                             border: "none", background: "transparent", cursor: "pointer",
                             color: actieveTab === tab.id ? "var(--color-accent-text)" : "var(--color-muted)",
                             borderBottom: actieveTab === tab.id ? "2px solid var(--color-accent)" : "2px solid transparent",
                             marginBottom: "-2px", transition: "var(--transition-base)",
                             borderRadius: "var(--radius-sm) var(--radius-sm) 0 0",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                         }}
                         aria-selected={actieveTab === tab.id}
                     >
