@@ -237,10 +237,11 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
             <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
+                capture="environment"
                 onChange={handleFileKeuze}
                 style={{ display: "none" }}
-                aria-label="Kies een foto van het kenteken"
+                aria-label="Fotografeer het kenteken"
             />
 
             {status === "scanning" ? (
