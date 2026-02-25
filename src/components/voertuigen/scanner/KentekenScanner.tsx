@@ -1,19 +1,23 @@
 /**
  * src/components/voertuigen/scanner/KentekenScanner.tsx
  *
- * Volledige kenteken scanner UI:
- *   1. Gebruiker opent de scanner via een camera / bestand knop
+ * Device-responsive kenteken scanner UI:
+ *   1. Mobiel/tablet → camera (capture="environment")
+ *      Desktop/laptop → bestandsmanager (geen capture attribuut)
  *   2. Foto wordt geüpload naar /api/rdw/scan-foto (POST multipart)
  *   3. Backend (xAI Grok Vision) OCR → RDW lookup → JSON response
  *   4. Gedetecteerd kenteken wordt getoond + onGescanned callback
  *
  * Foutgevallen:
- *   - 503: XAI_API_KEY niet geconfigureerd op backend
+ *   - 503: scan-backend tijdelijk niet beschikbaar (vriendelijke melding)
  *   - 400: ongeldig bestandstype of te groot
  *   - 422: geen kenteken herkend in de foto
  */
 
 import { useState, useRef } from "react";
+
+// Eenmalige device-detectie: touch = mobiel/tablet, geen touch = desktop/laptop.
+const isMobileDevice = typeof navigator !== "undefined" && navigator.maxTouchPoints > 1;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -183,7 +187,7 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                     ?? `Fout ${res.status}`;
 
                 if (res.status === 503) {
-                    setFoutmelding("AI scanner niet beschikbaar — XAI_API_KEY niet geconfigureerd.");
+                    setFoutmelding("Foto-scan tijdelijk niet beschikbaar. Voer het kenteken handmatig in.");
                 } else if (res.status === 422) {
                     setFoutmelding("Geen kenteken herkend. Probeer een scherpere foto.");
                 } else {
@@ -289,10 +293,10 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
+                {...(isMobileDevice ? { capture: "environment" } : {})}
                 onChange={handleFileKeuze}
                 style={{ display: "none" }}
-                aria-label="Fotografeer het kenteken"
+                aria-label={isMobileDevice ? "Fotografeer het kenteken" : "Selecteer foto van kenteken"}
             />
 
             {status === "scanning" ? (
@@ -325,7 +329,7 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    title="Scan kenteken via AI foto-herkenning"
+                    title={isMobileDevice ? "Scan kenteken via camera" : "Selecteer foto van kenteken"}
                     aria-label={label}
                     className="btn btn-ghost"
                     style={{
