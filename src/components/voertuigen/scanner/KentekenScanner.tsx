@@ -27,7 +27,7 @@ interface ScanResultaat {
         bouwjaar?: number | string;
         brandstof?: string;
         kleur?: string;
-        apk_vervaldatum?: string;
+        apkVervaldatum?: string;
     };
 }
 

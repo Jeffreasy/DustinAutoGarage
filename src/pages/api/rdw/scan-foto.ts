@@ -20,6 +20,9 @@ export const POST: APIRoute = async ({ request }) => {
     const cookie = request.headers.get("cookie");
     if (cookie) forwardHeaders.set("cookie", cookie);
 
+    const authorization = request.headers.get("authorization");
+    if (authorization) forwardHeaders.set("authorization", authorization);
+
     const csrf = request.headers.get("x-csrf-token");
     if (csrf) forwardHeaders.set("x-csrf-token", csrf);
 
