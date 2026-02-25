@@ -31,6 +31,58 @@ export const vDomeinRol = v.union(
     v.literal("stagiair"),  // Beperkte read-only toegang
 );
 
+/**
+ * Type dienstverband van een medewerker.
+ * Wordt opgeslagen op het medewerkers-record.
+ */
+export const vContractType = v.union(
+    v.literal("Vast"),
+    v.literal("Tijdelijk"),
+    v.literal("Oproep"),
+    v.literal("Stage"),
+    v.literal("ZZP"),
+);
+export type ContractType = "Vast" | "Tijdelijk" | "Oproep" | "Stage" | "ZZP";
+
+/**
+ * Werkdagen — afkorting per dag (NL).
+ * Opgeslagen als string array: bijv. ["MA", "DI", "WO"].
+ */
+export const vDagKeuze = v.union(
+    v.literal("MA"),
+    v.literal("DI"),
+    v.literal("WO"),
+    v.literal("DO"),
+    v.literal("VR"),
+    v.literal("ZA"),
+    v.literal("ZO"),
+);
+export type DagKeuze = "MA" | "DI" | "WO" | "DO" | "VR" | "ZA" | "ZO";
+
+/**
+ * Officiële NL rijbewijscategorieën (RDW).
+ * Opgeslagen als string array: bijv. ["B", "BE", "C"].
+ */
+export const vRijbewijsCategorie = v.union(
+    v.literal("A"),
+    v.literal("A1"),
+    v.literal("A2"),
+    v.literal("AM"),
+    v.literal("B"),
+    v.literal("BE"),
+    v.literal("C"),
+    v.literal("CE"),
+    v.literal("C1"),
+    v.literal("C1E"),
+    v.literal("D"),
+    v.literal("DE"),
+    v.literal("D1"),
+    v.literal("D1E"),
+    v.literal("T"),
+);
+export type RijbewijsCategorie = "A" | "A1" | "A2" | "AM" | "B" | "BE" | "C" | "CE" | "C1" | "C1E" | "D" | "DE" | "D1" | "D1E" | "T";
+
+
 // ---------------------------------------------------------------------------
 // Klanten
 // ---------------------------------------------------------------------------

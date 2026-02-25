@@ -30,7 +30,7 @@ import {
     getDomeinProfiel,
     requireDomainRole,
 } from "./helpers";
-import { vDomeinRol } from "./validators";
+import { vDomeinRol, vContractType, vDagKeuze, vRijbewijsCategorie } from "./validators";
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -132,6 +132,18 @@ export const ensureEigenaar = mutation({
     },
     handler: async (ctx, { naam }) => {
         const identity = await getIdentity(ctx);
+
+        // B-07 FIX: Verifieer de LaventeCare identity-rol vóór het aanmaken van een eigenaar.
+        // Alleen 'admin' en 'editor' in LaventeCare mogen de garage-eigenaar bootstrappen.
+        // Zonder deze check kan elke geauthenticeerde user de eerste eigenaar worden.
+        const toegestaneRollen = ["admin", "editor"];
+        const identityRol = (identity as { role?: string }).role ?? "";
+        if (!toegestaneRollen.includes(identityRol)) {
+            throw new Error(
+                "FORBIDDEN: Alleen een LaventeCare admin of editor mag de eerste eigenaar worden. " +
+                `Jouw huidige identity-rol is '${identityRol || "onbekend"}'.`
+            );
+        }
 
         // Check: heeft de tenant al medewerkers?
         const bestaandRecord = await ctx.db
@@ -326,6 +338,204 @@ export const activeerMedewerker = mutation({
         }
 
         await ctx.db.patch(medewerkerId, { actief: true });
+        return { success: true };
+    },
+});
+
+// ---------------------------------------------------------------------------
+// Profiel Queries
+// ---------------------------------------------------------------------------
+
+/**
+ * getMedewerkerProfiel — volledig profiel van één medewerker, inclusief
+ * gevoelige velden (bsn, uurloon). Alleen de eigenaar heeft toegang.
+ *
+ * Privacy: BSN en uurloon worden ALLEEN geretourneerd voor de eigenaar.
+ * Andere rollen (balie+) zien het profiel zonder gevoelige velden.
+ */
+export const getMedewerkerProfiel = query({
+    args: { medewerkerId: v.id("medewerkers") },
+    handler: async (ctx, { medewerkerId }) => {
+        const profiel = await requireDomainRole(ctx, "balie");
+
+        const doelMedewerker = await ctx.db.get(medewerkerId);
+        if (!doelMedewerker || doelMedewerker.tokenIdentifier !== profiel.tokenIdentifier) {
+            return null;
+        }
+
+        const isEigenaar = profiel.domeinRol === "eigenaar";
+        const isZichzelf = doelMedewerker._id === profiel._id;
+
+        // Balie/monteur mag eigen profiel volledig zien, anderen: gevoelige velden maskeren
+        if (!isEigenaar && !isZichzelf) {
+            const { bsn, uurloon, ...publiek } = doelMedewerker;
+            return publiek;
+        }
+
+        return doelMedewerker;
+    },
+});
+
+
+// ---------------------------------------------------------------------------
+// Profiel Mutations
+// ---------------------------------------------------------------------------
+
+/**
+ * updateMijnProfiel — medewerker werkt zijn/haar eigen publieke profieldata bij.
+ *
+ * Toegestane velden: persoonlijke contactgegevens, bio, rijbewijs, beschikbaarheid.
+ * Gevoelige velden (bsn, uurloon, contractType) zijn NIET via dit endpoint aanpasbaar.
+ * Vereist minimaal domeinrol "monteur".
+ */
+export const updateMijnProfiel = mutation({
+    args: {
+        email: v.optional(v.string()),
+        telefoonnummer: v.optional(v.string()),
+        geboortedatum: v.optional(v.number()),
+        adres: v.optional(v.string()),
+        postcode: v.optional(v.string()),
+        woonplaats: v.optional(v.string()),
+        nationaliteit: v.optional(v.string()),
+        noodContactNaam: v.optional(v.string()),
+        noodContactTelefoon: v.optional(v.string()),
+        noodContactRelatie: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        rijbewijsCategorien: v.optional(v.array(vRijbewijsCategorie)),
+        beschikbareDagen: v.optional(v.array(vDagKeuze)),
+
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "monteur");
+
+        // Bio lengte-validatie
+        if (args.bio !== undefined && args.bio.length > 500) {
+            throw new Error("INVALID: Bio mag maximaal 500 tekens zijn.");
+        }
+
+        // Bouw een schone patch (geen undefined-waarden doorgeven)
+        const patch = Object.fromEntries(
+            Object.entries(args).filter(([, val]) => val !== undefined)
+        );
+
+        await ctx.db.patch(profiel._id, patch);
+        return { success: true };
+    },
+});
+
+/**
+ * updateMedewerkerProfiel — eigenaar werkt het volledige profiel van
+ * een medewerker bij, inclusief gevoelige velden (bsn, uurloon, contract).
+ *
+ * Vereist domeinrol "eigenaar".
+ */
+export const updateMedewerkerProfiel = mutation({
+    args: {
+        medewerkerId: v.id("medewerkers"),
+        // Publieke velden
+        naam: v.optional(v.string()),
+        email: v.optional(v.string()),
+        telefoonnummer: v.optional(v.string()),
+        geboortedatum: v.optional(v.number()),
+        adres: v.optional(v.string()),
+        postcode: v.optional(v.string()),
+        woonplaats: v.optional(v.string()),
+        nationaliteit: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        rijbewijsCategorien: v.optional(v.array(vRijbewijsCategorie)),
+        beschikbareDagen: v.optional(v.array(vDagKeuze)),
+
+        // Noodcontact
+        noodContactNaam: v.optional(v.string()),
+        noodContactTelefoon: v.optional(v.string()),
+        noodContactRelatie: v.optional(v.string()),
+        // Contract & dienstverband (eigenaar-only)
+        inDienstSinds: v.optional(v.number()),
+        uitDienstOp: v.optional(v.number()),
+        contractType: v.optional(vContractType),
+        uurloon: v.optional(v.number()),
+        contractUrenPerWeek: v.optional(v.number()),
+        // Gevoelig (eigenaar-only)
+        bsn: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const acteert = await requireDomainRole(ctx, "eigenaar");
+
+        const doelMedewerker = await ctx.db.get(args.medewerkerId);
+        if (!doelMedewerker || doelMedewerker.tokenIdentifier !== acteert.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Medewerker niet gevonden of behoort tot andere garage.");
+        }
+
+        if (args.bio !== undefined && args.bio.length > 500) {
+            throw new Error("INVALID: Bio mag maximaal 500 tekens zijn.");
+        }
+
+        const { medewerkerId, ...rest } = args;
+        const patch = Object.fromEntries(
+            Object.entries(rest).filter(([, val]) => val !== undefined)
+        );
+
+        await ctx.db.patch(medewerkerId, patch);
+        return { success: true };
+    },
+});
+
+/**
+ * updateCVData — vervang de volledige werkervaring, opleiding of certificatenlijst.
+ *
+ * Array-replace strategie: de volledige array wordt vervangen.
+ * Reden: Convex heeft geen native array-item CRUD — de frontend beheert de lijst.
+ *
+ * Vrij toegankelijk voor eigen profiel (monteur+) of eigenaar voor anderen.
+ */
+export const updateCVData = mutation({
+    args: {
+        medewerkerId: v.optional(v.id("medewerkers")), // undefined = eigen profiel
+        werkervaring: v.optional(v.array(v.object({
+            bedrijf: v.string(),
+            functie: v.string(),
+            vanafMs: v.number(),
+            totMs: v.optional(v.number()),
+            beschrijving: v.optional(v.string()),
+        }))),
+        opleiding: v.optional(v.array(v.object({
+            instelling: v.string(),
+            richting: v.string(),
+            niveau: v.optional(v.string()),
+            behaaldOp: v.optional(v.number()),
+            diploma: v.optional(v.boolean()),
+        }))),
+        certificaten: v.optional(v.array(v.object({
+            naam: v.string(),
+            uitgever: v.optional(v.string()),
+            behaaldOp: v.number(),
+            verlooptOp: v.optional(v.number()),
+        }))),
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "monteur");
+
+        // Bepaal doelrecord: eigen profiel of (eigenaar) iemand anders
+        let doelId = profiel._id;
+
+        if (args.medewerkerId && args.medewerkerId !== profiel._id) {
+            // Alleen eigenaar mag andermans CV aanpassen
+            if (profiel.domeinRol !== "eigenaar") {
+                throw new Error("FORBIDDEN: Alleen de eigenaar mag het CV van anderen aanpassen.");
+            }
+            const doelMedewerker = await ctx.db.get(args.medewerkerId);
+            if (!doelMedewerker || doelMedewerker.tokenIdentifier !== profiel.tokenIdentifier) {
+                throw new Error("FORBIDDEN: Medewerker niet gevonden of behoort tot andere garage.");
+            }
+            doelId = args.medewerkerId;
+        }
+
+        const { medewerkerId, ...cvVelden } = args;
+        const patch = Object.fromEntries(
+            Object.entries(cvVelden).filter(([, val]) => val !== undefined)
+        );
+
+        await ctx.db.patch(doelId, patch);
         return { success: true };
     },
 });

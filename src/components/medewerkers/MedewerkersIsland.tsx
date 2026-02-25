@@ -17,6 +17,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { useRol, type DomeinRol } from "../../hooks/useRol";
 import { LaventeConvexProvider } from "../providers/LaventeConvexProvider";
+import MedewerkerProfielModal from "../modals/MedewerkerProfielModal";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -464,10 +465,11 @@ function InviteFormulier({ identityRole, isEigenaarDomein }: { identityRole: Ide
 // MedewerkerRij — glassmorphism card + inline bevestigingsdialog
 // ---------------------------------------------------------------------------
 
-function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId }: {
+function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onProfielKlik }: {
     medewerker: { _id: Id<"medewerkers">; naam: string; domeinRol: string; actief: boolean };
     isActerendEigenaar: boolean;
     actueelProfielId: Id<"medewerkers"> | undefined;
+    onProfielKlik: (id: Id<"medewerkers">) => void;
 }) {
     const wijzig = useMutation(api.medewerkers.wijzigDomeinRol);
     const deactiveer = useMutation(api.medewerkers.deactiveerMedewerker);
@@ -547,6 +549,14 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId }: {
                             Gedeactiveerd
                         </span>
                     )}
+                    <button
+                        onClick={() => onProfielKlik(medewerker._id)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ marginLeft: "auto", fontSize: "var(--text-xs)", padding: "0.15em 0.75em" }}
+                        aria-label={`Profiel van ${medewerker.naam} bekijken`}
+                    >
+                        Profiel
+                    </button>
                 </div>
 
                 {/* Eigenaar-acties */}
@@ -630,6 +640,7 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
     const kanLijstZien = !isLoading && !isNietGekoppeld && (isEigenaar || domeinRol === "balie" || isAdmin);
     const alleMedewerkers = useQuery(api.medewerkers.listMedewerkers, kanLijstZien ? {} : "skip");
     const medewerkers = kanLijstZien ? alleMedewerkers : null;
+    const [geselecteerdProfielId, setGeselecteerdProfielId] = useState<Id<"medewerkers"> | null>(null);
 
     if (isLoading) return <Spinner />;
 
@@ -698,11 +709,35 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
                                     medewerker={m}
                                     isActerendEigenaar={isEigenaar}
                                     actueelProfielId={profiel?._id}
+                                    onProfielKlik={(id) => setGeselecteerdProfielId(id)}
                                 />
                             ))}
                         </div>
                     )}
                 </section>
+            )}
+
+            {/* Eigen profiel knop voor monteur/stagiair */}
+            {!isEigenaar && domeinRol !== "balie" && profiel && (
+                <section>
+                    <button
+                        className="btn btn-ghost"
+                        onClick={() => setGeselecteerdProfielId(profiel._id)}
+                        style={{ width: "100%" }}
+                    >
+                        Mijn profiel bekijken / bewerken
+                    </button>
+                </section>
+            )}
+
+            {/* Profiel Modal */}
+            {geselecteerdProfielId && (
+                <MedewerkerProfielModal
+                    medewerkerId={geselecteerdProfielId}
+                    isEigenaar={isEigenaar}
+                    isZichzelf={geselecteerdProfielId === profiel?._id}
+                    onClose={() => setGeselecteerdProfielId(null)}
+                />
             )}
 
             {/* Uitnodiging formulier */}

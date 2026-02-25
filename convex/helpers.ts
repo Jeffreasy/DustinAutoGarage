@@ -78,28 +78,13 @@ export async function requireAuth(
         return mijnRecord.tokenIdentifier;
     }
 
-    // Stap 3b: geen medewerkerrecord (cold-start: eerste keer inloggen vóór seeding)
-    // Zoek de eigenaar via issuer-prefix als fallback.
-    const issuerPrefix = identity.tokenIdentifier.includes("|")
-        ? identity.tokenIdentifier.substring(0, identity.tokenIdentifier.lastIndexOf("|") + 1)
-        : "";
+    // Stap 3b: geen medewerkerrecord (cold-start: eerste keer inloggen vóór seeding).
+    // ⚠️ B-01 FIX: We zoeken NIET meer via een issuerPrefix-wildcard (kwetsbaar voor cross-tenant
+    // lekkage als meerdere tenants dezelfde issuer delen). In plaats daarvan accepteren we de
+    // cold-start situatie veilig: return raw JWT als tenant-scope. Queries vinden dan niets
+    // (lege dataset), wat correct en veilig is. De eigenaar moet ensureEigenaar aanroepen.
 
-    if (issuerPrefix) {
-        const eigenaarInTenant = await ctx.db
-            .query("medewerkers")
-            .filter((q) =>
-                q.and(
-                    q.eq(q.field("domeinRol"), "eigenaar"),
-                    q.eq(q.field("actief"), true)
-                )
-            )
-            .collect()
-            .then(records => records.find(r => r.tokenIdentifier.startsWith(issuerPrefix)) ?? null);
-
-        if (eigenaarInTenant) return eigenaarInTenant.tokenIdentifier;
-    }
-
-    // Stap 4: totale cold-start — raw JWT als fallback
+    // Stap 4: totale cold-start — raw JWT als fallback (veilig: isolatie via lege resultatenset)
     return identity.tokenIdentifier;
 }
 
@@ -181,8 +166,17 @@ export async function requireDomainRole(
         );
     }
 
-    const gebruikerGewicht = DOMEIN_ROL_GEWICHT[profiel.domeinRol as DomeinRol];
+    // B-06 FIX: onbekende domeinRol geeft undefined → NaN, wat altijd < vereistGewicht is false.
+    // Expliciet -1 toewijzen zodat onbekende rollen altijd geblokkeerd worden.
+    const gebruikerGewicht = DOMEIN_ROL_GEWICHT[profiel.domeinRol as DomeinRol] ?? -1;
     const vereistGewicht = DOMEIN_ROL_GEWICHT[minRol];
+
+    if (gebruikerGewicht === -1) {
+        throw new Error(
+            `FORBIDDEN: Onbekende domeinRol '${profiel.domeinRol}' — ` +
+            "toegang geweigerd. Neem contact op met de eigenaar."
+        );
+    }
 
     if (gebruikerGewicht < vereistGewicht) {
         throw new Error(

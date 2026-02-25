@@ -236,7 +236,10 @@ export const create = mutation({
         klantNotities: v.optional(v.string()),
     },
     handler: async (ctx, args): Promise<Id<"klanten">> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        // B-11 FIX: Stagiairs zijn read-only — minimaal monteur vereist om klanten aan te maken.
+        // Was requireAuth: stagiairs hadden schrijftoegang ondanks de bedoeling read-only te zijn.
+        const profiel = await requireDomainRole(ctx, "monteur");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const bestaand = await ctx.db
             .query("klanten")

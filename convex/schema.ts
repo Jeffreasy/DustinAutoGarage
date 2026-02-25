@@ -22,7 +22,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 // Enum-validators worden gecentraliseerd beheerd in validators.ts
-import { vKlanttype, vKlantstatus, vBrandstof, vTypeWerk, vDomeinRol, vWerkplekType, vWerkplekStatus, vWerkorderStatus, vAfsluitingReden } from "./validators";
+import { vKlanttype, vKlantstatus, vBrandstof, vTypeWerk, vDomeinRol, vWerkplekType, vWerkplekStatus, vWerkorderStatus, vAfsluitingReden, vContractType, vDagKeuze, vRijbewijsCategorie } from "./validators";
 
 // ---------------------------------------------------------------------------
 // Schema-definitie
@@ -34,6 +34,7 @@ export default defineSchema({
     //   Koppelt een LaventeCare userId aan een garage-specifieke domeinRol.
     //   Identity (wie mag inloggen) = LaventeCare.
     //   Domein (wat mag je in de app) = dit record.
+    //   Profiel (wie ben je professioneel) = optionele profielvelden hieronder.
     // ──────────────────────────────────────────────────────────────────────────
     medewerkers: defineTable({
         /**
@@ -63,6 +64,124 @@ export default defineSchema({
 
         /** Aanmaaktijdstip (ms since epoch). */
         aangemaaktOp: v.number(),
+
+        // ── Persoonlijke contactgegevens (optioneel) ─────────────────────────
+
+        /** Zakelijk of privé e-mailadres. */
+        email: v.optional(v.string()),
+
+        /** Mobiel telefoonnummer (internationaal formaat: +31612345678). */
+        telefoonnummer: v.optional(v.string()),
+
+        /** Geboortedatum (ms since epoch) — voor leeftijdsberekening. */
+        geboortedatum: v.optional(v.number()),
+
+        /** Woonadres: straat + huisnummer. */
+        adres: v.optional(v.string()),
+        postcode: v.optional(v.string()),
+        woonplaats: v.optional(v.string()),
+
+        /** Nationaliteit, bijv. "Nederlands". */
+        nationaliteit: v.optional(v.string()),
+
+        // ── Gevoelig (eigenaar-only) ──────────────────────────────────────────
+
+        /**
+         * BSN-nummer — uitsluitend zichtbaar voor de eigenaar.
+         * Wordt in query-laag gefilterd voor andere rollen.
+         * ⚠️  Sla dit alleen op als het operationeel noodzakelijk is.
+         */
+        bsn: v.optional(v.string()),
+
+        // ── Noodcontact ───────────────────────────────────────────────────────
+
+        noodContactNaam: v.optional(v.string()),
+        noodContactTelefoon: v.optional(v.string()),
+        noodContactRelatie: v.optional(v.string()), // bijv. "Partner", "Ouder"
+
+        // ── Dienstverband (eigenaar-only velden: uurloon) ─────────────────────
+
+        /** Startdatum dienstverband (ms since epoch). */
+        inDienstSinds: v.optional(v.number()),
+
+        /** Datum uitdiensttreding (ms since epoch) — optioneel. */
+        uitDienstOp: v.optional(v.number()),
+
+        /** Type contract. */
+        contractType: v.optional(vContractType),
+
+        /**
+         * Bruto uurloon in euro's — uitsluitend zichtbaar voor de eigenaar.
+         * Wordt in query-laag gefilterd voor andere rollen.
+         */
+        uurloon: v.optional(v.number()),
+
+        /** Aantal contracturen per week (bijv. 40). */
+        contractUrenPerWeek: v.optional(v.number()),
+
+        // ── Profiel & bio ─────────────────────────────────────────────────────
+
+        /**
+         * Korte omschrijving of motivatietekst, max. 500 tekens.
+         * Zichtbaar voor alle collega's (eigenaar + balie).
+         */
+        bio: v.optional(v.string()),
+
+        // ── Rijbewijs ─────────────────────────────────────────────────────────
+
+        /**
+         * rijbewijsCategorien die de medewerker bezit.
+         * Bijv. ["B", "BE", "C"] — relevant voor transport-taken.
+         */
+        rijbewijsCategorien: v.optional(v.array(vRijbewijsCategorie)),
+
+        // ── Certificaten ──────────────────────────────────────────────────────
+
+        /**
+         * Vakdiploma's en certificaten.
+         * Elk item: { naam, uitgever, behaaldOp (ms), verlooptOp? (ms) }
+         */
+        certificaten: v.optional(v.array(v.object({
+            naam: v.string(),          // bijv. "Airco-certificaat F-gassen"
+            uitgever: v.optional(v.string()), // bijv. "STEK"
+            behaaldOp: v.number(),     // ms since epoch
+            verlooptOp: v.optional(v.number()), // ms since epoch
+        }))),
+
+        // ── Werkervaring (CV) ─────────────────────────────────────────────────
+
+        /**
+         * Werkgeschiedenis vóór de huidige functie.
+         * Chronologisch — nieuwste bovenaan weergeven via sort in UI.
+         */
+        werkervaring: v.optional(v.array(v.object({
+            bedrijf: v.string(),
+            functie: v.string(),
+            vanafMs: v.number(),           // startdatum (ms since epoch)
+            totMs: v.optional(v.number()), // einddatum (null = huidig)
+            beschrijving: v.optional(v.string()),
+        }))),
+
+        // ── Opleiding ─────────────────────────────────────────────────────────
+
+        /**
+         * Gevolgde opleidingen en studies.
+         */
+        opleiding: v.optional(v.array(v.object({
+            instelling: v.string(),    // bijv. "ROC Midden Nederland"
+            richting: v.string(),      // bijv. "Autotechniek MBO niveau 4"
+            niveau: v.optional(v.string()), // bijv. "MBO", "HBO", "WO"
+            behaaldOp: v.optional(v.number()), // ms since epoch
+            diploma: v.optional(v.boolean()), // true = diploma behaald
+        }))),
+
+        // ── Beschikbaarheid ───────────────────────────────────────────────────
+
+        /**
+         * Werkdagen waarop de medewerker beschikbaar is.
+         * Bijv. ["MA", "DI", "WO", "DO", "VR"]
+         */
+        beschikbareDagen: v.optional(v.array(vDagKeuze)),
     })
         // Snelle lookup per gebruiker (identity bridge in useRol hook)
         .index("by_userId", ["userId"])

@@ -39,7 +39,9 @@ import { requireAuth, requireDomainRole } from "./helpers";
 export const lijstWerkordersVoorBord = query({
     args: {},
     handler: async (ctx) => {
-        const tokenIdentifier = await requireAuth(ctx);
+        // B-09 FIX: monteur+ vereist (was requireAuth — stagiairs kwamen er ook doorheen)
+        const profiel = await requireDomainRole(ctx, "monteur");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const orders = await ctx.db
             .query("werkorders")
@@ -134,6 +136,14 @@ export const maakWerkorderAan = mutation({
         // Controleer consistentie: klant moet eigenaar zijn van het voertuig
         if (voertuig.klantId !== args.klantId) {
             throw new Error("CONFLICT: Het opgegeven voertuig behoort niet tot de opgegeven klant.");
+        }
+
+        // B-10 FIX: Valideer dat de opgegeven monteur tot dezelfde tenant behoort.
+        if (args.monteursId) {
+            const monteur = await ctx.db.get(args.monteursId);
+            if (!monteur || monteur.tokenIdentifier !== profiel.tokenIdentifier) {
+                throw new Error("FORBIDDEN: De opgegeven monteur behoort niet tot deze garage.");
+            }
         }
 
         const werkorderId = await ctx.db.insert("werkorders", {
@@ -272,6 +282,14 @@ export const wijsMonteurtoe = mutation({
         const order = await ctx.db.get(args.werkorderId);
         if (!order || order.tokenIdentifier !== profiel.tokenIdentifier) {
             throw new Error("FORBIDDEN: Werkorder niet gevonden of geen toegang.");
+        }
+
+        // B-10 FIX: Valideer dat de opgegeven monteur tot dezelfde tenant behoort.
+        if (args.monteursId) {
+            const monteur = await ctx.db.get(args.monteursId);
+            if (!monteur || monteur.tokenIdentifier !== profiel.tokenIdentifier) {
+                throw new Error("FORBIDDEN: De opgegeven monteur behoort niet tot deze garage.");
+            }
         }
 
         await ctx.db.patch(args.werkorderId, { monteursId: args.monteursId });

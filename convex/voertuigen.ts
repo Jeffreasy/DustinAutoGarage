@@ -180,7 +180,9 @@ export const create = mutation({
         voertuigNotities: v.optional(v.string()),
     },
     handler: async (ctx, args): Promise<Id<"voertuigen">> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        // B-12 FIX: Stagiairs zijn read-only — minimaal monteur vereist om voertuigen aan te maken.
+        const profiel = await requireDomainRole(ctx, "monteur");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const klant = await ctx.db.get(args.klantId);
         if (!klant || klant.tokenIdentifier !== tokenIdentifier) {
@@ -233,7 +235,9 @@ export const update = mutation({
         voertuigNotities: v.optional(v.string()),
     },
     handler: async (ctx, args): Promise<void> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        // B-12 FIX: Stagiairs zijn read-only — minimaal monteur vereist.
+        const profiel = await requireDomainRole(ctx, "monteur");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const voertuig = await ctx.db.get(args.voertuigId);
         if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {
@@ -266,7 +270,9 @@ export const updateKilometerstand = mutation({
         nieuweKilometerstand: v.number(),
     },
     handler: async (ctx, args): Promise<void> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        // B-12 FIX: Stagiairs zijn read-only — minimaal monteur vereist.
+        const profiel = await requireDomainRole(ctx, "monteur");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const voertuig = await ctx.db.get(args.voertuigId);
         if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {

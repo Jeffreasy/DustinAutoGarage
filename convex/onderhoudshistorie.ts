@@ -199,7 +199,9 @@ export const registreer = mutation({
         werkNotities: v.optional(v.string()),
     },
     handler: async (ctx, args): Promise<Id<"onderhoudshistorie">> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        // B-13 FIX: Stagiairs zijn read-only — minimaal monteur vereist om beurten te registreren.
+        const profiel = await requireDomainRole(ctx, "monteur");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const voertuig = await ctx.db.get(args.voertuigId);
         if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {
@@ -207,7 +209,6 @@ export const registreer = mutation({
         }
 
         // M-4 FIX: datum mag niet meer dan 1 dag in de toekomst liggen
-        // Voorkomt data-vervuiling en onjuiste omzetberekeningen.
         const maxToekomst = Date.now() + 86400000; // +1 dag
         if (args.datumUitgevoerd > maxToekomst) {
             throw new Error(
@@ -244,7 +245,9 @@ export const updateDocumentUrl = mutation({
         documentUrl: v.string(),
     },
     handler: async (ctx, args): Promise<void> => {
-        const tokenIdentifier = await requireAuth(ctx);
+        // B-13 FIX: Stagiairs zijn read-only — minimaal monteur vereist om document-URLs te muteren.
+        const profiel = await requireDomainRole(ctx, "monteur");
+        const tokenIdentifier = profiel.tokenIdentifier;
 
         const entry = await ctx.db.get(args.historieId);
         if (!entry || entry.tokenIdentifier !== tokenIdentifier) {
