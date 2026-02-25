@@ -87,8 +87,8 @@ function KlantKaartMonteur({ klant }: { klant: Doc<"klanten"> }) {
                     style={{
                         display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
                         padding: "var(--space-2) var(--space-4)", minHeight: "44px",
-                        background: "var(--color-success, #16a34a)",
-                        color: "#fff", borderRadius: "var(--radius-md)",
+                        background: "var(--color-success)",
+                        color: "var(--color-on-accent)", borderRadius: "var(--radius-md)",
                         textDecoration: "none", fontWeight: "var(--weight-semibold)",
                         fontSize: "var(--text-sm)", whiteSpace: "nowrap",
                         transition: "opacity 150ms ease",

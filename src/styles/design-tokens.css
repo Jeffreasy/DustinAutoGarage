@@ -223,6 +223,60 @@
    --z-overlay: 400;
    --z-modal: 500;
    --z-toast: 600;
+
+   /* ══════════════════════════════════════════════════════════
+       WERKORDER STATUS KLEUREN
+       Gebruik altijd deze tokens in componenten — nooit hardcode hex.
+       ══════════════════════════════════════════════════════════ */
+
+   --status-planned: #8b5cf6;
+   /* Gepland — violet               */
+   --status-present: #0891b2;
+   /* Aanwezig — cyan                */
+   --status-busy: #f59e0b;
+   /* Bezig — amber                  */
+   --status-done: #16a34a;
+   /* Afgerond — groen               */
+
+   /* ══════════════════════════════════════════════════════════
+       EXTRA ACCENTEN & CONTAINER
+       ══════════════════════════════════════════════════════════ */
+
+   --color-accent-indigo: #6366f1;
+   /* Indigo — beurten KPI             */
+   --color-accent-dark: #0d9488;
+   /* Teal-700 — donkere avatar stop   */
+   --color-accent-bg: rgba(20, 184, 166, 0.10);
+   /* Teal subtiele bg */
+   --container-max: 1280px;
+   /* Max breedte pagina-content       */
+
+   /* ══════════════════════════════════════════════════════════
+       LAYOUT TOKENS
+       ══════════════════════════════════════════════════════════ */
+
+   --header-height: 56px;
+   /* Sticky nav hoogte                 */
+   --card-max-width-sm: 440px;
+   /* Smalle kaart (login, modals)      */
+   --space-10: 2.5rem;
+   /* 40px bij 16px base                */
+
+   /* ══════════════════════════════════════════════════════════
+       GLASSMORPHISM VARIANTEN
+       ══════════════════════════════════════════════════════════ */
+
+   --glass-bg-strong: rgba(7, 9, 15, 0.85);
+   /* Header bg dark   */
+   --glass-bg-subtle: rgba(255, 255, 255, 0.06);
+   /* Input bg dark    */
+
+   /* ══════════════════════════════════════════════════════════
+       OVERLAY BACKDROP
+       ══════════════════════════════════════════════════════════ */
+
+   --overlay-bg: rgba(0, 0, 0, 0.65);
+   /* Mobile drawer backdrop */
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -274,6 +328,8 @@
 
    /* ── Status — Success ─────────────────────────────────────── */
    --color-success: var(--primitive-green-400);
+   --color-success-text: #34d399;
+   /* emerald-400 — leesbaar op dark */
    --color-success-bg: rgba(74, 222, 128, 0.08);
    --color-success-border: rgba(74, 222, 128, 0.22);
 
@@ -290,8 +346,10 @@
 
    /* ── Status — Info ────────────────────────────────────────── */
    --color-info: var(--primitive-blue-400);
-   --color-info-bg: rgba(96, 165, 250, 0.08);
-   --color-info-border: rgba(96, 165, 250, 0.22);
+   --color-info-text: #60a5fa;
+   /* blue-400 — leesbaar op dark */
+   --color-info-bg: rgba(96, 165, 250, 0.10);
+   --color-info-border: rgba(96, 165, 250, 0.25);
 
    /* ── Shadows (deep dark + glow) ────────────────────────────── */
    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.6);
@@ -329,19 +387,25 @@
    color-scheme: light;
 
    /* ── Achtergrond hiërarchie ───────────────────────────────── */
-   --color-bg: #f8fafc;
-   --color-surface: #ffffff;
-   --color-surface-2: #f1f5f9;
-   --color-surface-3: #e2e8f0;
-   --color-surface-4: #cbd5e1;
-   --color-surface-hover: #f4f7fa;
+   --color-bg: #eef1f5;
+   /* warm slate — diepte, geen puur wit */
+   --color-surface: #f7f9fc;
+   /* licht warm, contrastering met bg   */
+   --color-surface-2: #eaecf2;
+   /* niveau 2 — duidelijk zichtbaar     */
+   --color-surface-3: #dde0e8;
+   /* niveau 3                           */
+   --color-surface-4: #cfd3de;
+   /* niveau 4                           */
+   --color-surface-hover: #e2e6ef;
+   /* duidelijke hover                 */
 
    /* ── Borders ──────────────────────────────────────────────── */
-   --color-border: rgba(0, 0, 0, 0.09);
-   --color-border-hover: rgba(0, 0, 0, 0.16);
+   --color-border: rgba(0, 0, 0, 0.13);
+   --color-border-hover: rgba(0, 0, 0, 0.22);
    --color-border-focus: var(--primitive-teal-600);
    --color-border-luminous: rgba(15, 118, 110, 0.35);
-   --color-border-subtle: rgba(0, 0, 0, 0.04);
+   --color-border-subtle: rgba(0, 0, 0, 0.06);
 
    /* ── Tekst (WCAG AA+ getest) ──────────────────────────────── */
    --color-heading: #0f172a;
@@ -365,6 +429,8 @@
 
    /* ── Status — Success ─────────────────────────────────────── */
    --color-success: var(--primitive-green-500);
+   --color-success-text: #065f46;
+   /* emerald-800 — hoog contrast op licht */
    --color-success-bg: #f0fdf4;
    --color-success-border: #bbf7d0;
 
@@ -381,28 +447,30 @@
 
    /* ── Status — Info ────────────────────────────────────────── */
    --color-info: var(--primitive-blue-500);
+   --color-info-text: #1d4ed8;
+   /* blue-700 — hoog contrast op licht */
    --color-info-bg: #eff6ff;
    --color-info-border: #bfdbfe;
 
-   /* ── Shadows (zacht + glow in light mode) ─────────────────── */
-   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.06);
-   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
-   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
-   --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.09), 0 4px 8px rgba(0, 0, 0, 0.05);
-   --shadow-xl: 0 24px 40px rgba(0, 0, 0, 0.10), 0 8px 16px rgba(0, 0, 0, 0.05);
-   --shadow-glow: 0 0 16px rgba(15, 118, 110, 0.15), 0 0 32px rgba(15, 118, 110, 0.06);
-   --shadow-glow-strong: 0 0 24px rgba(15, 118, 110, 0.25), 0 0 48px rgba(15, 118, 110, 0.12);
-   --shadow-glow-sm: 0 0 8px rgba(15, 118, 110, 0.14);
-   --shadow-accent: 0 0 0 1px var(--color-border-luminous), 0 4px 16px rgba(15, 118, 110, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+   /* ── Shadows (dieper + glow in light mode) ─────────────────── */
+   --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
+   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+   --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.11), 0 2px 6px rgba(0, 0, 0, 0.07);
+   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.13), 0 4px 10px rgba(0, 0, 0, 0.08);
+   --shadow-xl: 0 28px 48px rgba(0, 0, 0, 0.14), 0 8px 20px rgba(0, 0, 0, 0.08);
+   --shadow-glow: 0 0 16px rgba(15, 118, 110, 0.18), 0 0 32px rgba(15, 118, 110, 0.09);
+   --shadow-glow-strong: 0 0 24px rgba(15, 118, 110, 0.28), 0 0 48px rgba(15, 118, 110, 0.14);
+   --shadow-glow-sm: 0 0 8px rgba(15, 118, 110, 0.16);
+   --shadow-accent: 0 0 0 1px var(--color-border-luminous), 0 4px 16px rgba(15, 118, 110, 0.14), 0 1px 3px rgba(0, 0, 0, 0.10);
 
-   /* ── Glassmorphism — Light variant ───────────────────────── */
-   --glass-bg-subtle: rgba(255, 255, 255, 0.60);
-   --glass-bg: rgba(255, 255, 255, 0.82);
-   --glass-bg-strong: rgba(255, 255, 255, 0.96);
-   --glass-border: rgba(0, 0, 0, 0.08);
+   /* ── Glassmorphism — Light variant (werkt nu met gkleurde bg) */
+   --glass-bg-subtle: rgba(247, 249, 252, 0.65);
+   --glass-bg: rgba(247, 249, 252, 0.88);
+   --glass-bg-strong: rgba(247, 249, 252, 0.97);
+   --glass-border: rgba(0, 0, 0, 0.11);
    --glass-border-luminous: rgba(15, 118, 110, 0.30);
-   --glass-highlight: rgba(255, 255, 255, 0.80);
-   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+   --glass-highlight: rgba(255, 255, 255, 0.90);
+   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.14), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
 
    /* ── Skeleton ─────────────────────────────────────────────── */
    --skeleton-base: #e2e8f0;
@@ -420,16 +488,16 @@
 
 @media (prefers-color-scheme: light) {
    :root:not([data-theme]) {
-      /* Dezelfde overschrijvingen als [data-theme="light"] */
+      /* Gespiegeld van [data-theme="light"] — DRY via update */
       color-scheme: light;
-      --color-bg: #f8fafc;
-      --color-surface: #ffffff;
-      --color-surface-2: #f1f5f9;
-      --color-surface-3: #e2e8f0;
-      --color-surface-4: #cbd5e1;
-      --color-surface-hover: #f4f7fa;
-      --color-border: rgba(0, 0, 0, 0.08);
-      --color-border-hover: rgba(0, 0, 0, 0.15);
+      --color-bg: #eef1f5;
+      --color-surface: #f7f9fc;
+      --color-surface-2: #eaecf2;
+      --color-surface-3: #dde0e8;
+      --color-surface-4: #cfd3de;
+      --color-surface-hover: #e2e6ef;
+      --color-border: rgba(0, 0, 0, 0.13);
+      --color-border-hover: rgba(0, 0, 0, 0.22);
       --color-border-focus: var(--primitive-teal-600);
       --color-heading: #0f172a;
       --color-body: #1e293b;
@@ -443,8 +511,8 @@
       --color-accent-dim-hover: rgba(15, 118, 110, 0.17);
       --color-accent-text: var(--primitive-teal-700);
       --color-on-accent: #ffffff;
-      --focus-ring-color: rgba(15, 118, 110, 0.25);
-      --focus-ring: 0 0 0 3px var(--focus-ring-color);
+      --focus-ring-color: rgba(15, 118, 110, 0.28);
+      --focus-ring: 0 0 0 3px var(--focus-ring-color), 0 0 8px rgba(15, 118, 110, 0.12);
       --color-success: var(--primitive-green-500);
       --color-success-bg: #f0fdf4;
       --color-success-border: #bbf7d0;
@@ -454,20 +522,23 @@
       --color-error: #dc2626;
       --color-error-bg: #fff1f2;
       --color-error-border: #fecdd3;
-      --focus-ring-error: 0 0 0 3px rgba(220, 38, 38, 0.20);
+      --focus-ring-error: 0 0 0 3px rgba(220, 38, 38, 0.22);
       --color-info: var(--primitive-blue-500);
       --color-info-bg: #eff6ff;
       --color-info-border: #bfdbfe;
-      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
-      --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
-      --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
-      --shadow-xl: 0 24px 40px rgba(0, 0, 0, 0.10), 0 8px 16px rgba(0, 0, 0, 0.05);
-      --shadow-accent: 0 0 0 1px rgba(15, 118, 110, 0.20), 0 4px 12px rgba(15, 118, 110, 0.08);
-      --glass-bg: rgba(255, 255, 255, 0.85);
-      --glass-border: rgba(0, 0, 0, 0.08);
-      --skeleton-base: #e2e8f0;
-      --skeleton-shine: #f1f5f9;
+      --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.11), 0 2px 6px rgba(0, 0, 0, 0.07);
+      --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.13), 0 4px 10px rgba(0, 0, 0, 0.08);
+      --shadow-xl: 0 28px 48px rgba(0, 0, 0, 0.14), 0 8px 20px rgba(0, 0, 0, 0.08);
+      --shadow-accent: 0 0 0 1px var(--color-border-luminous), 0 4px 16px rgba(15, 118, 110, 0.14), 0 1px 3px rgba(0, 0, 0, 0.10);
+      --glass-bg-subtle: rgba(247, 249, 252, 0.65);
+      --glass-bg: rgba(247, 249, 252, 0.88);
+      --glass-bg-strong: rgba(247, 249, 252, 0.97);
+      --glass-border: rgba(0, 0, 0, 0.11);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.14), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+      --skeleton-base: #dde0e8;
+      --skeleton-shine: #eaecf2;
       --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
    }
 }

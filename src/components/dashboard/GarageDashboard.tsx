@@ -50,9 +50,14 @@ function formatDatum(ms: number): string {
 }
 
 const STATUS_KLEUR: Record<string, string> = {
-    "Gepland": "#8b5cf6", "Aanwezig": "#0891b2", "Wachtend": "#6b7280",
-    "Bezig": "#f59e0b", "Wacht op onderdelen": "#3b82f6",
-    "Klaar": "#22c55e", "Afgerond": "#16a34a", "Geannuleerd": "#dc2626",
+    "Gepland": "var(--status-planned)",
+    "Aanwezig": "var(--status-present)",
+    "Wachtend": "var(--color-muted)",
+    "Bezig": "var(--status-busy)",
+    "Wacht op onderdelen": "var(--color-info)",
+    "Klaar": "var(--color-success)",
+    "Afgerond": "var(--status-done)",
+    "Geannuleerd": "var(--color-error)",
 };
 
 // Label voor compacte sectie-headers
@@ -92,17 +97,17 @@ function KPIStrip() {
         },
         {
             label: "Wacht op ophalen", waarde: ophalen !== undefined ? String(ophalen.length) : "—",
-            Icon: IconPackage, accent: "#16a34a",
+            Icon: IconPackage, accent: "var(--status-done)",
         },
         {
             label: "APK verlopen < 14d",
             waarde: apkAlerts !== undefined ? String(apkAlerts.length) : "—",
             Icon: IconCalendar,
-            accent: apkAlerts && apkAlerts.length > 0 ? "#dc2626" : "#6b7280",
+            accent: apkAlerts && apkAlerts.length > 0 ? "var(--color-error)" : "var(--color-muted)",
         },
         {
             label: "Totaal beurten ooit", waarde: stats?.totaal !== undefined ? String(stats.totaal) : "—",
-            Icon: IconActivity, accent: "#6366f1",
+            Icon: IconActivity, accent: "var(--color-accent-indigo)",
         },
     ];
 
@@ -139,7 +144,7 @@ function KPIStrip() {
                         fontVariantNumeric: "tabular-nums", lineHeight: 1,
                     }}>
                         {waarde === "—" ? (
-                            <span style={{ display: "inline-block", width: "2ch", height: "1em", background: "var(--color-border)", borderRadius: "var(--radius-xs)", animation: "pulse 1.5s ease infinite" }} />
+                            <span style={{ display: "inline-block", width: "2ch", height: "1em", background: "var(--skeleton-base)", borderRadius: "var(--radius-xs)", animation: "pulse 1.5s ease infinite" }} />
                         ) : waarde}
                     </div>
                 </div>
@@ -190,7 +195,7 @@ function LiveWerkplaats({ onNieuw }: { onNieuw: () => void }) {
             {actief === undefined ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                     {[...Array(3)].map((_, i) => (
-                        <div key={i} style={{ height: "52px", background: "var(--color-border)", borderRadius: "var(--radius-md)", animation: "pulse 1.5s ease infinite" }} />
+                        <div key={i} style={{ height: "52px", background: "var(--skeleton-base)", borderRadius: "var(--radius-md)", animation: "pulse 1.5s ease infinite" }} />
                     ))}
                 </div>
             ) : actief.length === 0 ? (
@@ -199,7 +204,7 @@ function LiveWerkplaats({ onNieuw }: { onNieuw: () => void }) {
                     border: "1px dashed var(--color-border)", borderRadius: "var(--radius-md)",
                 }}>
                     <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)", margin: 0 }}>
-                        Geen actieve werkorders. Rustige dag! 👍
+                        Geen actieve werkorders. Rustige dag!
                     </p>
                 </div>
             ) : (
@@ -291,7 +296,7 @@ function RecenteBeurtFeed() {
             {beurten === undefined ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
                     {[...Array(4)].map((_, i) => (
-                        <div key={i} style={{ height: "44px", background: "var(--color-border)", borderRadius: "var(--radius-sm)", animation: "pulse 1.5s ease infinite" }} />
+                        <div key={i} style={{ height: "44px", background: "var(--skeleton-base)", borderRadius: "var(--radius-sm)", animation: "pulse 1.5s ease infinite" }} />
                     ))}
                 </div>
             ) : beurten.length === 0 ? (
@@ -399,19 +404,19 @@ function WachtOpOphalen({ enabled }: { enabled: boolean }) {
     return (
         <section style={{
             padding: "var(--space-4)",
-            background: "rgba(22,163,74,0.06)",
-            border: "1px solid rgba(22,163,74,0.25)",
+            background: "var(--color-success-bg)",
+            border: "1px solid var(--color-success-border)",
             borderRadius: "var(--radius-md)",
             display: "flex", flexDirection: "column", gap: "var(--space-3)",
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <span style={{ color: "#16a34a" }}><IconPackage size={16} /></span>
+                <span style={{ color: "var(--color-success)" }}><IconPackage size={16} /></span>
                 <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
                     Wacht op ophalen
                 </span>
                 <span style={{
-                    background: "#16a34a", color: "#fff", fontSize: "var(--text-xs)",
-                    fontWeight: "var(--weight-bold)", borderRadius: "9999px", padding: "1px 8px",
+                    background: "var(--color-success)", color: "var(--color-on-accent)", fontSize: "var(--text-xs)",
+                    fontWeight: "var(--weight-bold)", borderRadius: "var(--radius-full)", padding: "1px 8px",
                 }}>{orders.length}</span>
             </div>
 
@@ -445,7 +450,7 @@ function WachtOpOphalen({ enabled }: { enabled: boolean }) {
                         className="btn btn-sm"
                         style={{
                             minHeight: "44px", minWidth: "44px",
-                            background: "#16a34a", color: "#fff", border: "none",
+                            background: "var(--color-success)", color: "var(--color-on-accent)", border: "none",
                             borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)",
                             fontWeight: "var(--weight-semibold)", cursor: "pointer",
                             display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px",
@@ -481,19 +486,19 @@ function ApkAlerts() {
         <>
             <section style={{
                 padding: "var(--space-4)",
-                background: heeftUrgent ? "rgba(239,68,68,0.06)" : "rgba(251,191,36,0.06)",
-                border: `1px solid ${heeftUrgent ? "rgba(239,68,68,0.2)" : "rgba(251,191,36,0.3)"}`,
+                background: heeftUrgent ? "var(--color-error-bg)" : "var(--color-warning-bg)",
+                border: `1px solid ${heeftUrgent ? "var(--color-error-border)" : "var(--color-warning-border)"}`,
                 borderRadius: "var(--radius-md)",
                 display: "flex", flexDirection: "column", gap: "var(--space-3)",
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                    <span style={{ color: "#dc2626" }}><IconAlertTriangle size={16} /></span>
+                    <span style={{ color: "var(--color-error)" }}><IconAlertTriangle size={16} /></span>
                     <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
                         APK verloopt binnenkort
                     </span>
                     <span style={{
-                        background: "#dc2626", color: "#fff", fontSize: "var(--text-xs)",
-                        fontWeight: "var(--weight-bold)", borderRadius: "9999px", padding: "1px 8px",
+                        background: "var(--color-error)", color: "var(--color-on-accent)", fontSize: "var(--text-xs)",
+                        fontWeight: "var(--weight-bold)", borderRadius: "var(--radius-full)", padding: "1px 8px",
                     }}>{alerts.length}</span>
                 </div>
 
@@ -517,7 +522,7 @@ function ApkAlerts() {
                             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", flex: 1, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                                 {v.merk} {v.model}
                             </span>
-                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: isUrgent ? "#991b1b" : "#78350f", whiteSpace: "nowrap", flexShrink: 0 }}>
+                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: isUrgent ? "var(--color-error)" : "var(--color-warning)", whiteSpace: "nowrap", flexShrink: 0 }}>
                                 {daysLeft !== null ? (daysLeft < 0 ? "Verlopen" : `${daysLeft}d`) : "—"}
                             </span>
                         </button>
@@ -613,7 +618,7 @@ export default function GarageDashboard() {
         return (
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
                 {[...Array(2)].map((_, i) => (
-                    <div key={i} style={{ height: "80px", background: "var(--color-border)", borderRadius: "var(--radius-md)", animation: "pulse 1.5s ease infinite" }} />
+                    <div key={i} style={{ height: "80px", background: "var(--skeleton-base)", borderRadius: "var(--radius-md)", animation: "pulse 1.5s ease infinite" }} />
                 ))}
             </div>
         );
@@ -672,7 +677,7 @@ export default function GarageDashboard() {
                     gap: "var(--space-4)",
                     // Alleen sticky op laptop/desktop
                     position: isTabletOrSmaller ? "static" : "sticky",
-                    top: isTabletOrSmaller ? undefined : "calc(var(--nav-height, 64px) + var(--space-4))",
+                    top: isTabletOrSmaller ? undefined : "calc(var(--header-height) + var(--space-4))",
                 }}>
                     {/* Snelacties alleen op desktop in de sidebar */}
                     {!isMobile && (

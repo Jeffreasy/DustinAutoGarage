@@ -130,8 +130,8 @@ function IconSearch() {
 // ---------------------------------------------------------------------------
 
 const STATUS_BADGE: Record<string, { color: string; bg: string; border: string }> = {
-    Actief: { color: "#065f46", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.35)" },
-    Prospect: { color: "#1d4ed8", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.35)" },
+    Actief: { color: "var(--color-success-text)", bg: "var(--color-success-bg)", border: "var(--color-success-border)" },
+    Prospect: { color: "var(--color-info-text)", bg: "var(--color-info-bg)", border: "var(--color-info-border)" },
     Inactief: { color: "var(--color-muted)", bg: "var(--color-surface)", border: "var(--color-border)" },
 };
 
@@ -142,7 +142,7 @@ function StatusBadge({ status }: { status: string }) {
             fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
             color: s.color, background: s.bg,
             border: `1px solid ${s.border}`,
-            borderRadius: "9999px", padding: "0.15em 0.6em",
+            borderRadius: "var(--radius-full)", padding: "var(--space-px) var(--space-2)",
         }}>
             {status}
         </span>
@@ -161,11 +161,11 @@ function KlantKaartSkeleton() {
             display: "flex", flexDirection: "column", gap: "var(--space-3)",
         }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ width: "60%", height: "16px", borderRadius: "var(--radius-md)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
-                <div style={{ width: "15%", height: "16px", borderRadius: "9999px", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ width: "60%", height: "16px", borderRadius: "var(--radius-md)", background: "var(--skeleton-base)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ width: "15%", height: "16px", borderRadius: "var(--radius-md)", background: "var(--skeleton-base)", animation: "pulse 1.5s ease-in-out infinite" }} />
             </div>
-            <div style={{ width: "40%", height: "12px", borderRadius: "var(--radius-md)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
-            <div style={{ width: "50%", height: "12px", borderRadius: "var(--radius-md)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: "40%", height: "12px", borderRadius: "var(--radius-md)", background: "var(--skeleton-base)", animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: "50%", height: "12px", borderRadius: "var(--radius-md)", background: "var(--skeleton-base)", animation: "pulse 1.5s ease-in-out infinite" }} />
         </div>
     );
 }
@@ -176,7 +176,7 @@ function VoertuigenSkeleton() {
             {[75, 60].map((w, i) => (
                 <div key={i} style={{
                     height: "44px", borderRadius: "var(--radius-md)",
-                    background: "var(--color-border)", width: `${w}%`,
+                    background: "var(--skeleton-base)", width: `${w}%`,
                     animation: "pulse 1.5s ease-in-out infinite",
                 }} />
             ))}
@@ -277,16 +277,16 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                             </span>
                         )}
                     </h2>
-                    <p style={{ color: "var(--color-muted)", fontSize: "var(--text-xs)", margin: "4px 0 0", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                    <p style={{ color: "var(--color-muted)", fontSize: "var(--text-xs)", margin: "var(--space-px) 0 0", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                         Klant sinds {new Date(klant.klantSinds).toLocaleDateString("nl-NL")}
                         <span>·</span>
                         <StatusBadge status={klant.status} />
                         {klant.klanttype === "Zakelijk" && (
                             <span style={{
                                 fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
-                                color: "#1d4ed8", background: "rgba(59,130,246,0.1)",
-                                border: "1px solid rgba(59,130,246,0.3)",
-                                borderRadius: "9999px", padding: "0.15em 0.6em",
+                                color: "var(--color-info-text)", background: "var(--color-info-bg)",
+                                border: "1px solid var(--color-info-border)",
+                                borderRadius: "var(--radius-full)", padding: "var(--space-px) var(--space-2)",
                             }}>
                                 Zakelijk
                             </span>
@@ -646,9 +646,9 @@ function KlantKaartBalie({ klant, onSelecteer }: { klant: Doc<"klanten">; onSele
                         {klant.klanttype === "Zakelijk" && (
                             <span style={{
                                 fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
-                                color: "#1d4ed8", background: "rgba(59,130,246,0.1)",
-                                border: "1px solid rgba(59,130,246,0.3)",
-                                borderRadius: "9999px", padding: "0.15em 0.6em",
+                                color: "var(--color-info-text)", background: "var(--color-info-bg)",
+                                border: "1px solid var(--color-info-border)",
+                                borderRadius: "var(--radius-full)", padding: "var(--space-px) var(--space-2)",
                             }}>
                                 Zakelijk
                             </span>

@@ -128,7 +128,7 @@ function TableSkeleton() {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }} aria-hidden="true">
             {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} style={{ height: "48px", borderRadius: "var(--radius-md)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite", opacity: 1 - i * 0.12 }} />
+                <div key={i} style={{ height: "48px", borderRadius: "var(--radius-md)", background: "var(--skeleton-base)", animation: "pulse 1.5s ease-in-out infinite", opacity: 1 - i * 0.12 }} />
             ))}
         </div>
     );
@@ -232,10 +232,10 @@ function KlantRij({ k, index }: { k: KlantMetOmzet; index: number }) {
             {/* Type */}
             <td style={{ padding: "var(--space-3) var(--space-2)" }}>
                 <span style={{
-                    fontSize: "var(--text-xs)", borderRadius: "9999px", padding: "0.1em 0.55em",
-                    background: k.klanttype === "Zakelijk" ? "rgba(59,130,246,0.1)" : "var(--color-surface)",
-                    color: k.klanttype === "Zakelijk" ? "#1d4ed8" : "var(--color-muted)",
-                    border: k.klanttype === "Zakelijk" ? "1px solid rgba(59,130,246,0.3)" : "1px solid var(--color-border)",
+                    fontSize: "var(--text-xs)", borderRadius: "var(--radius-full)", padding: "var(--space-px) var(--space-2)",
+                    background: k.klanttype === "Zakelijk" ? "var(--color-info-bg)" : "var(--color-surface)",
+                    color: k.klanttype === "Zakelijk" ? "var(--color-info-text)" : "var(--color-muted)",
+                    border: k.klanttype === "Zakelijk" ? "1px solid var(--color-info-border)" : "1px solid var(--color-border)",
                 }}>
                     {k.klanttype}
                 </span>
@@ -272,7 +272,7 @@ function KlantRij({ k, index }: { k: KlantMetOmzet; index: number }) {
                 {k.laasteBezoekvDatum ? (
                     <span style={{
                         fontSize: "var(--text-xs)",
-                        color: inactiefLang ? "#b45309" : "var(--color-muted)",
+                        color: inactiefLang ? "var(--color-warning)" : "var(--color-muted)",
                         fontWeight: inactiefLang ? "var(--weight-medium)" : "normal",
                     }}>
                         {inactiefLang && "⚠ "}{formatDatum(k.laasteBezoekvDatum)}
@@ -382,7 +382,7 @@ export default function EigenaarExtras() {
             {/* ── Niet gezien 2+ jaar ───────────────────────────────────────── */}
             <section className="card" style={{
                 padding: "var(--space-4)",
-                borderColor: nietGezien.length > 0 ? "rgba(239,68,68,0.4)" : undefined,
+                borderColor: nietGezien.length > 0 ? "var(--color-error-border)" : undefined,
             }}>
                 <p className="card-title" style={{ marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                     <IconClock />
@@ -390,9 +390,9 @@ export default function EigenaarExtras() {
                     {klantenMetOmzet !== undefined && (
                         <span style={{
                             fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
-                            color: nietGezien.length > 0 ? "#991b1b" : "#065f46",
-                            background: nietGezien.length > 0 ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                            border: `1px solid ${nietGezien.length > 0 ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`,
+                            color: nietGezien.length > 0 ? "var(--color-error)" : "var(--color-success-text)",
+                            background: nietGezien.length > 0 ? "var(--color-error-bg)" : "var(--color-success-bg)",
+                            border: `1px solid ${nietGezien.length > 0 ? "var(--color-error-border)" : "var(--color-success-border)"}`,
                             borderRadius: "9999px", padding: "0.1em 0.55em",
                             marginLeft: "var(--space-1)",
                         }}>
@@ -405,7 +405,7 @@ export default function EigenaarExtras() {
                     <TableSkeleton />
                 ) : nietGezien.length === 0 ? (
                     <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                        <span style={{ color: "#16a34a" }}><IconCheck /></span>
+                        <span style={{ color: "var(--color-success)" }}><IconCheck /></span>
                         Alle klanten recent actief.
                     </p>
                 ) : (
@@ -431,7 +431,7 @@ export default function EigenaarExtras() {
                                     <div style={{ textAlign: "right" }}>
                                         {k.laasteBezoekvDatum ? (
                                             <>
-                                                <p style={{ fontSize: "var(--text-xs)", color: "#b45309", fontWeight: "var(--weight-medium)", margin: 0 }}>
+                                                <p style={{ fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-medium)", margin: 0 }}>
                                                     Laatste bezoek: {formatDatum(k.laasteBezoekvDatum)}
                                                 </p>
                                                 <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: "1px 0 0" }}>

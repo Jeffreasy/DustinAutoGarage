@@ -191,7 +191,7 @@ import "../styles/components.css";
             }
 
             .password-wrapper input {
-                padding-right: var(--space-10, 2.5rem);
+                padding-right: var(--space-10);
             }
 
             .toggle-password {
@@ -293,7 +293,7 @@ import "../styles/components.css";
                 width: 14px;
                 height: 14px;
                 border: 2px solid rgba(255, 255, 255, 0.3);
-                border-top-color: #fff;
+                border-top-color: var(--color-on-accent);
                 border-radius: 50%;
                 animation: spin 0.7s linear infinite;
                 flex-shrink: 0;
@@ -360,8 +360,8 @@ import "../styles/components.css";
             }
 
             .mfa-dot {
-                width: 8px;
-                height: 8px;
+                width: var(--space-2);
+                height: var(--space-2);
                 border-radius: 50%;
                 background: var(--color-border);
                 transition: background 150ms ease;
