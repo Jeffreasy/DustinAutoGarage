@@ -4,44 +4,45 @@
  * BFF proxy: multipart foto-upload → LaventeCare /api/v1/rdw/scan-foto (POST)
  * → xAI Grok Vision OCR → RDW Open Data → JSON { detected_kenteken, voertuig }
  *
- * Auth-strategie (in volgorde van prioriteit):
- *   1. LAVENTECARE_TOKEN env var → Bearer header (service account, editor+ rol)
- *   2. Fallback: forward user-cookies (werkt alleen als user zelf editor+ is)
+ * Auth-strategie:
+ *   1. Service account token via getServiceToken() (server-side, gecached 14 min)
+ *   2. Fallback: forward user-cookies (werkt alleen als user weight ≥ 2 heeft)
  *
- * Browser stuurt FormData met veld "foto" (JPEG/PNG/WebP, max 5 MB).
+ * Vereiste Vercel env vars:
+ *   LAVENTECARE_SVC_EMAIL + LAVENTECARE_SVC_PASS (voor service account auth)
+ *   API_URL, TENANT_ID
  */
 
 import type { APIRoute } from "astro";
+import { getServiceToken } from "../../../lib/laventecareToken";
 
 const API_URL = import.meta.env.API_URL as string;
 const TENANT_ID = import.meta.env.TENANT_ID as string;
-// Service account token met editor+ rechten — staat in Vercel env vars
-const SVC_TOKEN = import.meta.env.LAVENTECARE_TOKEN as string | undefined;
 
 export const POST: APIRoute = async ({ request }) => {
     const targetUrl = `${API_URL}/api/v1/rdw/scan-foto`;
 
     const forwardHeaders = new Headers();
 
-    if (SVC_TOKEN) {
-        // Service-account pad: vaste token met editor+ rol
-        forwardHeaders.set("Authorization", `Bearer ${SVC_TOKEN}`);
+    // Service account token (preferred) of user-cookies (fallback)
+    const svcToken = await getServiceToken();
+
+    if (svcToken) {
+        forwardHeaders.set("Authorization", `Bearer ${svcToken}`);
     } else {
-        // Fallback: forward user-cookies (vereist zelf editor+ rol in LaventeCare)
         const cookie = request.headers.get("cookie");
         if (cookie) forwardHeaders.set("cookie", cookie);
 
         const authorization = request.headers.get("authorization");
         if (authorization) forwardHeaders.set("authorization", authorization);
-    }
 
-    // CSRF forwarden (vereist door LaventeCare op POST-routes)
-    const csrf = request.headers.get("x-csrf-token");
-    if (csrf) forwardHeaders.set("x-csrf-token", csrf);
+        const csrf = request.headers.get("x-csrf-token");
+        if (csrf) forwardHeaders.set("x-csrf-token", csrf);
+    }
 
     if (TENANT_ID) forwardHeaders.set("X-Tenant-ID", TENANT_ID);
 
-    // Forward de multipart/form-data body direct door — NIET zelf parsen
+    // Forward multipart/form-data body direct door — NIET zelf parsen
     const body = await request.arrayBuffer();
     const contentType = request.headers.get("content-type");
     if (contentType) forwardHeaders.set("content-type", contentType);

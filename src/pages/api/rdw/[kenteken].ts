@@ -1,23 +1,22 @@
 /**
  * src/pages/api/rdw/[kenteken].ts
  *
- * BFF-proxy voor de RDW Open Data kenteken-lookup.
+ * BFF-proxy voor de RDW Open Data kenteken-lookup (GET).
  *
- * Browser → /api/rdw/{kenteken}
- *   → (Astro server-side)
- *     → LaventeCare /api/v1/rdw/voertuig/{kenteken} (editor+)
+ * Auth-strategie:
+ *   1. Service account token via getServiceToken() (server-side, gecached 14 min)
+ *   2. Fallback: forward user-cookies
  *
- * Auth-strategie (in volgorde van prioriteit):
- *   1. LAVENTECARE_TOKEN env var → Bearer header (service account, editor+ rol)
- *   2. Fallback: forward user-cookies (werkt alleen als user zelf editor+ is)
+ * Vereiste Vercel env vars:
+ *   LAVENTECARE_SVC_EMAIL + LAVENTECARE_SVC_PASS
+ *   API_URL, TENANT_ID
  */
 
 import type { APIRoute } from "astro";
+import { getServiceToken } from "../../../lib/laventecareToken";
 
 const API_URL = import.meta.env.API_URL as string;
 const TENANT_ID = import.meta.env.TENANT_ID as string;
-// Service account token met editor+ rechten — staat in Vercel env vars
-const SVC_TOKEN = import.meta.env.LAVENTECARE_TOKEN as string | undefined;
 
 export const GET: APIRoute = async ({ request, params }) => {
     const kenteken = params.kenteken ?? "";
@@ -25,11 +24,11 @@ export const GET: APIRoute = async ({ request, params }) => {
 
     const forwardHeaders = new Headers();
 
-    if (SVC_TOKEN) {
-        // Service-account pad: vaste token met editor+ rol
-        forwardHeaders.set("Authorization", `Bearer ${SVC_TOKEN}`);
+    const svcToken = await getServiceToken();
+
+    if (svcToken) {
+        forwardHeaders.set("Authorization", `Bearer ${svcToken}`);
     } else {
-        // Fallback: forward user-cookies
         const cookie = request.headers.get("cookie");
         if (cookie) forwardHeaders.set("cookie", cookie);
 
