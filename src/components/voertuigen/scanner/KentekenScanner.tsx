@@ -174,10 +174,18 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
             form.append("foto", gecomprimeerd);
 
 
+            const csrfToken =
+                typeof document !== "undefined"
+                    ? document.cookie.split("; ").find((c) => c.startsWith("csrf_token="))?.split("=")[1] ?? ""
+                    : "";
+
             const res = await fetch("/api/rdw/scan-foto", {
                 method: "POST",
                 body: form,
                 credentials: "include",
+                headers: {
+                    ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+                },
             });
 
             if (!res.ok) {
