@@ -195,6 +195,7 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
 }) {
     const voertuigen = useQuery(api.voertuigen.getByKlant, { klantId: klant._id });
     const updateBalie = useMutation(api.klanten.updateKlantBalieVelden);
+    const updateKlant = useMutation(api.klanten.update);
     const verwijderKlant = useMutation(api.klanten.verwijder);
 
     const [notities, setNotities] = useState(klant.klantNotities ?? "");
@@ -202,6 +203,44 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
     const [opslaan, setOpslaan] = useState(false);
     const [verwijderBevestig, setVerwijderBevestig] = useState(false);
     const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
+
+    // Inline edit state
+    const [bewerkModus, setBewerkModus] = useState(false);
+    const [bewerkData, setBewerkData] = useState({
+        voornaam: klant.voornaam,
+        achternaam: klant.achternaam,
+        bedrijfsnaam: klant.bedrijfsnaam ?? "",
+        telefoonnummer: klant.telefoonnummer,
+        emailadres: klant.emailadres,
+        adres: klant.adres,
+        postcode: klant.postcode,
+        woonplaats: klant.woonplaats,
+        klanttype: klant.klanttype as "Particulier" | "Zakelijk",
+        status: klant.status as "Actief" | "Inactief" | "Prospect",
+    });
+    const [bewerkOpslaan, setBewerkOpslaan] = useState(false);
+
+    async function handleBewerkOpslaan() {
+        setBewerkOpslaan(true);
+        try {
+            await updateKlant({
+                klantId: klant._id,
+                voornaam: bewerkData.voornaam.trim() || undefined,
+                achternaam: bewerkData.achternaam.trim() || undefined,
+                bedrijfsnaam: bewerkData.bedrijfsnaam.trim() || undefined,
+                telefoonnummer: bewerkData.telefoonnummer.trim() || undefined,
+                emailadres: bewerkData.emailadres.trim() || undefined,
+                adres: bewerkData.adres.trim() || undefined,
+                postcode: bewerkData.postcode.trim() || undefined,
+                woonplaats: bewerkData.woonplaats.trim() || undefined,
+                klanttype: bewerkData.klanttype,
+                status: bewerkData.status,
+            });
+            setBewerkModus(false);
+        } finally {
+            setBewerkOpslaan(false);
+        }
+    }
 
     async function handleOpslaan() {
         setOpslaan(true);
@@ -255,7 +294,7 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                     </p>
                 </div>
 
-                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
                     <a
                         href={`tel:${klant.telefoonnummer}`}
                         className="btn btn-ghost btn-sm"
@@ -263,6 +302,18 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                     >
                         <IconPhone /> Bellen
                     </a>
+                    <button
+                        onClick={() => { setBewerkModus((v) => !v); }}
+                        className={`btn btn-sm ${bewerkModus ? "btn-primary" : "btn-ghost"}`}
+                        style={{ minHeight: "44px", display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
+                        aria-pressed={bewerkModus}
+                    >
+                        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        {bewerkModus ? "Annuleren" : "Bewerken"}
+                    </button>
                     <button
                         onClick={onSluit}
                         className="btn btn-ghost btn-sm"
@@ -273,28 +324,123 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                 </div>
             </div>
 
-            {/* Contactgegevens */}
-            <section className="card" style={{ padding: "var(--space-4)" }}>
-                <p className="card-title" style={{
-                    marginBottom: "var(--space-4)",
-                    display: "flex", alignItems: "center", gap: "var(--space-2)",
-                }}>
-                    <IconUser /> Contactgegevens
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "var(--space-3)" }}>
-                    {[
-                        { l: "E-mail", v: klant.emailadres },
-                        { l: "Telefoon", v: klant.telefoonnummer },
-                        { l: "Adres", v: `${klant.adres}, ${klant.postcode} ${klant.woonplaats}` },
-                        { l: "Type", v: klant.klanttype },
-                    ].map(({ l, v }) => (
-                        <div key={l}>
-                            <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{l}</p>
-                            <p style={{ fontSize: "var(--text-sm)", color: "var(--color-heading)", fontWeight: "var(--weight-medium)", margin: 0 }}>{v}</p>
+            {/* Contactgegevens — lees-modus */}
+            {!bewerkModus && (
+                <section className="card" style={{ padding: "var(--space-4)" }}>
+                    <p className="card-title" style={{
+                        marginBottom: "var(--space-4)",
+                        display: "flex", alignItems: "center", gap: "var(--space-2)",
+                    }}>
+                        <IconUser /> Contactgegevens
+                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "var(--space-3)" }}>
+                        {[
+                            { l: "E-mail", v: klant.emailadres },
+                            { l: "Telefoon", v: klant.telefoonnummer },
+                            { l: "Adres", v: `${klant.adres}, ${klant.postcode} ${klant.woonplaats}` },
+                            { l: "Type", v: klant.klanttype },
+                            { l: "Status", v: klant.status },
+                            ...(klant.bedrijfsnaam ? [{ l: "Bedrijf", v: klant.bedrijfsnaam }] : []),
+                        ].map(({ l, v }) => (
+                            <div key={l}>
+                                <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{l}</p>
+                                <p style={{ fontSize: "var(--text-sm)", color: "var(--color-heading)", fontWeight: "var(--weight-medium)", margin: 0 }}>{v}</p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Contactgegevens — bewerkformulier */}
+            {bewerkModus && (
+                <section className="card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
+                        <p className="card-title" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", margin: 0 }}>
+                            <IconUser /> Klantgegevens bewerken
+                        </p>
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic" }}>Vul ontbrekende gegevens aan</span>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--space-3)" }}>
+                        {([
+                            { key: "voornaam", label: "Voornaam", type: "text" },
+                            { key: "achternaam", label: "Achternaam", type: "text" },
+                            { key: "bedrijfsnaam", label: "Bedrijfsnaam", type: "text", placeholder: "Alleen voor zakelijk" },
+                            { key: "telefoonnummer", label: "Telefoon", type: "tel" },
+                            { key: "emailadres", label: "E-mail", type: "email" },
+                            { key: "adres", label: "Straat + huisnummer", type: "text" },
+                            { key: "postcode", label: "Postcode", type: "text" },
+                            { key: "woonplaats", label: "Woonplaats", type: "text" },
+                        ] as const).map(({ key, label, type, ...rest }) => {
+                            const placeholder = "placeholder" in rest ? rest.placeholder : "";
+                            return (
+                                <div key={key}>
+                                    <label style={{ display: "block", fontSize: "var(--text-xs)", color: "var(--color-muted)", marginBottom: "var(--space-1)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                        {label}
+                                    </label>
+                                    <input
+                                        type={type}
+                                        value={bewerkData[key]}
+                                        onChange={(e) => setBewerkData((d) => ({ ...d, [key]: e.target.value }))}
+                                        placeholder={placeholder ?? ""}
+                                        className="input"
+                                        style={{ width: "100%", minHeight: "44px", boxSizing: "border-box" }}
+                                    />
+                                </div>
+                            );
+                        })}
+
+                        {/* Klanttype */}
+                        <div>
+                            <label style={{ display: "block", fontSize: "var(--text-xs)", color: "var(--color-muted)", marginBottom: "var(--space-1)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Type</label>
+                            <select
+                                value={bewerkData.klanttype}
+                                onChange={(e) => setBewerkData((d) => ({ ...d, klanttype: e.target.value as "Particulier" | "Zakelijk" }))}
+                                className="input"
+                                style={{ width: "100%", minHeight: "44px", boxSizing: "border-box" }}
+                            >
+                                <option value="Particulier">Particulier</option>
+                                <option value="Zakelijk">Zakelijk</option>
+                            </select>
                         </div>
-                    ))}
-                </div>
-            </section>
+
+                        {/* Status */}
+                        <div>
+                            <label style={{ display: "block", fontSize: "var(--text-xs)", color: "var(--color-muted)", marginBottom: "var(--space-1)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</label>
+                            <select
+                                value={bewerkData.status}
+                                onChange={(e) => setBewerkData((d) => ({ ...d, status: e.target.value as "Actief" | "Inactief" | "Prospect" }))}
+                                className="input"
+                                style={{ width: "100%", minHeight: "44px", boxSizing: "border-box" }}
+                            >
+                                <option value="Actief">Actief</option>
+                                <option value="Prospect">Prospect</option>
+                                <option value="Inactief">Inactief</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "var(--space-3)", paddingTop: "var(--space-2)", borderTop: "1px solid var(--color-border)" }}>
+                        <button
+                            onClick={handleBewerkOpslaan}
+                            disabled={bewerkOpslaan}
+                            className="btn btn-primary btn-sm"
+                            style={{ minHeight: "44px", display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
+                        >
+                            <IconSave /> {bewerkOpslaan ? "Opslaan…" : "Wijzigingen opslaan"}
+                        </button>
+                        <button
+                            onClick={() => { setBewerkModus(false); setBewerkData({ voornaam: klant.voornaam, achternaam: klant.achternaam, bedrijfsnaam: klant.bedrijfsnaam ?? "", telefoonnummer: klant.telefoonnummer, emailadres: klant.emailadres, adres: klant.adres, postcode: klant.postcode, woonplaats: klant.woonplaats, klanttype: klant.klanttype as "Particulier" | "Zakelijk", status: klant.status as "Actief" | "Inactief" | "Prospect" }); }}
+                            className="btn btn-ghost btn-sm"
+                            style={{ minHeight: "44px" }}
+                        >
+                            Annuleren
+                        </button>
+                    </div>
+                </section>
+            )}
+
+
 
             {/* Wagenpark */}
             <section className="card" style={{ padding: "var(--space-4)" }}>
