@@ -9,15 +9,22 @@
  *
  * Rol-gating:
  *   Lezen     → alle medewerkers (monteur+)
- *   Aanmaken  → balie+ (receptionist configureert de garage)
+ *   Aanmaken  → eigenaar only
  *   Hernoemen / Verplaatsen / Verwijderen → eigenaar only
- *   Seed      → balie+ (eenmalig bij eerste gebruik)
+ *   Seed      → eigenaar only (eenmalig bij eerste gebruik)
  */
 
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { vWerkplekType } from "./validators";
+import { vWerkplekType, vWerkplekStatus } from "./validators";
 import { requireAuth, requireDomainRole } from "./helpers";
+
+
+// ---------------------------------------------------------------------------
+// Constanten
+// ---------------------------------------------------------------------------
+
+const MAX_NAAM_LENGTE = 50;
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -47,30 +54,8 @@ export const lijstWerkplekken = query({
 // ---------------------------------------------------------------------------
 
 /**
- * maakWerkplekAan — voegt een nieuwe fysieke locatie toe aan de garage.
- * Vereist minimaal de rol "balie".
- */
-export const maakWerkplekAan = mutation({
-    args: {
-        naam: v.string(),
-        type: vWerkplekType,
-        volgorde: v.number(),
-    },
-    handler: async (ctx, args) => {
-        const profiel = await requireDomainRole(ctx, "balie");
-
-        return ctx.db.insert("werkplekken", {
-            naam: args.naam,
-            type: args.type,
-            volgorde: args.volgorde,
-            tokenIdentifier: profiel.tokenIdentifier,
-        });
-    },
-});
-
-/**
  * voegWerkplekToe — voegt een werkplek toe met automatische volgorde.
- * Alias voor maakWerkplekAan die de max-volgorde + 1 berekent.
+ * Controleert op dubbele namen en valideert de naam server-side.
  * Vereist de rol "eigenaar".
  */
 export const voegWerkplekToe = mutation({
@@ -81,18 +66,36 @@ export const voegWerkplekToe = mutation({
     handler: async (ctx, args) => {
         const profiel = await requireDomainRole(ctx, "eigenaar");
 
+        const naamTrimmed = args.naam.trim();
+        if (naamTrimmed.length === 0) {
+            throw new Error("VALIDATIE: Naam mag niet leeg zijn.");
+        }
+        if (naamTrimmed.length > MAX_NAAM_LENGTE) {
+            throw new Error(`VALIDATIE: Naam mag maximaal ${MAX_NAAM_LENGTE} tekens zijn.`);
+        }
+
+        // Duplicaatcheck: geen twee werkplekken met dezelfde naam (case-insensitief)
         const bestaande = await ctx.db
             .query("werkplekken")
             .withIndex("by_token_and_volgorde", (q) =>
                 q.eq("tokenIdentifier", profiel.tokenIdentifier)
             )
-            .order("desc")
-            .first();
+            .collect();
 
-        const volgorde = bestaande ? bestaande.volgorde + 1 : 1;
+        const duplicaat = bestaande.find(
+            (w) => w.naam.toLowerCase() === naamTrimmed.toLowerCase()
+        );
+        if (duplicaat) {
+            throw new Error(`VALIDATIE: Er bestaat al een werkplek met de naam "${duplicaat.naam}".`);
+        }
+
+        const maxVolgorde = bestaande.length > 0
+            ? Math.max(...bestaande.map((w) => w.volgorde))
+            : 0;
+        const volgorde = maxVolgorde + 1;
 
         return ctx.db.insert("werkplekken", {
-            naam: args.naam,
+            naam: naamTrimmed,
             type: args.type,
             volgorde,
             tokenIdentifier: profiel.tokenIdentifier,
@@ -102,6 +105,7 @@ export const voegWerkplekToe = mutation({
 
 /**
  * hernoemWerkplek — wijzig naam en/of type van een bestaande werkplek.
+ * Controleert op dubbele namen.
  * Vereist de rol "eigenaar".
  */
 export const hernoemWerkplek = mutation({
@@ -118,7 +122,30 @@ export const hernoemWerkplek = mutation({
             throw new Error("FORBIDDEN: Werkplek niet gevonden of geen toegang.");
         }
 
-        await ctx.db.patch(args.werkplekId, { naam: args.naam, type: args.type });
+        const naamTrimmed = args.naam.trim();
+        if (naamTrimmed.length === 0) {
+            throw new Error("VALIDATIE: Naam mag niet leeg zijn.");
+        }
+        if (naamTrimmed.length > MAX_NAAM_LENGTE) {
+            throw new Error(`VALIDATIE: Naam mag maximaal ${MAX_NAAM_LENGTE} tekens zijn.`);
+        }
+
+        // Duplicaatcheck (excl. zichzelf)
+        const alleWerkplekken = await ctx.db
+            .query("werkplekken")
+            .withIndex("by_token_and_volgorde", (q) =>
+                q.eq("tokenIdentifier", profiel.tokenIdentifier)
+            )
+            .collect();
+
+        const duplicaat = alleWerkplekken.find(
+            (w) => w._id !== args.werkplekId && w.naam.toLowerCase() === naamTrimmed.toLowerCase()
+        );
+        if (duplicaat) {
+            throw new Error(`VALIDATIE: Er bestaat al een werkplek met de naam "${duplicaat.naam}".`);
+        }
+
+        await ctx.db.patch(args.werkplekId, { naam: naamTrimmed, type: args.type });
         return { succes: true };
     },
 });
@@ -141,7 +168,6 @@ export const verplaatsWerkplek = mutation({
             throw new Error("FORBIDDEN: Werkplek niet gevonden of geen toegang.");
         }
 
-        // Haal alle werkplekken op gesorteerd op volgorde
         const alleWerkplekken = await ctx.db
             .query("werkplekken")
             .withIndex("by_token_and_volgorde", (q) =>
@@ -159,7 +185,6 @@ export const verplaatsWerkplek = mutation({
 
         const buur = alleWerkplekken[burenIndex];
 
-        // Wissel volgordes
         await ctx.db.patch(args.werkplekId, { volgorde: buur.volgorde });
         await ctx.db.patch(buur._id, { volgorde: werkplek.volgorde });
 
@@ -171,12 +196,12 @@ export const verplaatsWerkplek = mutation({
  * seedDefaultWerkplekken — zaait 3 standaard werkplekken bij eerste gebruik.
  *
  * Idempotent: doet niets als er al werkplekken bestaan voor deze tenant.
- * Vereist minimaal de rol "balie".
+ * Vereist de rol "eigenaar".
  */
 export const seedDefaultWerkplekken = mutation({
     args: {},
     handler: async (ctx) => {
-        const profiel = await requireDomainRole(ctx, "balie");
+        const profiel = await requireDomainRole(ctx, "eigenaar");
 
         const bestaande = await ctx.db
             .query("werkplekken")
@@ -206,7 +231,9 @@ export const seedDefaultWerkplekken = mutation({
 
 /**
  * verwijderWerkplek — verwijdert een werkplek.
- * Let op: werkorders die naar deze plek verwijzen krijgen werkplekId = null.
+ *
+ * Geblokkeerd als er actieve (niet-gearchiveerde) werkorders aan de plek
+ * gekoppeld zijn — verwijdering zou kaartjes van het bord laten verdwijnen.
  * Vereist de rol "eigenaar".
  */
 export const verwijderWerkplek = mutation({
@@ -219,17 +246,53 @@ export const verwijderWerkplek = mutation({
             throw new Error("FORBIDDEN: Werkplek niet gevonden of geen toegang.");
         }
 
-        // Ontkoppel alle werkorders die naar deze plek verwijzen
-        const gekoppeldeOrders = await ctx.db
+        // Veiligheidscheck: blokkeer bij actieve werkorders
+        const actieveOrders = await ctx.db
             .query("werkorders")
             .withIndex("by_werkplek", (q) => q.eq("werkplekId", args.werkplekId))
+            .filter((q) => q.neq(q.field("gearchiveerd"), true))
             .collect();
 
-        for (const order of gekoppeldeOrders) {
-            await ctx.db.patch(order._id, { werkplekId: undefined });
+        if (actieveOrders.length > 0) {
+            throw new Error(
+                `GEBLOKKEERD: Er ${actieveOrders.length === 1 ? "staat" : "staan"} nog ${actieveOrders.length} actieve werkorder${actieveOrders.length === 1 ? "" : "s"} op deze plek. ` +
+                `Verplaats of archiveer ze eerst.`
+            );
         }
 
         await ctx.db.delete(args.werkplekId);
-        return { verwijderd: true, ontkoppeldeOrders: gekoppeldeOrders.length };
+        return { verwijderd: true };
     },
 });
+
+/**
+ * zetWerkplekStatus — wijzig de operationele status van een werkplek.
+ *
+ * Beschikbaar  → normaal in gebruik
+ * In onderhoud → tijdelijk blokkeren (brug defect, service)
+ * Buiten gebruik → langdurig of permanent blokkeren
+ *
+ * Effect op het bord:
+ *   - Werkorders die al op de plek staan worden NIET verplaatst.
+ *   - Nieuwe verplaatsingen naar een geblokkeerde plek worden geblokkeerd
+ *     in de frontend (filter in beschikbarePlekken).
+ * Vereist de rol "eigenaar".
+ */
+export const zetWerkplekStatus = mutation({
+    args: {
+        werkplekId: v.id("werkplekken"),
+        status: vWerkplekStatus,
+    },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+
+        const werkplek = await ctx.db.get(args.werkplekId);
+        if (!werkplek || werkplek.tokenIdentifier !== profiel.tokenIdentifier) {
+            throw new Error("FORBIDDEN: Werkplek niet gevonden of geen toegang.");
+        }
+
+        await ctx.db.patch(args.werkplekId, { status: args.status });
+        return { succes: true, nieuweStatus: args.status };
+    },
+});
+

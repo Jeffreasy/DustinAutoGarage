@@ -2,64 +2,32 @@
  * src/components/werkplaats/WerkplaatsBord.tsx
  *
  * Het Digitaal Werkplaatsbord — Kanban-hoofdcomponent.
- * ui-ux-pro-max: SVG icons voor kolommen, laadspinner, seed prompt, lege staat, + knop.
+ * Icons geïmporteerd uit gedeelde Icons.tsx (geen lokale duplicaten).
  */
 
 import { useState } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import {
     useWerkplekken, useWerkorders, useSeedDefaultWerkplekken,
-    type WerkorderVerrijkt, type WerkplekDoc,
+    type WerkorderVerrijkt, type WerkplekDoc, type WerkplekStatus,
 } from "../../hooks/useWerkplaats";
 import { useRol } from "../../hooks/useRol";
 import WerkorderKaart from "./WerkorderKaart";
 import WerkorderLogboek from "./WerkorderLogboek";
 import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
+import {
+    IconWrench, IconPlus, IconCheckCircle,
+    WERKPLEK_TYPE_ICON,
+} from "../ui/Icons";
 
-// ---------------------------------------------------------------------------
-// SVG icons voor werkplek-types
-// ---------------------------------------------------------------------------
-
-function IconWrench({ size = 14 }: { size?: number }) {
-    return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>;
-}
-function IconRuler({ size = 14 }: { size?: number }) {
-    return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7l4-4 14 14-4 4z" /><line x1="8" y1="12" x2="12" y2="8" /><line x1="12" y1="16" x2="16" y2="12" /></svg>;
-}
-function IconDroplets({ size = 14 }: { size?: number }) {
-    return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z" /><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97" /></svg>;
-}
-function IconParking({ size = 14 }: { size?: number }) {
-    return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 17V7h4a3 3 0 0 1 0 6H9" /></svg>;
-}
-function IconGrid({ size = 14 }: { size?: number }) {
-    return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>;
-}
-function IconPlus() {
-    return <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>;
-}
-function IconCheckCircle() {
-    return <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="#16a34a" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>;
-}
-
-// ---------------------------------------------------------------------------
-// Type → SVG mapper
-// ---------------------------------------------------------------------------
-
-const TYPE_SVG: Record<string, React.ReactNode> = {
-    Brug: <IconWrench />,
-    Uitlijnbrug: <IconRuler />,
-    Wasplaats: <IconDroplets />,
-    Buiten: <IconParking />,
-    Overig: <IconGrid />,
-};
 
 // ---------------------------------------------------------------------------
 // KolomHeader
 // ---------------------------------------------------------------------------
 
-function KolomHeader({ naam, type, teller }: { naam: string; type: string; teller: number }) {
-    const icon = TYPE_SVG[type] ?? <IconGrid />;
+function KolomHeader({ naam, type, teller, status }: { naam: string; type: string; teller: number; status?: WerkplekStatus }) {
+    const icon = WERKPLEK_TYPE_ICON[type as keyof typeof WERKPLEK_TYPE_ICON] ?? WERKPLEK_TYPE_ICON["Overig"];
+    const isGeblokkeerd = status === "In onderhoud" || status === "Buiten gebruik";
     return (
         <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -67,20 +35,34 @@ function KolomHeader({ naam, type, teller }: { naam: string; type: string; telle
             borderBottom: "1px solid var(--color-border)",
             marginBottom: "var(--space-3)",
         }}>
-            <h2 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", margin: 0, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <h2 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: isGeblokkeerd ? "var(--color-muted)" : "var(--color-heading)", margin: 0, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 <span style={{ color: "var(--color-muted)" }}>{icon}</span>
                 <span>{naam}</span>
             </h2>
-            <span style={{
-                fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                color: teller > 0 ? "var(--color-heading)" : "var(--color-muted)",
-                background: teller > 0 ? "var(--gradient-accent-subtle)" : "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "9999px", padding: "0.15em 0.55em",
-                minWidth: "1.6em", textAlign: "center",
-            }}>
-                {teller}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                {/* Status badge — alleen tonen als niet Beschikbaar */}
+                {status && status !== "Beschikbaar" && (
+                    <span style={{
+                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                        color: status === "In onderhoud" ? "#78350f" : "#374151",
+                        background: status === "In onderhoud" ? "#fffbeb" : "#f3f4f6",
+                        border: `1px solid ${status === "In onderhoud" ? "#d9770655" : "#6b728055"}`,
+                        borderRadius: "9999px", padding: "1px 8px", whiteSpace: "nowrap",
+                    }}>
+                        {status}
+                    </span>
+                )}
+                <span style={{
+                    fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                    color: teller > 0 ? "var(--color-heading)" : "var(--color-muted)",
+                    background: teller > 0 ? "var(--gradient-accent-subtle)" : "var(--color-surface)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "9999px", padding: "0.15em 0.55em",
+                    minWidth: "1.6em", textAlign: "center",
+                }}>
+                    {teller}
+                </span>
+            </div>
         </div>
     );
 }
@@ -92,6 +74,7 @@ function KolomHeader({ naam, type, teller }: { naam: string; type: string; telle
 interface KolomProps {
     naam: string;
     type: string;
+    status?: WerkplekStatus;
     orders: WerkorderVerrijkt[];
     werkplekken: WerkplekDoc[];
     domeinRol: ReturnType<typeof useRol>["domeinRol"];
@@ -99,23 +82,59 @@ interface KolomProps {
     onOpenLogboek: (id: Id<"werkorders">) => void;
 }
 
-function WerkplekKolom({ naam, type, orders, werkplekken, domeinRol, mijnId, onOpenLogboek }: KolomProps) {
+function WerkplekKolom({ naam, type, status, orders, werkplekken, domeinRol, mijnId, onOpenLogboek }: KolomProps) {
+    const isBuitenGebruik = status === "Buiten gebruik";
+    const isInOnderhoud = status === "In onderhoud";
+
     return (
         <div style={{
             minWidth: "280px", maxWidth: "320px", flex: "0 0 auto",
             background: "var(--glass-bg)", backdropFilter: "blur(8px)",
             WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid var(--glass-border)", borderRadius: "var(--radius-xl)",
+            border: isBuitenGebruik
+                ? "1px solid var(--color-border)"
+                : isInOnderhoud
+                    ? "1px solid #d9770644"
+                    : "1px solid var(--glass-border)",
+            borderRadius: "var(--radius-xl)",
             display: "flex", flexDirection: "column",
             maxHeight: "calc(100vh - 180px)", overflow: "hidden",
+            opacity: isBuitenGebruik ? 0.45 : 1,
+            transition: "opacity 200ms ease",
         }}>
-            <KolomHeader naam={naam} type={type} teller={orders.length} />
+            <KolomHeader naam={naam} type={type} teller={orders.length} status={status} />
+
+            {/* Onderhoud-banner: oranje melding bovenin de kolom */}
+            {isInOnderhoud && (
+                <div style={{
+                    margin: "0 var(--space-3) var(--space-2)",
+                    padding: "var(--space-2) var(--space-3)",
+                    background: "#fffbeb",
+                    border: "1px solid #fcd34d",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "var(--text-xs)",
+                    color: "#78350f",
+                    fontWeight: "var(--weight-semibold)",
+                    display: "flex", alignItems: "center", gap: "var(--space-2)",
+                }}>
+                    <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    Niet beschikbaar voor nieuwe werkorders
+                </div>
+            )}
 
             <div style={{ flex: 1, overflowY: "auto", padding: "0 var(--space-3) var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                 {orders.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "var(--space-8) var(--space-4)", color: "var(--color-muted)", fontSize: "var(--text-sm)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
-                        <span style={{ display: "inline-flex", width: "10px", height: "10px", borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,0.5)" }} aria-hidden="true" />
-                        <p style={{ margin: 0 }}>Vrij</p>
+                        {!isInOnderhoud && !isBuitenGebruik && (
+                            <>
+                                <span style={{ display: "inline-flex", width: "10px", height: "10px", borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,0.5)" }} aria-hidden="true" />
+                                <p style={{ margin: 0 }}>Vrij</p>
+                            </>
+                        )}
                     </div>
                 ) : (
                     orders.map((order) => (
@@ -163,7 +182,6 @@ export default function WerkplaatsBord() {
     // Geen werkplekken — toon rol-specifieke lege staat
     if (werkplekken.length === 0 && !rolLaden) {
         if (!isBalie) {
-            // Monteur kan niet seeden — toon informatieve melding
             return (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
                     <div style={{
@@ -184,7 +202,6 @@ export default function WerkplaatsBord() {
             );
         }
 
-        // Balie/eigenaar kan seeden
         return (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
                 <div style={{
@@ -255,10 +272,12 @@ export default function WerkplaatsBord() {
                 {werkplekken.map((plek) => (
                     <WerkplekKolom
                         key={plek._id} naam={plek.naam} type={plek.type}
+                        status={plek.status}
                         orders={perWerkplek(plek._id)} werkplekken={werkplekken}
                         domeinRol={domeinRol} mijnId={mijnId} onOpenLogboek={setLogboekOrderId}
                     />
                 ))}
+
 
                 <WerkplekKolom naam="Klaar voor ophalen" type="Overig" orders={klaar} werkplekken={werkplekken} domeinRol={domeinRol} mijnId={mijnId} onOpenLogboek={setLogboekOrderId} />
             </div>

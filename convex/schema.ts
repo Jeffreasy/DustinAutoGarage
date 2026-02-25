@@ -22,7 +22,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 // Enum-validators worden gecentraliseerd beheerd in validators.ts
-import { vKlanttype, vKlantstatus, vBrandstof, vTypeWerk, vDomeinRol, vWerkplekType, vWerkorderStatus, vAfsluitingReden } from "./validators";
+import { vKlanttype, vKlantstatus, vBrandstof, vTypeWerk, vDomeinRol, vWerkplekType, vWerkplekStatus, vWerkorderStatus, vAfsluitingReden } from "./validators";
 
 // ---------------------------------------------------------------------------
 // Schema-definitie
@@ -239,6 +239,17 @@ export default defineSchema({
          * "Klaar voor ophalen" = impliciete laatste kolom (status-filter).
          */
         volgorde: v.number(),
+
+        /**
+         * Operationele status van de werkplek.
+         * v.optional() voor backward-compatibiliteit: bestaande records
+         * zonder dit veld werken door als "Beschikbaar".
+         *
+         * Beschikbaar  → normaal in gebruik (default)
+         * In onderhoud → tijdelijk niet bruikbaar (service, defect)
+         * Buiten gebruik → langdurig of permanent niet actief
+         */
+        status: v.optional(vWerkplekStatus),
 
         /** Multi-tenant isolatie. */
         tokenIdentifier: v.string(),

@@ -91,6 +91,23 @@ export const vWerkplekType = v.union(
 );
 
 /**
+ * Operationele status van een werkplek (brug, lift, etc.).
+ *
+ * Beschikbaar  → normaal bruikbaar (default / impliciet als undefined)
+ * In onderhoud → tijdelijk geblokkeerd (service, defect)
+ * Buiten gebruik → langdurig of permanent niet actief
+ *
+ * Backward-compat: bestaande records zonder dit veld = "Beschikbaar".
+ */
+export const vWerkplekStatus = v.union(
+    v.literal("Beschikbaar"),
+    v.literal("In onderhoud"),
+    v.literal("Buiten gebruik"),
+);
+export type WerkplekStatus = "Beschikbaar" | "In onderhoud" | "Buiten gebruik";
+
+
+/**
  * Lifecycle-status van een werkorder (het 'kaartje' op het bord).
  *
  * Volledig transitie-pad:

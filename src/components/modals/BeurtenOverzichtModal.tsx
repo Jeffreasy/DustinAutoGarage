@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { useRecenteOnderhoudsbeurten } from "../../hooks/useOnderhoud";
+import { useRecenteOnderhoudsbeurten, useVerwijderOnderhoud } from "../../hooks/useOnderhoud";
 import ModalShell from "./ModalShell";
 
 
@@ -34,6 +34,15 @@ const TYPE_BADGE_KLEUR: Record<string, string> = {
     "Overig": "var(--color-muted)",
 };
 
+function IconTrash() {
+    return (
+        <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" />
+            <path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" />
+        </svg>
+    );
+}
+
 function formatDatum(ms: number) {
     return new Date(ms).toLocaleDateString("nl-NL", {
         day: "2-digit", month: "2-digit", year: "numeric",
@@ -49,9 +58,19 @@ type SortRichting = "asc" | "desc";
 
 export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void }) {
     const beurten = useRecenteOnderhoudsbeurten(200);
+    const verwijder = useVerwijderOnderhoud();
     const [sortVeld, setSortVeld] = useState<SortVeld>("datum");
     const [sortRichting, setSortRichting] = useState<SortRichting>("desc");
     const [filterType, setFilterType] = useState<string>("Alle");
+    const [verwijderConfirm, setVerwijderConfirm] = useState<string | null>(null);
+    const [verwijderBezig, setVerwijderBezig] = useState<string | null>(null);
+
+    async function handleVerwijder(id: string) {
+        setVerwijderConfirm(null);
+        setVerwijderBezig(id);
+        try { await verwijder({ historieId: id as never }); }
+        finally { setVerwijderBezig(null); }
+    }
 
     // Beschikbare types uit de geladen data
     const beschikbareTypes = useMemo(() => {
@@ -221,6 +240,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                 </th>
                                 <th style={thStyle}>Notities</th>
                                 <th style={thStyle}>Document</th>
+                                <th style={{ ...thStyle, width: "64px", textAlign: "center" }}>Del.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -292,6 +312,56 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                             </a>
                                         ) : (
                                             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-border)" }}>—</span>
+                                        )}
+                                    </td>
+
+                                    {/* Verwijder — inline confirm */}
+                                    <td style={{ ...tdStyle, textAlign: "center", padding: "var(--space-2)", width: "64px" }}>
+                                        {verwijderConfirm === beurt._id ? (
+                                            <div style={{ display: "flex", gap: "2px", justifyContent: "center" }}>
+                                                <button
+                                                    onClick={() => handleVerwijder(beurt._id)}
+                                                    disabled={verwijderBezig === beurt._id}
+                                                    style={{
+                                                        minHeight: "26px", padding: "0 var(--space-2)",
+                                                        background: "#dc2626", color: "#fff", border: "none",
+                                                        borderRadius: "var(--radius-sm)", cursor: "pointer",
+                                                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                                    }}
+                                                    aria-label="Definitief verwijderen"
+                                                >
+                                                    {verwijderBezig === beurt._id ? "…" : "Ja"}
+                                                </button>
+                                                <button
+                                                    onClick={() => setVerwijderConfirm(null)}
+                                                    style={{
+                                                        minHeight: "26px", padding: "0 var(--space-1)",
+                                                        background: "transparent", border: "1px solid var(--color-border)",
+                                                        borderRadius: "var(--radius-sm)", cursor: "pointer",
+                                                        fontSize: "var(--text-xs)", color: "var(--color-muted)",
+                                                    }}
+                                                    aria-label="Annuleren"
+                                                >
+                                                    Nee
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setVerwijderConfirm(beurt._id)}
+                                                disabled={!!verwijderBezig}
+                                                style={{
+                                                    background: "none", border: "none", cursor: "pointer",
+                                                    color: "var(--color-error, #dc2626)", padding: "var(--space-1)",
+                                                    borderRadius: "var(--radius-sm)", display: "inline-flex",
+                                                    alignItems: "center", justifyContent: "center",
+                                                    minHeight: "32px", minWidth: "32px",
+                                                    opacity: verwijderBezig ? 0.4 : 1,
+                                                }}
+                                                aria-label="Verwijder beurt"
+                                                title="Verwijder"
+                                            >
+                                                <IconTrash />
+                                            </button>
                                         )}
                                     </td>
                                 </tr>

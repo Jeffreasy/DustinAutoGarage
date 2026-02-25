@@ -162,8 +162,14 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
     const ikBenIngeschreven = mijnId !== null && order.monteursId === mijnId;
 
     const statusCfg = getStatusCfg(order.status);
-    // Klaar orders mogen terug naar een brug (bijv. aanvullend werk nodig)
-    const beschikbarePlekken = werkplekken.filter((p) => p._id !== order.werkplekId);
+    // Klaar orders mogen terug naar een brug (bijv. aanvullend werk nodig).
+    // Werkplekken met status "In onderhoud" of "Buiten gebruik" worden uitgefilterd:
+    // undefined = backward-compat voor bestaande records zonder status → beschikbaar.
+    const beschikbarePlekken = werkplekken.filter((p) =>
+        p._id !== order.werkplekId &&
+        (p.status === undefined || p.status === "Beschikbaar")
+    );
+
 
     // ---------------------------------------------------------------------------
     // Handlers

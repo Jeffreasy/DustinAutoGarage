@@ -13,11 +13,15 @@ import type { Id } from "../../convex/_generated/dataModel";
 // Types (afgeleid van de Convex return types)
 // ---------------------------------------------------------------------------
 
+export type WerkplekStatus = "Beschikbaar" | "In onderhoud" | "Buiten gebruik";
+
 export type WerkplekDoc = {
     _id: Id<"werkplekken">;
     naam: string;
     type: "Brug" | "Uitlijnbrug" | "Wasplaats" | "Buiten" | "Overig";
     volgorde: number;
+    /** Operationele status — undefined = Beschikbaar (backward-compat) */
+    status?: WerkplekStatus;
     tokenIdentifier: string;
 };
 
@@ -186,4 +190,9 @@ export function useAnnuleerWerkorder() {
  */
 export function useBevestigOphalen() {
     return useMutation(api.werkorders.bevestigOphalen);
+}
+
+/** Zet operationele status van een werkplek (eigenaar-only). */
+export function useZetWerkplekStatus() {
+    return useMutation(api.werkplekken.zetWerkplekStatus);
 }

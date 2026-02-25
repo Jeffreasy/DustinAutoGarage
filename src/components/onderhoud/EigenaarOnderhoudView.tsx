@@ -389,9 +389,10 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
     const verwijder = useMutation(api.onderhoudshistorie.verwijder);
     const [toonNieuw, setToonNieuw] = useState(false);
     const [verwijderBezig, setVerwijderBezig] = useState<Id<"onderhoudshistorie"> | null>(null);
+    const [verwijderConfirm, setVerwijderConfirm] = useState<Id<"onderhoudshistorie"> | null>(null);
 
     async function handleVerwijder(id: Id<"onderhoudshistorie">) {
-        if (!confirm("Definitief verwijderen? Dit kan niet ongedaan gemaakt worden.")) return;
+        setVerwijderConfirm(null);
         setVerwijderBezig(id);
         try { await verwijder({ historieId: id }); } finally { setVerwijderBezig(null); }
     }
@@ -471,15 +472,53 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
                                         )}
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleVerwijder(beurt._id)}
-                                    disabled={verwijderBezig === beurt._id}
-                                    className="btn btn-ghost btn-sm"
-                                    aria-label="Verwijder beurt"
-                                    style={{ color: "var(--color-error)", minHeight: "32px", padding: "0 var(--space-2)", flexShrink: 0 }}
-                                >
-                                    <IconTrash />
-                                </button>
+                                <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "var(--space-1)" }}>
+                                    {verwijderConfirm === beurt._id ? (
+                                        // Inline confirm — geen window.confirm()
+                                        <div style={{
+                                            display: "flex", flexDirection: "column", gap: "var(--space-1)",
+                                            background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.25)",
+                                            borderRadius: "var(--radius-sm)", padding: "var(--space-2)",
+                                        }}>
+                                            <span style={{ fontSize: "var(--text-xs)", color: "#991b1b", fontWeight: "var(--weight-semibold)", whiteSpace: "nowrap" }}>
+                                                Definitief verwijderen?
+                                            </span>
+                                            <div style={{ display: "flex", gap: "var(--space-1)" }}>
+                                                <button
+                                                    onClick={() => handleVerwijder(beurt._id)}
+                                                    disabled={verwijderBezig === beurt._id}
+                                                    style={{
+                                                        minHeight: "28px", padding: "0 var(--space-2)",
+                                                        background: "#dc2626", color: "#fff", border: "none",
+                                                        borderRadius: "var(--radius-sm)", cursor: "pointer",
+                                                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                                    }}
+                                                    aria-label="Definitief verwijderen"
+                                                >
+                                                    {verwijderBezig === beurt._id ? "…" : "Ja"}
+                                                </button>
+                                                <button
+                                                    onClick={() => setVerwijderConfirm(null)}
+                                                    className="btn btn-ghost"
+                                                    style={{ minHeight: "28px", padding: "0 var(--space-2)", fontSize: "var(--text-xs)" }}
+                                                    aria-label="Annuleren"
+                                                >
+                                                    Nee
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setVerwijderConfirm(beurt._id)}
+                                            disabled={!!verwijderBezig}
+                                            className="btn btn-ghost btn-sm"
+                                            aria-label="Verwijder beurt"
+                                            style={{ color: "var(--color-error)", minHeight: "32px", padding: "0 var(--space-2)" }}
+                                        >
+                                            <IconTrash />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}
