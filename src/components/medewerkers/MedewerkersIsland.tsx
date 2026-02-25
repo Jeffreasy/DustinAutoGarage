@@ -43,9 +43,9 @@ const ROL_LABELS: Record<DomeinRol, string> = {
 
 const ROL_BADGE: Record<DomeinRol, { bg: string; color: string; border: string }> = {
     eigenaar: { bg: "var(--color-accent-dim)", color: "var(--color-accent-text)", border: "var(--color-border-luminous)" },
-    balie: { bg: "rgba(96,165,250,0.12)", color: "var(--primitive-blue-400, #60a5fa)", border: "rgba(96,165,250,0.35)" },
-    monteur: { bg: "rgba(148,163,184,0.10)", color: "var(--color-body)", border: "var(--color-border)" },
-    stagiair: { bg: "rgba(250,204,21,0.10)", color: "var(--color-warning, #f59e0b)", border: "rgba(250,204,21,0.3)" },
+    balie: { bg: "var(--color-info-bg)", color: "var(--color-info-text)", border: "var(--color-info-border)" },
+    monteur: { bg: "var(--color-surface-2)", color: "var(--color-body)", border: "var(--color-border)" },
+    stagiair: { bg: "var(--color-warning-bg)", color: "var(--color-warning)", border: "var(--color-warning-border)" },
 };
 
 // Avatar gradient per rol
@@ -149,7 +149,7 @@ function RolBadge({ rol }: { rol: DomeinRol }) {
             fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
             background: s.bg, color: s.color,
             border: `1px solid ${s.border}`,
-            borderRadius: "9999px", padding: "0.15em 0.6em",
+            borderRadius: "var(--radius-full)", padding: "var(--space-px) var(--space-2)",
         }}>
             {ROL_LABELS[rol] ?? rol}
         </span>
@@ -191,10 +191,10 @@ function Spinner() {
 function MedewerkerSkeleton() {
     return (
         <div aria-hidden="true" style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-4)", borderRadius: "var(--radius-xl)", background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}>
-            <div style={{ width: "44px", height: "44px", borderRadius: "9999px", background: "var(--color-border)", flexShrink: 0, animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: "44px", height: "44px", borderRadius: "var(--radius-full)", background: "var(--skeleton-base)", flexShrink: 0, animation: "pulse 1.5s ease-in-out infinite" }} />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                <div style={{ width: "45%", height: "14px", borderRadius: "var(--radius-md)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
-                <div style={{ width: "25%", height: "18px", borderRadius: "9999px", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ width: "45%", height: "14px", borderRadius: "var(--radius-md)", background: "var(--skeleton-base)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ width: "25%", height: "18px", borderRadius: "var(--radius-full)", background: "var(--skeleton-base)", animation: "pulse 1.5s ease-in-out infinite" }} />
             </div>
         </div>
     );
@@ -242,10 +242,10 @@ function ColdStartBanner({ naam }: { naam: string }) {
             <div style={{
                 display: "flex", alignItems: "center", gap: "var(--space-3)",
                 padding: "var(--space-4)", borderRadius: "var(--radius-xl)",
-                background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.4)",
-                color: "#065f46",
+                background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)",
+                color: "var(--color-success-text)",
             }} role="status">
-                <span style={{ color: "#16a34a" }}><IconCheck /></span>
+                <span style={{ color: "var(--color-success)" }}><IconCheck /></span>
                 {bericht}
             </div>
         );
@@ -269,7 +269,7 @@ function ColdStartBanner({ naam }: { naam: string }) {
 
             {/* Foutmelding */}
             {status === "error" && (
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.4)", color: "#991b1b", fontSize: "var(--text-sm)" }} role="alert">
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", color: "var(--color-error-text)", fontSize: "var(--text-sm)" }} role="alert">
                     <IconX /> {bericht}
                 </div>
             )}
@@ -433,16 +433,16 @@ function InviteFormulier({ identityRole, isEigenaarDomein }: { identityRole: Ide
 
             {/* Fout */}
             {fout && (
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", color: "#991b1b", fontSize: "var(--text-sm)" }} role="alert">
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", color: "var(--color-error-text)", fontSize: "var(--text-sm)" }} role="alert">
                     <IconAlertCircle /> {fout}
                 </div>
             )}
 
             {/* Succes */}
             {result && (
-                <div style={{ padding: "var(--space-4)", borderRadius: "var(--radius-xl)", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.35)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }} role="status">
-                    <p style={{ fontWeight: "var(--weight-semibold)", margin: 0, display: "flex", alignItems: "center", gap: "var(--space-2)", color: "#065f46" }}>
-                        <span style={{ color: "#16a34a" }}><IconCheck /></span> Uitnodiging aangemaakt!
+                <div style={{ padding: "var(--space-4)", borderRadius: "var(--radius-xl)", background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }} role="status">
+                    <p style={{ fontWeight: "var(--weight-semibold)", margin: 0, display: "flex", alignItems: "center", gap: "var(--space-2)", color: "var(--color-success-text)" }}>
+                        <span style={{ color: "var(--color-success)" }}><IconCheck /></span> Uitnodiging aangemaakt!
                     </p>
                     <p style={{ fontSize: "var(--text-xs)", margin: 0, color: "var(--color-muted)" }}>Deel deze link met de medewerker:</p>
                     <code style={{ display: "block", padding: "var(--space-2) var(--space-3)", background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", wordBreak: "break-all", fontFamily: "var(--font-mono)", color: "var(--color-heading)" }}>
@@ -522,10 +522,10 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
             <div aria-hidden="true" style={{
                 width: "44px", height: "44px", borderRadius: "9999px",
                 background: avatarGradient,
-                border: "2px solid rgba(255,255,255,0.15)",
+                border: "2px solid var(--glass-border)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: "var(--weight-bold)", fontSize: "var(--text-base)",
-                color: "#fff", flexShrink: 0,
+                color: "var(--color-on-accent)", flexShrink: 0,
                 boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             }}>
                 {weergaveNaam.charAt(0).toUpperCase()}
@@ -545,9 +545,9 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
                     {!medewerker.actief && (
                         <span style={{
                             fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
-                            color: "#92400e", background: "rgba(251,191,36,0.12)",
-                            border: "1px solid rgba(251,191,36,0.4)",
-                            borderRadius: "9999px", padding: "0.15em 0.6em",
+                            color: "var(--color-warning-text)", background: "var(--color-warning-bg)",
+                            border: "1px solid var(--color-warning-border)",
+                            borderRadius: "var(--radius-full)", padding: "var(--space-px) var(--space-2)",
                         }}>
                             Gedeactiveerd
                         </span>
@@ -605,9 +605,9 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
                             <div style={{
                                 display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap",
                                 padding: "var(--space-3)", borderRadius: "var(--radius-md)",
-                                background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
+                                background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)",
                             }}>
-                                <span style={{ fontSize: "var(--text-xs)", color: "#991b1b", fontWeight: "var(--weight-medium)", flex: 1 }}>
+                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-medium)", flex: 1 }}>
                                     Weet je zeker dat je {medewerker.naam} wilt deactiveren?
                                 </span>
                                 <button onClick={handleDeactiveer} className="btn btn-danger btn-sm" disabled={bezig}>
@@ -659,19 +659,19 @@ function TenantRepairBanner() {
 
     if (status === "ok") {
         return (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-lg)", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.4)", color: "#065f46", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-lg)", background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)", color: "var(--color-success-text)", fontSize: "var(--text-sm)", marginBottom: "var(--space-4)" }}>
                 <IconCheck /> {resultaat} — herlaad de pagina om het resultaat te zien.
             </div>
         );
     }
 
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-lg)", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.4)", fontSize: "var(--text-sm)", flexWrap: "wrap" }} role="alert">
-            <span style={{ flex: 1, color: "#92400e", minWidth: "200px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-lg)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", fontSize: "var(--text-sm)", flexWrap: "wrap" }} role="alert">
+            <span style={{ flex: 1, color: "var(--color-warning-text)", minWidth: "200px" }}>
                 <strong>Niet alle medewerkers zichtbaar?</strong> Oude records gebruiken nog de verkeerde tenant-koppeling. Klik om dit eenmalig te repareren.
             </span>
-            {status === "error" && <span style={{ color: "#991b1b", fontSize: "var(--text-xs)" }}>{resultaat}</span>}
-            <button className="btn btn-ghost btn-sm" onClick={handleFix} disabled={status === "loading"} style={{ borderColor: "rgba(251,191,36,0.5)", color: "#92400e" }}>
+            {status === "error" && <span style={{ color: "var(--color-error-text)", fontSize: "var(--text-xs)" }}>{resultaat}</span>}
+            <button className="btn btn-ghost btn-sm" onClick={handleFix} disabled={status === "loading"} style={{ borderColor: "var(--color-warning-border)", color: "var(--color-warning-text)" }}>
                 {status === "loading" ? "Bezig…" : "Repareer records"}
             </button>
         </div>

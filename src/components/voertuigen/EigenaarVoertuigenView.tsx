@@ -52,7 +52,14 @@ function IconCar() {
 // Stat card
 // ---------------------------------------------------------------------------
 
-function VlootStatCard({ icon, label, waarde, kleur }: { icon: React.ReactNode; label: string; waarde: string | number; kleur: string }) {
+function VlootStatCard({ icon, label, waarde, kleur, kleurBg, kleurBorder }: {
+    icon: React.ReactNode;
+    label: string;
+    waarde: string | number;
+    kleur: string;
+    kleurBg: string;
+    kleurBorder: string;
+}) {
     return (
         <div style={{
             padding: "var(--space-4)", borderRadius: "var(--radius-xl)",
@@ -62,13 +69,13 @@ function VlootStatCard({ icon, label, waarde, kleur }: { icon: React.ReactNode; 
         }}>
             <div style={{
                 width: "36px", height: "36px", borderRadius: "var(--radius-md)",
-                background: `${kleur}18`, border: `1px solid ${kleur}30`,
+                background: kleurBg, border: `1px solid ${kleurBorder}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: kleur,
             }}>
                 {icon}
             </div>
-            <p style={{ fontSize: "var(--text-3xl, 2rem)", fontWeight: 900, color: kleur, margin: 0, lineHeight: 1.1 }}>
+            <p style={{ fontSize: "var(--text-3xl, 2rem)", fontWeight: "var(--weight-black)", color: kleur, margin: 0, lineHeight: 1.1 }}>
                 {waarde}
             </p>
             <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -118,19 +125,25 @@ function FleetStats() {
                             icon={<IconCar />}
                             label="Totaal voertuigen"
                             waarde={voertuigen.length}
-                            kleur="#6366f1"
+                            kleur="var(--color-info)"
+                            kleurBg="var(--color-info-bg)"
+                            kleurBorder="var(--color-info-border)"
                         />
                         <VlootStatCard
                             icon={<IconShieldAlert />}
                             label="APK verlopen"
                             waarde={verlopen.length}
-                            kleur={verlopen.length > 0 ? "#dc2626" : "#16a34a"}
+                            kleur={verlopen.length > 0 ? "var(--color-error)" : "var(--color-success)"}
+                            kleurBg={verlopen.length > 0 ? "var(--color-error-bg)" : "var(--color-success-bg)"}
+                            kleurBorder={verlopen.length > 0 ? "var(--color-error-border)" : "var(--color-success-border)"}
                         />
                         <VlootStatCard
                             icon={<IconShield />}
                             label="APK binnen 30d"
                             waarde={bijna.length}
-                            kleur={bijna.length > 0 ? "#d97706" : "#16a34a"}
+                            kleur={bijna.length > 0 ? "var(--color-warning)" : "var(--color-success)"}
+                            kleurBg={bijna.length > 0 ? "var(--color-warning-bg)" : "var(--color-success-bg)"}
+                            kleurBorder={bijna.length > 0 ? "var(--color-warning-border)" : "var(--color-success-border)"}
                         />
                     </>
                 )}

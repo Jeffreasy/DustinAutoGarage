@@ -84,13 +84,13 @@ function Toast({ message, type = "info", onClose }: ToastProps) {
 
     const bgMap = {
         info: "var(--color-surface)",
-        success: "var(--color-success-bg, #dcfce7)",
-        warning: "var(--color-warning-bg, #fffbeb)",
+        success: "var(--color-success-bg)",
+        warning: "var(--color-warning-bg)",
     };
     const borderMap = {
         info: "var(--color-border)",
-        success: "var(--color-success-border, #86efac)",
-        warning: "var(--color-warning-border, #fcd34d)",
+        success: "var(--color-success-border)",
+        warning: "var(--color-warning-border)",
     };
 
     return (
@@ -173,7 +173,7 @@ function skeletonBlock(width: string, height: string): React.CSSProperties {
         width,
         height,
         borderRadius: "var(--radius-md)",
-        background: "var(--color-border)",
+        background: "var(--skeleton-base)",
         animation: "pulse 1.5s ease-in-out infinite",
     };
 }
@@ -247,9 +247,9 @@ export default function VoertuigenDashboard() {
                     style={{
                         padding: "var(--space-3) var(--space-4)",
                         borderRadius: "var(--radius-md)",
-                        background: "var(--color-warning-bg, #fffbeb)",
-                        border: "1px solid var(--color-warning-border, #fcd34d)",
-                        color: "var(--color-warning, #92400e)",
+                        background: "var(--color-warning-bg)",
+                        border: "1px solid var(--color-warning-border)",
+                        color: "var(--color-warning)",
                         fontSize: "var(--text-sm)",
                         display: "flex",
                         alignItems: "center",
@@ -394,18 +394,18 @@ export default function VoertuigenDashboard() {
 type BrandstofType = "Benzine" | "Diesel" | "Hybride" | "EV" | "LPG";
 
 const BRANDSTOF_CONFIG: Record<BrandstofType, { color: string; bg: string }> = {
-    Benzine: { color: "#92400e", bg: "rgba(251,191,36,0.12)" },
-    Diesel: { color: "#1e3a5f", bg: "rgba(59,130,246,0.12)" },
-    Hybride: { color: "#065f46", bg: "rgba(16,185,129,0.12)" },
-    EV: { color: "#1d4ed8", bg: "rgba(99,102,241,0.15)" },
-    LPG: { color: "#7c3aed", bg: "rgba(139,92,246,0.12)" },
+    Benzine: { color: "var(--color-warning-text)", bg: "var(--color-warning-bg)" },
+    Diesel: { color: "var(--color-info-text)", bg: "var(--color-info-bg)" },
+    Hybride: { color: "var(--color-success-text)", bg: "var(--color-success-bg)" },
+    EV: { color: "var(--color-info-text)", bg: "var(--color-info-bg)" },
+    LPG: { color: "var(--color-muted)", bg: "var(--color-surface)" },
 };
 
 function apkUrgency(apkMs: number): { label: string; color: string; bg: string; border: string } {
     const daysLeft = Math.ceil((apkMs - Date.now()) / (1000 * 60 * 60 * 24));
-    if (daysLeft < 0) return { label: `Verlopen (${Math.abs(daysLeft)}d)`, color: "#991b1b", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.4)" };
-    if (daysLeft <= 14) return { label: `${daysLeft}d resterend`, color: "#92400e", bg: "rgba(251,191,36,0.15)", border: "rgba(251,191,36,0.5)" };
-    if (daysLeft <= 30) return { label: formatDatum(apkMs), color: "#78350f", bg: "rgba(249,115,22,0.10)", border: "rgba(249,115,22,0.3)" };
+    if (daysLeft < 0) return { label: `Verlopen (${Math.abs(daysLeft)}d)`, color: "var(--color-error-text)", bg: "var(--color-error-bg)", border: "var(--color-error-border)" };
+    if (daysLeft <= 14) return { label: `${daysLeft}d resterend`, color: "var(--color-warning-text)", bg: "var(--color-warning-bg)", border: "var(--color-warning-border)" };
+    if (daysLeft <= 30) return { label: formatDatum(apkMs), color: "var(--color-warning-text)", bg: "var(--color-warning-bg)", border: "var(--color-warning-border)" };
     return { label: formatDatum(apkMs), color: "var(--color-muted)", bg: "transparent", border: "var(--color-border)" };
 }
 
@@ -489,7 +489,7 @@ function VoertuigCard({ voertuig: v, onClick }: VoertuigCardProps) {
                     color: fuel.color,
                     background: fuel.bg,
                     border: `1px solid ${fuel.color}40`,
-                    borderRadius: "9999px",
+                    borderRadius: "var(--radius-full)",
                     padding: "0.2em 0.7em",
                 }}>
                     {v.brandstof}

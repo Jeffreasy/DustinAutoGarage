@@ -24,10 +24,10 @@ import { TYPE_ICOON } from "../onderhoud/utils";
 import type { TypeWerk } from "../onderhoud/utils";
 
 const TYPE_BADGE_KLEUR: Record<string, string> = {
-    "Grote Beurt": "var(--color-error, #dc2626)",
-    "Kleine Beurt": "var(--color-success, #16a34a)",
-    "APK": "var(--color-primary, #2563eb)",
-    "Reparatie": "var(--color-warning, #d97706)",
+    "Grote Beurt": "var(--color-error)",
+    "Kleine Beurt": "var(--color-success)",
+    "APK": "var(--color-info)",
+    "Reparatie": "var(--color-warning)",
     "Bandenwisseling": "var(--color-body)",
     "Schadeherstel": "var(--color-body)",
     "Diagnostiek": "var(--color-body)",
@@ -160,8 +160,8 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                         <p style={{ margin: "4px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
                             {stats.totaal} totaal
                             {" · "}<span style={{ color: "var(--color-error)" }}>{stats.groteBeurten} grote</span>
-                            {" · "}<span style={{ color: "var(--color-success, #16a34a)" }}>{stats.kleineBeurten} kleine</span>
-                            {" · "}<span style={{ color: "var(--color-primary, #2563eb)" }}>{stats.apkDezeMaand} APK deze maand</span>
+                            {" · "}<span style={{ color: "var(--color-success)" }}>{stats.kleineBeurten} kleine</span>
+                            {" · "}<span style={{ color: "var(--color-info)" }}>{stats.apkDezeMaand} APK deze maand</span>
                         </p>
                     )}
                 </div>
@@ -191,7 +191,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                         key={type}
                         onClick={() => setFilterType(type)}
                         className={`btn btn-sm ${filterType === type ? "btn-primary" : "btn-ghost"}`}
-                        style={{ minHeight: "32px", fontSize: "var(--text-xs)", gap: "4px" }}
+                        style={{ minHeight: "32px", fontSize: "var(--text-xs)", gap: "var(--space-1)" }}
                     >
                         {type !== "Alle" && (TYPE_ICOON[type as TypeWerk] ?? "🔧")} {type}
                     </button>
@@ -248,11 +248,11 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                 <tr
                                     key={beurt._id}
                                     style={{
-                                        background: idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle, rgba(255,255,255,0.02))",
+                                        background: idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle)",
                                         transition: "background 0.15s",
                                     }}
                                     onMouseEnter={e => (e.currentTarget.style.background = "var(--glass-bg)")}
-                                    onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle, rgba(255,255,255,0.02))")}
+                                    onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "var(--glass-bg-subtle)")}
                                 >
                                     {/* Rijnummer */}
                                     <td style={{ ...tdStyle, color: "var(--color-muted)", fontSize: "var(--text-xs)", width: "40px" }}>
@@ -306,7 +306,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                                 href={beurt.documentUrl}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                style={{ fontSize: "var(--text-xs)", color: "var(--color-primary)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                                style={{ fontSize: "var(--text-xs)", color: "var(--color-accent-text)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}
                                             >
                                                 📄 Bekijk
                                             </a>
@@ -324,7 +324,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                                     disabled={verwijderBezig === beurt._id}
                                                     style={{
                                                         minHeight: "26px", padding: "0 var(--space-2)",
-                                                        background: "#dc2626", color: "#fff", border: "none",
+                                                        background: "var(--color-error)", color: "var(--color-on-accent)", border: "none",
                                                         borderRadius: "var(--radius-sm)", cursor: "pointer",
                                                         fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                                                     }}

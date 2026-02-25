@@ -83,14 +83,14 @@ function SectieKop({ children }: { children: React.ReactNode }) {
 function Badge({ children, color = "default" }: { children: React.ReactNode; color?: "default" | "green" | "amber" | "red" }) {
     const styles: Record<string, { bg: string; color: string; border: string }> = {
         default: { bg: "var(--glass-bg)", color: "var(--color-body)", border: "var(--color-border)" },
-        green: { bg: "rgba(16,185,129,0.1)", color: "#065f46", border: "rgba(16,185,129,0.3)" },
-        amber: { bg: "rgba(251,191,36,0.1)", color: "#92400e", border: "rgba(251,191,36,0.3)" },
-        red: { bg: "rgba(239,68,68,0.1)", color: "#991b1b", border: "rgba(239,68,68,0.3)" },
+        green: { bg: "var(--color-success-bg)", color: "var(--color-success-text)", border: "var(--color-success-border)" },
+        amber: { bg: "var(--color-warning-bg)", color: "var(--color-warning-text)", border: "var(--color-warning-border)" },
+        red: { bg: "var(--color-error-bg)", color: "var(--color-error-text)", border: "var(--color-error-border)" },
     };
     const s = styles[color];
     return (
         <span style={{
-            display: "inline-block", padding: "0.2em 0.65em", borderRadius: "9999px",
+            display: "inline-block", padding: "0.2em 0.65em", borderRadius: "var(--radius-full)",
             fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
             background: s.bg, color: s.color, border: `1px solid ${s.border}`,
             whiteSpace: "nowrap",
@@ -842,7 +842,7 @@ export default function MedewerkerProfielModal({ medewerkerId, isEigenaar, isZic
                 aria-hidden="true"
                 style={{
                     position: "fixed", inset: 0, zIndex: 50,
-                    background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
+                    background: "var(--overlay-bg)", backdropFilter: "blur(4px)",
                     WebkitBackdropFilter: "blur(4px)",
                 }}
             />
@@ -869,7 +869,7 @@ export default function MedewerkerProfielModal({ medewerkerId, isEigenaar, isZic
                     width: "100%",
                     maxHeight: "92vh",
                     borderRadius: "var(--radius-2xl) var(--radius-2xl) 0 0",
-                    boxShadow: "0 -8px 40px rgba(0,0,0,0.4)",
+                    boxShadow: "var(--shadow-xl)",
 
                     // Tablet+ override via inline media query workaround:
                     // We use a CSS custom approach — see the style tag below
@@ -991,7 +991,7 @@ export default function MedewerkerProfielModal({ medewerkerId, isEigenaar, isZic
                         max-height: 88vh !important;
                         border-radius: var(--radius-2xl) !important;
                         transform: translate(-50%, -50%);
-                        box-shadow: 0 24px 64px rgba(0,0,0,0.5) !important;
+                        box-shadow: var(--shadow-xl) !important;
                     }
                     .profiel-modal-drag-handle { display: none !important; }
 

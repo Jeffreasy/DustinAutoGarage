@@ -42,11 +42,11 @@ function ArchivePanel() {
             padding: "var(--space-4)", borderRadius: "var(--radius-xl)",
             background: "var(--glass-bg)", backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
-            border: "1px solid rgba(22,163,74,0.3)",
+            border: "1px solid var(--color-success-border)",
             boxShadow: "var(--glass-shadow)",
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-                <span style={{ color: "#16a34a" }}><IconTrophy /></span>
+                <span style={{ color: "var(--color-success)" }}><IconTrophy /></span>
                 <p style={{ margin: 0, fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", fontSize: "var(--text-sm)" }}>
                     Afgerond — klaar voor archivering ({klaarOrders.length})
                 </p>
@@ -63,7 +63,7 @@ function ArchivePanel() {
                         flexWrap: "wrap",
                     }}>
                         <span style={{
-                            fontFamily: "var(--font-mono)", fontWeight: 700,
+                            fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)",
                             fontSize: "var(--text-base)", color: "var(--color-heading)", minWidth: "80px",
                         }}>
                             {order.voertuig?.kenteken ?? "–"}

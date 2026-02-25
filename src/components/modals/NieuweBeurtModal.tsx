@@ -185,7 +185,7 @@ export default function NieuweBeurtModal({ voertuig, onSluit }: NieuweBeurtModal
                 {fout && <div className="alert alert-error" role="alert">{fout}</div>}
 
                 <button type="submit" disabled={bezig} className="btn btn-primary" style={{ minHeight: "52px" }}>
-                    {bezig ? "Registreren…" : "✅ Onderhoudsbeurt opslaan"}
+                    {bezig ? "Registreren…" : "Onderhoudsbeurt opslaan"}
                 </button>
             </form>
         </ModalShell>

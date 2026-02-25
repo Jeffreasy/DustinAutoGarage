@@ -70,7 +70,7 @@ function DossierView({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; onTer
                                     )}
                                     {beurt.documentUrl && (
                                         <a href={beurt.documentUrl} target="_blank" rel="noreferrer"
-                                            style={{ display: "inline-flex", gap: "4px", marginTop: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-primary)" }}>
+                                            style={{ display: "inline-flex", gap: "var(--space-1)", marginTop: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-accent-text)" }}>
                                             📄 Document
                                         </a>
                                     )}
@@ -106,7 +106,7 @@ export default function MonteurOnderhoudView() {
             {/* Zoekbalk */}
             <div>
                 <h2 style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)" }}>
-                    🔍 Onderhoudsdossier opzoeken
+                    Onderhoudsdossier opzoeken
                 </h2>
                 <input
                     type="search"
@@ -126,7 +126,7 @@ export default function MonteurOnderhoudView() {
                             <button key={v._id} onClick={() => setGeselecteerd(v)}
                                 className="card card-interactive"
                                 style={{ textAlign: "left", padding: "var(--space-3) var(--space-4)", width: "100%", cursor: "pointer" }}>
-                                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, marginRight: "var(--space-3)", color: "var(--color-heading)" }}>
+                                <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)", marginRight: "var(--space-3)", color: "var(--color-heading)" }}>
                                     {v.kenteken}
                                 </span>
                                 <span style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)" }}>
@@ -142,7 +142,7 @@ export default function MonteurOnderhoudView() {
             {!zoek && (
                 <div>
                     <h3 style={{ margin: "0 0 var(--space-3)", fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)" }}>
-                        🕐 Recente beurten
+                        Recente beurten
                     </h3>
                     {recenteBeurten === undefined ? (
                         <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>Laden…</p>

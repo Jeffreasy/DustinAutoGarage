@@ -17,9 +17,9 @@ import type { Doc } from "../../../convex/_generated/dataModel";
 function apkKleur(apkMs: number | undefined) {
     if (!apkMs) return { color: "var(--color-muted)", bg: "transparent", border: "transparent" };
     const nu = Date.now();
-    if (apkMs < nu) return { color: "#dc2626", bg: "rgba(220,38,38,0.08)", border: "rgba(220,38,38,0.3)" };
-    if (apkMs < nu + 30 * 864e5) return { color: "#d97706", bg: "rgba(217,119,6,0.08)", border: "rgba(217,119,6,0.3)" };
-    return { color: "#16a34a", bg: "rgba(22,163,74,0.08)", border: "rgba(22,163,74,0.3)" };
+    if (apkMs < nu) return { color: "var(--color-error)", bg: "var(--color-error-bg)", border: "var(--color-error-border)" };
+    if (apkMs < nu + 30 * 864e5) return { color: "var(--color-warning)", bg: "var(--color-warning-bg)", border: "var(--color-warning-border)" };
+    return { color: "var(--color-success)", bg: "var(--color-success-bg)", border: "var(--color-success-border)" };
 }
 
 function apkLabel(apkMs: number | undefined): string {
@@ -85,7 +85,7 @@ function VoertuigKaartMonteur({ voertuig }: { voertuig: Doc<"voertuigen"> }) {
         }}>
             {/* Kenteken */}
             <div style={{
-                fontFamily: "var(--font-mono)", fontWeight: 900,
+                fontFamily: "var(--font-mono)", fontWeight: "var(--weight-black)",
                 fontSize: "var(--text-2xl)", color: "var(--color-heading)",
                 letterSpacing: "0.08em", lineHeight: 1,
             }}>
@@ -109,7 +109,7 @@ function VoertuigKaartMonteur({ voertuig }: { voertuig: Doc<"voertuigen"> }) {
                 display: "inline-flex", alignSelf: "flex-start",
                 fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                 color: apk.color, background: apk.bg, border: `1px solid ${apk.border}`,
-                borderRadius: "9999px", padding: "0.2em 0.65em",
+                borderRadius: "var(--radius-full)", padding: "0.2em 0.65em",
             }}>
                 {apkLabel(voertuig.apkVervaldatum)}
             </span>

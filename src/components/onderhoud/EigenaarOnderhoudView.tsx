@@ -477,10 +477,10 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
                                         // Inline confirm — geen window.confirm()
                                         <div style={{
                                             display: "flex", flexDirection: "column", gap: "var(--space-1)",
-                                            background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.25)",
+                                            background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)",
                                             borderRadius: "var(--radius-sm)", padding: "var(--space-2)",
                                         }}>
-                                            <span style={{ fontSize: "var(--text-xs)", color: "#991b1b", fontWeight: "var(--weight-semibold)", whiteSpace: "nowrap" }}>
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-semibold)", whiteSpace: "nowrap" }}>
                                                 Definitief verwijderen?
                                             </span>
                                             <div style={{ display: "flex", gap: "var(--space-1)" }}>
@@ -489,7 +489,7 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
                                                     disabled={verwijderBezig === beurt._id}
                                                     style={{
                                                         minHeight: "28px", padding: "0 var(--space-2)",
-                                                        background: "#dc2626", color: "#fff", border: "none",
+                                                        background: "var(--color-error)", color: "var(--color-on-accent)", border: "none",
                                                         borderRadius: "var(--radius-sm)", cursor: "pointer",
                                                         fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                                                     }}

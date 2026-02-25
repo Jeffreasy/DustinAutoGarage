@@ -26,14 +26,14 @@ function formatDag(ms: number): string {
 
 function statusKleur(status: string): string {
     switch (status) {
-        case "Gepland": return "#8b5cf6";
-        case "Aanwezig": return "#0891b2";
+        case "Gepland": return "var(--color-info)";
+        case "Aanwezig": return "var(--color-muted)";
         case "Wachtend": return "var(--color-muted)";
         case "Bezig": return "var(--color-primary)";
-        case "Wacht op onderdelen": return "var(--color-warning, #d97706)";
-        case "Klaar": return "var(--color-success, #16a34a)";
-        case "Afgerond": return "#15803d";
-        case "Geannuleerd": return "var(--color-error, #dc2626)";
+        case "Wacht op onderdelen": return "var(--color-warning)";
+        case "Klaar": return "var(--color-success)";
+        case "Afgerond": return "var(--color-success)";
+        case "Geannuleerd": return "var(--color-error)";
         default: return "var(--color-muted)";
     }
 }
@@ -96,7 +96,7 @@ function AgendaSkeleton() {
                 }}>
                     <div style={{ width: "80px", height: "16px", borderRadius: "var(--radius-sm)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
                     <div style={{ flex: 1, height: "14px", borderRadius: "var(--radius-sm)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
-                    <div style={{ width: "60px", height: "20px", borderRadius: "9999px", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                    <div style={{ width: "60px", height: "20px", borderRadius: "var(--radius-full)", background: "var(--color-border)", animation: "pulse 1.5s ease-in-out infinite" }} />
                 </div>
             ))}
         </div>
@@ -188,7 +188,7 @@ function PlanningsAgenda() {
                                             display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap",
                                         }}>
                                             <span style={{
-                                                fontFamily: "var(--font-mono)", fontWeight: 700,
+                                                fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)",
                                                 fontSize: "var(--text-base)", color: "var(--color-heading)",
                                                 minWidth: "80px",
                                             }}>
@@ -263,18 +263,18 @@ function WachtOpOphalenWidget() {
     return (
         <section style={{
             padding: "var(--space-4)", borderRadius: "var(--radius-lg)",
-            background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.25)",
+            background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)",
             display: "flex", flexDirection: "column", gap: "var(--space-3)",
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <span style={{ color: "#16a34a" }}><IconPackage /></span>
+                <span style={{ color: "var(--color-success)" }}><IconPackage /></span>
                 <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
                     Wacht op ophalen
                 </span>
                 <span style={{
-                    background: "#16a34a", color: "#fff",
+                    background: "var(--color-success)", color: "#fff",
                     fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)",
-                    borderRadius: "9999px", padding: "1px 8px", minWidth: "24px", textAlign: "center",
+                    borderRadius: "var(--radius-full)", padding: "1px 8px", minWidth: "24px", textAlign: "center",
                 }}>{orders.length}</span>
             </div>
 
@@ -287,7 +287,7 @@ function WachtOpOphalenWidget() {
                         border: "1px solid var(--color-border)", flexWrap: "wrap",
                     }}>
                         <span style={{
-                            fontFamily: "var(--font-mono)", fontWeight: 700,
+                            fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)",
                             fontSize: "var(--text-sm)", color: "var(--color-heading)",
                             background: "var(--color-surface-4)", padding: "1px 6px",
                             borderRadius: "var(--radius-xs)", border: "1px solid var(--color-border)",
@@ -312,7 +312,7 @@ function WachtOpOphalenWidget() {
                             disabled={bezigId === order._id}
                             className="btn btn-sm"
                             style={{
-                                minHeight: "36px", background: "#16a34a", color: "#fff",
+                                minHeight: "36px", background: "var(--color-success)", color: "#fff",
                                 border: "none", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)",
                                 fontWeight: "var(--weight-semibold)", cursor: "pointer",
                                 display: "inline-flex", alignItems: "center", gap: "4px",

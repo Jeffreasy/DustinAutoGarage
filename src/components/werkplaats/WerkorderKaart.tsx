@@ -45,14 +45,14 @@ const STATUS_CONFIG: Record<string, {
     badgeBorder: string;
     badgeTekst: string;
 }> = {
-    "Gepland": { label: "Gepland", accentKleur: "#8b5cf6", badgeBg: "#f5f3ff", badgeBorder: "#c4b5fd", badgeTekst: "#5b21b6" },
-    "Aanwezig": { label: "Aanwezig", accentKleur: "#0891b2", badgeBg: "#ecfeff", badgeBorder: "#67e8f9", badgeTekst: "#164e63" },
-    "Wachtend": { label: "Wachtend", accentKleur: "#6b7280", badgeBg: "var(--color-surface)", badgeBorder: "var(--color-border)", badgeTekst: "var(--color-muted)" },
-    "Bezig": { label: "Bezig", accentKleur: "#f59e0b", badgeBg: "#fffbeb", badgeBorder: "#fcd34d", badgeTekst: "#92400e" },
-    "Wacht op onderdelen": { label: "Wacht op onderdelen", accentKleur: "#3b82f6", badgeBg: "#eff6ff", badgeBorder: "#93c5fd", badgeTekst: "#1e3a5f" },
-    "Klaar": { label: "Klaar", accentKleur: "#22c55e", badgeBg: "#f0fdf4", badgeBorder: "#86efac", badgeTekst: "#14532d" },
-    "Afgerond": { label: "Afgerond", accentKleur: "#16a34a", badgeBg: "#f0fdf4", badgeBorder: "#4ade80", badgeTekst: "#14532d" },
-    "Geannuleerd": { label: "Geannuleerd", accentKleur: "#dc2626", badgeBg: "#fef2f2", badgeBorder: "#fca5a5", badgeTekst: "#7f1d1d" },
+    "Gepland": { label: "Gepland", accentKleur: "var(--color-info)", badgeBg: "var(--color-info-bg)", badgeBorder: "var(--color-info-border)", badgeTekst: "var(--color-info-text)" },
+    "Aanwezig": { label: "Aanwezig", accentKleur: "var(--color-muted)", badgeBg: "var(--color-surface)", badgeBorder: "var(--color-border)", badgeTekst: "var(--color-muted)" },
+    "Wachtend": { label: "Wachtend", accentKleur: "var(--color-muted)", badgeBg: "var(--color-surface)", badgeBorder: "var(--color-border)", badgeTekst: "var(--color-muted)" },
+    "Bezig": { label: "Bezig", accentKleur: "var(--color-warning)", badgeBg: "var(--color-warning-bg)", badgeBorder: "var(--color-warning-border)", badgeTekst: "var(--color-warning-text)" },
+    "Wacht op onderdelen": { label: "Wacht op onderdelen", accentKleur: "var(--color-info)", badgeBg: "var(--color-info-bg)", badgeBorder: "var(--color-info-border)", badgeTekst: "var(--color-info-text)" },
+    "Klaar": { label: "Klaar", accentKleur: "var(--color-success)", badgeBg: "var(--color-success-bg)", badgeBorder: "var(--color-success-border)", badgeTekst: "var(--color-success-text)" },
+    "Afgerond": { label: "Afgerond", accentKleur: "var(--color-success)", badgeBg: "var(--color-success-bg)", badgeBorder: "var(--color-success-border)", badgeTekst: "var(--color-success-text)" },
+    "Geannuleerd": { label: "Geannuleerd", accentKleur: "var(--color-error)", badgeBg: "var(--color-error-bg)", badgeBorder: "var(--color-error-border)", badgeTekst: "var(--color-error-text)" },
 };
 
 function getStatusCfg(status: string) {
@@ -266,7 +266,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-2)", flexWrap: "wrap" }}>
                         <span
                             style={{
-                                fontFamily: "var(--font-mono)", fontWeight: 900,
+                                fontFamily: "var(--font-mono)", fontWeight: "var(--weight-black)",
                                 fontSize: "clamp(1.5rem, 3.5vw, 2rem)", letterSpacing: "0.08em",
                                 color: "var(--color-heading)",
                                 background: "var(--gradient-accent-subtle)",
@@ -282,7 +282,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                             fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                             color: statusCfg.badgeTekst, background: statusCfg.badgeBg,
                             border: `1px solid ${statusCfg.badgeBorder}`,
-                            borderRadius: "9999px", padding: "0.2em 0.65em", whiteSpace: "nowrap", marginTop: "4px",
+                            borderRadius: "var(--radius-full)", padding: "0.2em 0.65em", whiteSpace: "nowrap", marginTop: "4px",
                         }}>
                             {statusCfg.label}
                         </span>
@@ -294,9 +294,9 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                     </p>
 
                     {/* 3. Klacht — rood blok met SVG icon */}
-                    <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "var(--radius-md)", padding: "var(--space-2) var(--space-3)", marginTop: "var(--space-2)", display: "flex", alignItems: "flex-start", gap: "var(--space-1)" }}>
+                    <div style={{ background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-md)", padding: "var(--space-2) var(--space-3)", marginTop: "var(--space-2)", display: "flex", alignItems: "flex-start", gap: "var(--space-1)" }}>
                         <span style={{ flexShrink: 0, marginTop: "1px" }}><IconAlertCircle /></span>
-                        <p style={{ color: "#dc2626", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", margin: 0, lineHeight: 1.4 }}>
+                        <p style={{ color: "var(--color-error)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", margin: 0, lineHeight: 1.4 }}>
                             {order.klacht}
                         </p>
                     </div>
@@ -312,7 +312,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                                 <span
                                     aria-label={`Monteur: ${order.monteur.naam}`}
-                                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", borderRadius: "50%", background: avatarKleur(order.monteur.naam), color: "#fff", fontSize: "10px", fontWeight: 700, flexShrink: 0, letterSpacing: "0.03em" }}
+                                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", borderRadius: "50%", background: avatarKleur(order.monteur.naam), color: "#fff", fontSize: "10px", fontWeight: "var(--weight-bold)", flexShrink: 0, letterSpacing: "0.03em" }}
                                 >
                                     {avatarInitialen(order.monteur.naam)}
                                 </span>
@@ -373,7 +373,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                         {/* Gepland → Aanwezig */}
                         {isBalie && order.status === "Gepland" && (
                             <button onClick={handleAanwezig} disabled={bezig} className="btn btn-sm" aria-label="Markeer als aanwezig"
-                                style={{ minHeight: "48px", width: "100%", background: "linear-gradient(135deg, #0891b2, #0e7490)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}>
+                                style={{ minHeight: "48px", width: "100%", background: "var(--color-info)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}>
                                 <IconFlag /> {bezig ? "…" : "Auto aanwezig"}
                             </button>
                         )}
@@ -393,7 +393,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                                 disabled={bezig}
                                 className="btn btn-sm"
                                 aria-label="Auto klaar voor ophalen"
-                                style={{ minHeight: "48px", width: "100%", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
+                                style={{ minHeight: "48px", width: "100%", background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
                             >
                                 <IconCheckCircle /> {bezig ? "…" : "Auto klaar"}
                             </button>
@@ -402,7 +402,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                         {/* Afsluiten */}
                         {isBalie && order.status === "Klaar" && (
                             <button onClick={() => setToonAfsluitenModal(true)} className="btn btn-sm"
-                                style={{ minHeight: "48px", width: "100%", background: "linear-gradient(135deg,#16a34a,#15803d)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
+                                style={{ minHeight: "48px", width: "100%", background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
                                 aria-label="Werkorder definitief afsluiten">
                                 <IconCheckCircle /> Doorsturen
                             </button>
@@ -426,7 +426,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                                     disabled={bezig || !mijnId}
                                     className="btn btn-ghost btn-sm"
                                     aria-label="Zichzelf als monteur aanmelden"
-                                    style={{ minHeight: "40px", width: "100%", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-accent-text, #0891b2)", borderColor: "rgba(8,145,178,0.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
+                                    style={{ minHeight: "40px", width: "100%", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-info)", borderColor: "var(--color-info-border)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
                                 >
                                     <IconUserCheck /> Aanmelden als monteur
                                 </button>
@@ -444,8 +444,8 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
 
                         {/* Inline confirm banner */}
                         {toonAnnuleerConfirm && (
-                            <div style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: "var(--radius-md)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                                <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "#991b1b", fontWeight: "var(--weight-semibold)" }}>
+                            <div style={{ background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-md)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                                <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-semibold)" }}>
                                     Werkorder voor {order.voertuig?.kenteken ?? "dit voertuig"} annuleren?
                                 </p>
                                 {/* Reden dropdown */}
@@ -454,8 +454,8 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                                     onChange={(e) => setAnnuleerReden(e.target.value as AfsluitingReden)}
                                     style={{
                                         width: "100%", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)",
-                                        border: "1px solid rgba(220,38,38,0.4)", background: "#fff8f8",
-                                        color: "#7f1d1d", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                        border: "1px solid var(--color-error-border)", background: "var(--color-error-bg)",
+                                        color: "var(--color-error-text)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                                         cursor: "pointer", minHeight: "36px",
                                     }}
                                     aria-label="Reden van annulering"
@@ -466,7 +466,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                                 </select>
                                 <div style={{ display: "flex", gap: "var(--space-2)" }}>
                                     <button onClick={handleGeannuleerd} disabled={bezig} className="btn btn-sm"
-                                        style={{ flex: 1, minHeight: "36px", background: "#dc2626", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-xs)", cursor: "pointer" }}>
+                                        style={{ flex: 1, minHeight: "36px", background: "var(--color-error)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-xs)", cursor: "pointer" }}>
                                         {bezig ? "…" : "Ja, annuleren"}
                                     </button>
                                     <button onClick={() => setToonAnnuleerConfirm(false)} className="btn btn-ghost btn-sm"
@@ -505,8 +505,8 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
 
                         {/* Wacht op onderdelen invoer */}
                         {toonWachtInput && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", background: "#eff6ff", border: "1px solid #93c5fd" }}>
-                                <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "#1e3a5f", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", background: "var(--color-info-bg)", border: "1px solid var(--color-info-border)" }}>
+                                <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-info-text)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
                                     <IconClock /> Wacht op onderdelen — voeg notitie toe:
                                 </p>
                                 <input
@@ -514,11 +514,11 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                                     onKeyDown={(e) => { if (e.key === "Enter") handleWachtOpOnderdelen(); }}
                                     placeholder="bijv. Draagarmrubber bestellen bij Van Mossel"
                                     aria-label="Notitie voor wacht op onderdelen"
-                                    style={{ padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid #93c5fd", background: "#fff", color: "#1e3a5f", fontSize: "var(--text-sm)", minHeight: "44px" }}
+                                    style={{ padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-info-border)", background: "var(--color-surface)", color: "var(--color-heading)", fontSize: "var(--text-sm)", minHeight: "44px" }}
                                     autoFocus
                                 />
                                 <button onClick={handleWachtOpOnderdelen} disabled={bezig}
-                                    style={{ minHeight: "44px", borderRadius: "var(--radius-md)", background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
+                                    style={{ minHeight: "44px", borderRadius: "var(--radius-md)", background: "var(--color-info)", color: "#fff", border: "none", cursor: "pointer", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
                                     aria-label="Bevestigen: wacht op onderdelen">
                                     <IconClock /> {bezig ? "…" : "Bevestig — Wacht op onderdelen"}
                                 </button>

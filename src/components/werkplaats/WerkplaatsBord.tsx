@@ -44,10 +44,10 @@ function KolomHeader({ naam, type, teller, status }: { naam: string; type: strin
                 {status && status !== "Beschikbaar" && (
                     <span style={{
                         fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                        color: status === "In onderhoud" ? "#78350f" : "#374151",
-                        background: status === "In onderhoud" ? "#fffbeb" : "#f3f4f6",
-                        border: `1px solid ${status === "In onderhoud" ? "#d9770655" : "#6b728055"}`,
-                        borderRadius: "9999px", padding: "1px 8px", whiteSpace: "nowrap",
+                        color: status === "In onderhoud" ? "var(--color-warning-text)" : "var(--color-body)",
+                        background: status === "In onderhoud" ? "var(--color-warning-bg)" : "var(--color-surface)",
+                        border: `1px solid ${status === "In onderhoud" ? "var(--color-warning-border)" : "var(--color-border)"}`,
+                        borderRadius: "var(--radius-full)", padding: "1px 8px", whiteSpace: "nowrap",
                     }}>
                         {status}
                     </span>
@@ -57,7 +57,7 @@ function KolomHeader({ naam, type, teller, status }: { naam: string; type: strin
                     color: teller > 0 ? "var(--color-heading)" : "var(--color-muted)",
                     background: teller > 0 ? "var(--gradient-accent-subtle)" : "var(--color-surface)",
                     border: "1px solid var(--color-border)",
-                    borderRadius: "9999px", padding: "0.15em 0.55em",
+                    borderRadius: "var(--radius-full)", padding: "0.15em 0.55em",
                     minWidth: "1.6em", textAlign: "center",
                 }}>
                     {teller}
@@ -94,7 +94,7 @@ function WerkplekKolom({ naam, type, status, orders, werkplekken, domeinRol, mij
             border: isBuitenGebruik
                 ? "1px solid var(--color-border)"
                 : isInOnderhoud
-                    ? "1px solid #d9770644"
+                    ? "1px solid var(--color-warning-border)"
                     : "1px solid var(--glass-border)",
             borderRadius: "var(--radius-xl)",
             display: "flex", flexDirection: "column",
@@ -109,11 +109,11 @@ function WerkplekKolom({ naam, type, status, orders, werkplekken, domeinRol, mij
                 <div style={{
                     margin: "0 var(--space-3) var(--space-2)",
                     padding: "var(--space-2) var(--space-3)",
-                    background: "#fffbeb",
-                    border: "1px solid #fcd34d",
+                    background: "var(--color-warning-bg)",
+                    border: "1px solid var(--color-warning-border)",
                     borderRadius: "var(--radius-md)",
                     fontSize: "var(--text-xs)",
-                    color: "#78350f",
+                    color: "var(--color-warning-text)",
                     fontWeight: "var(--weight-semibold)",
                     display: "flex", alignItems: "center", gap: "var(--space-2)",
                 }}>
@@ -131,7 +131,7 @@ function WerkplekKolom({ naam, type, status, orders, werkplekken, domeinRol, mij
                     <div style={{ textAlign: "center", padding: "var(--space-8) var(--space-4)", color: "var(--color-muted)", fontSize: "var(--text-sm)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
                         {!isInOnderhoud && !isBuitenGebruik && (
                             <>
-                                <span style={{ display: "inline-flex", width: "10px", height: "10px", borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,0.5)" }} aria-hidden="true" />
+                                <span style={{ display: "inline-flex", width: "10px", height: "10px", borderRadius: "50%", background: "var(--color-success)", boxShadow: "0 0 6px var(--color-success-border)" }} aria-hidden="true" />
                                 <p style={{ margin: 0 }}>Vrij</p>
                             </>
                         )}

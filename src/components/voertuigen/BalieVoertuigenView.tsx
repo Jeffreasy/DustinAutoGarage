@@ -21,9 +21,9 @@ import VoertuigBewerkModal from "../modals/VoertuigBewerkModal";
 function apkStijl(ms: number | undefined) {
     if (!ms) return { color: "var(--color-muted)", bg: "transparent", border: "transparent" };
     const nu = Date.now();
-    if (ms < nu) return { color: "#dc2626", bg: "rgba(220,38,38,0.08)", border: "rgba(220,38,38,0.3)" };
-    if (ms < nu + 30 * 864e5) return { color: "#d97706", bg: "rgba(217,119,6,0.08)", border: "rgba(217,119,6,0.3)" };
-    return { color: "#16a34a", bg: "rgba(22,163,74,0.08)", border: "rgba(22,163,74,0.3)" };
+    if (ms < nu) return { color: "var(--color-error)", bg: "var(--color-error-bg)", border: "var(--color-error-border)" };
+    if (ms < nu + 30 * 864e5) return { color: "var(--color-warning)", bg: "var(--color-warning-bg)", border: "var(--color-warning-border)" };
+    return { color: "var(--color-success)", bg: "var(--color-success-bg)", border: "var(--color-success-border)" };
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ function VoertuigKaartBalie({ voertuig, onBewerk }: { voertuig: Doc<"voertuigen"
         }}>
             {/* Kaart header */}
             <div style={{ padding: "var(--space-4) var(--space-4) 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-2)" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 900, fontSize: "var(--text-xl)", color: "var(--color-heading)", letterSpacing: "0.06em" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--weight-black)", fontSize: "var(--text-xl)", color: "var(--color-heading)", letterSpacing: "0.06em" }}>
                     {voertuig.kenteken}
                 </span>
                 <button
@@ -155,7 +155,7 @@ function VoertuigKaartBalie({ voertuig, onBewerk }: { voertuig: Doc<"voertuigen"
                     display: "inline-flex", alignSelf: "flex-start",
                     fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                     color: apk.color, background: apk.bg, border: `1px solid ${apk.border}`,
-                    borderRadius: "9999px", padding: "0.2em 0.65em",
+                    borderRadius: "var(--radius-full)", padding: "0.2em 0.65em",
                 }}>
                     {voertuig.apkVervaldatum
                         ? `APK: ${new Date(voertuig.apkVervaldatum).toLocaleDateString("nl-NL")}`
@@ -173,7 +173,7 @@ function VoertuigKaartBalie({ voertuig, onBewerk }: { voertuig: Doc<"voertuigen"
                         style={{
                             flex: 1, padding: "var(--space-2) var(--space-3)",
                             borderRadius: "var(--radius-md)",
-                            border: `1px solid ${kmFout ? "rgba(220,38,38,0.5)" : "var(--color-border)"}`,
+                            border: `1px solid ${kmFout ? "var(--color-error-border)" : "var(--color-border)"}`,
                             background: "var(--color-surface-2, var(--color-surface))",
                             color: "var(--color-heading)", fontSize: "var(--text-xs)",
                             minHeight: "34px", boxSizing: "border-box",
@@ -183,7 +183,7 @@ function VoertuigKaartBalie({ voertuig, onBewerk }: { voertuig: Doc<"voertuigen"
                     />
                     {bezig && <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="var(--color-muted)" strokeWidth={2} strokeLinecap="round" aria-hidden="true" style={{ animation: "spin 1s linear infinite", flexShrink: 0 }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>}
                 </div>
-                {kmFout && <p style={{ fontSize: "var(--text-xs)", color: "#dc2626", margin: 0 }}>{kmFout}</p>}
+                {kmFout && <p style={{ fontSize: "var(--text-xs)", color: "var(--color-error)", margin: 0 }}>{kmFout}</p>}
             </div>
         </div>
     );
@@ -213,18 +213,18 @@ export default function BalieVoertuigenView() {
 
             {/* APK-banners */}
             {verlopen.length > 0 && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-xl)", background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.3)" }} role="alert">
-                    <span style={{ color: "#dc2626", flexShrink: 0, marginTop: "1px" }}><IconAlertTriangle /></span>
-                    <div style={{ fontSize: "var(--text-sm)", color: "#991b1b" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-xl)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)" }} role="alert">
+                    <span style={{ color: "var(--color-error)", flexShrink: 0, marginTop: "1px" }}><IconAlertTriangle /></span>
+                    <div style={{ fontSize: "var(--text-sm)", color: "var(--color-error-text)" }}>
                         <strong>{verlopen.length} voertuig{verlopen.length > 1 ? "en" : ""} met verlopen APK:</strong>
                         {" "}{verlopen.map((v) => v.kenteken).join(" · ")}
                     </div>
                 </div>
             )}
             {bijnaVerlopen.length > 0 && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-xl)", background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.3)" }} role="alert">
-                    <span style={{ color: "#d97706", flexShrink: 0, marginTop: "1px" }}><IconClock /></span>
-                    <div style={{ fontSize: "var(--text-sm)", color: "#92400e" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-xl)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)" }} role="alert">
+                    <span style={{ color: "var(--color-warning)", flexShrink: 0, marginTop: "1px" }}><IconClock /></span>
+                    <div style={{ fontSize: "var(--text-sm)", color: "var(--color-warning-text)" }}>
                         <strong>{bijnaVerlopen.length} voertuig{bijnaVerlopen.length > 1 ? "en" : ""} met APK binnen 30 dagen:</strong>
                         {" "}{bijnaVerlopen.map((v) => v.kenteken).join(" · ")}
                     </div>

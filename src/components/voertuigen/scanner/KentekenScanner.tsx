@@ -232,11 +232,11 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                 display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
                 padding: "var(--space-2) var(--space-3)", minHeight: "44px",
                 borderRadius: "var(--radius-md)",
-                background: "rgba(22,163,74,0.1)", border: "1px solid rgba(22,163,74,0.35)",
-                color: "#16a34a", fontSize: "var(--text-sm)",
+                background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)",
+                color: "var(--color-success)", fontSize: "var(--text-sm)",
             }}>
                 <IconCheck />
-                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.05em" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)", letterSpacing: "0.05em" }}>
                     {gevondenKenteken}
                 </span>
                 {voertuigInfo?.merk && (
@@ -248,7 +248,7 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                     onClick={reset}
                     style={{
                         background: "none", border: "none", cursor: "pointer",
-                        color: "var(--color-muted)", padding: "2px", display: "flex",
+                        color: "var(--color-muted)", padding: "var(--space-1)", display: "flex",
                     }}
                     aria-label="Scanner resetten"
                 >
@@ -264,15 +264,15 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                 display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
                 padding: "var(--space-2) var(--space-3)", minHeight: "44px",
                 borderRadius: "var(--radius-md)",
-                background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.3)",
-                color: "#dc2626", fontSize: "var(--text-sm)", maxWidth: "320px",
+                background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)",
+                color: "var(--color-error)", fontSize: "var(--text-sm)", maxWidth: "320px",
             }}>
                 <span style={{ flex: 1 }}>{foutmelding}</span>
                 <button
                     onClick={reset}
                     style={{
                         background: "none", border: "none", cursor: "pointer",
-                        color: "rgba(220,38,38,0.7)", padding: "2px", display: "flex", flexShrink: 0,
+                        color: "var(--color-error)", padding: "var(--space-1)", display: "flex", flexShrink: 0,
                     }}
                     aria-label="Probeer opnieuw"
                 >
@@ -301,9 +301,9 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                     display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
                     padding: "var(--space-2) var(--space-4)", minHeight: "44px",
                     borderRadius: "var(--radius-md)",
-                    border: "1.5px solid var(--color-accent, #10b981)",
-                    background: "rgba(16,185,129,0.07)",
-                    color: "var(--color-accent, #10b981)",
+                    border: "1.5px solid var(--color-accent)",
+                    background: "var(--color-accent-dim)",
+                    color: "var(--color-accent)",
                     fontSize: "var(--text-sm)",
                 }}>
                     <Spinner />

@@ -36,14 +36,15 @@ import type { WerkplekStatus } from "../../hooks/useWerkplaats";
 
 const WERKPLEK_STATUS_CONFIG: Record<WerkplekStatus | "_default", {
     label: string;
-    kleur: string;      // dot + badge kleur
+    kleur: string;
+    kleurBorder: string;
     achtergrond: string;
     tekst: string;
 }> = {
-    "Beschikbaar": { label: "Beschikbaar", kleur: "#16a34a", achtergrond: "#f0fdf4", tekst: "#14532d" },
-    "In onderhoud": { label: "In onderhoud", kleur: "#d97706", achtergrond: "#fffbeb", tekst: "#78350f" },
-    "Buiten gebruik": { label: "Buiten gebruik", kleur: "#6b7280", achtergrond: "#f3f4f6", tekst: "#374151" },
-    "_default": { label: "Beschikbaar", kleur: "#16a34a", achtergrond: "#f0fdf4", tekst: "#14532d" },
+    "Beschikbaar": { label: "Beschikbaar", kleur: "var(--color-success)", kleurBorder: "var(--color-success-border)", achtergrond: "var(--color-success-bg)", tekst: "var(--color-success-text)" },
+    "In onderhoud": { label: "In onderhoud", kleur: "var(--color-warning)", kleurBorder: "var(--color-warning-border)", achtergrond: "var(--color-warning-bg)", tekst: "var(--color-warning-text)" },
+    "Buiten gebruik": { label: "Buiten gebruik", kleur: "var(--color-muted)", kleurBorder: "var(--color-border)", achtergrond: "var(--color-surface)", tekst: "var(--color-body)" },
+    "_default": { label: "Beschikbaar", kleur: "var(--color-success)", kleurBorder: "var(--color-success-border)", achtergrond: "var(--color-success-bg)", tekst: "var(--color-success-text)" },
 };
 
 function getStatusCfg(status?: WerkplekStatus) {
@@ -379,8 +380,8 @@ function WerkplekRij({
                                             display: "inline-flex", alignItems: "center", gap: "4px",
                                             fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
                                             color: cfg.tekst, background: cfg.achtergrond,
-                                            border: `1px solid ${cfg.kleur}55`,
-                                            borderRadius: "9999px", padding: "1px 8px",
+                                            border: `1px solid ${cfg.kleurBorder}`,
+                                            borderRadius: "var(--radius-full)", padding: "1px 8px",
                                         }}>
                                             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: cfg.kleur, flexShrink: 0, display: "inline-block" }} />
                                             {cfg.label}
@@ -403,7 +404,7 @@ function WerkplekRij({
                                     fontSize: "var(--text-xs)",
                                     padding: "var(--space-1) var(--space-2)",
                                     minHeight: "32px",
-                                    borderColor: getStatusCfg(werkplek.status).kleur + "88",
+                                    borderColor: getStatusCfg(werkplek.status).kleurBorder,
                                     color: getStatusCfg(werkplek.status).tekst,
                                 }}
                             >
@@ -475,7 +476,7 @@ function WerkplekRij({
                         onClick={() => setFout(null)}
                         style={{
                             background: "none", border: "none", cursor: "pointer",
-                            color: "var(--color-error)", display: "flex", padding: "2px",
+                            color: "var(--color-error)", display: "flex", padding: "var(--space-1)",
                         }}
                         aria-label="Foutmelding sluiten"
                     >
