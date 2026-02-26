@@ -156,6 +156,7 @@ export const getRecenteBeurtenVerrijkt = query({
                     voertuig: voertuig
                         ? {
                             _id: voertuig._id,
+                            klantId: voertuig.klantId,       // ← vereist voor VoertuigDetailPanel klant-koppeling
                             kenteken: voertuig.kenteken,
                             merk: voertuig.merk,
                             model: voertuig.model,
