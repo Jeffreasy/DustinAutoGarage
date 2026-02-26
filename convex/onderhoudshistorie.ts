@@ -147,7 +147,11 @@ export const getRecenteBeurtenVerrijkt = query({
         const verrijkt = await Promise.all(
             beurten.map(async (beurt) => {
                 const voertuig = await ctx.db.get(beurt.voertuigId);
-                const klant = voertuig ? await ctx.db.get(voertuig.klantId) : null;
+                // klantId is optional in het schema — guard vóór ctx.db.get()
+                // anders crasht de hele Promise.all als één voertuig ongebonden is
+                const klant = (voertuig && voertuig.klantId)
+                    ? await ctx.db.get(voertuig.klantId)
+                    : null;
                 return {
                     ...beurt,
                     voertuig: voertuig
