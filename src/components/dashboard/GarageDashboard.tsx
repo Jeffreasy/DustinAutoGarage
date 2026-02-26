@@ -626,7 +626,7 @@ export default function GarageDashboard() {
 
     function handleKlantKeuze(keuze: ScanKlantKeuzeResult) {
         setToonVoertuigKlantKeuze(false);
-        setVoertuigPreFill(keuze.klantId ? { klantId: keuze.klantId, klantNaam: keuze.klantNaam } : undefined);
+        setVoertuigPreFill(keuze.klantId ? { klantId: keuze.klantId, klantNaam: keuze.klantNaam } : {});
         setToonVoertuigModal(true);
     }
 
