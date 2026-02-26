@@ -3,7 +3,7 @@
  *
  * Gedeelde modal — overzicht van alle onderhoudsbeurten.
  * Toont een professionele tabel met alle beurten (groot, klein, APK, etc.),
- * sorteerbaar op datum, type en kilometerstand.
+ * inclusief kenteken en klantnaam via de verrijkte Convex query.
  *
  * Gebruikt door:
  *   - EigenaarOnderhoudView (dashboard statistieken knop)
@@ -12,9 +12,8 @@
  */
 
 import { useState, useMemo } from "react";
-import { useRecenteOnderhoudsbeurten, useVerwijderOnderhoud } from "../../hooks/useOnderhoud";
+import { useRecenteBeurtenVerrijkt, useVerwijderOnderhoud } from "../../hooks/useOnderhoud";
 import ModalShell from "./ModalShell";
-
 
 // ---------------------------------------------------------------------------
 // Types & helpers
@@ -22,6 +21,9 @@ import ModalShell from "./ModalShell";
 
 import { TYPE_ICOON } from "../onderhoud/utils";
 import type { TypeWerk } from "../onderhoud/utils";
+
+// Retour-type van getRecenteBeurtenVerrijkt
+type BeurtVerrijkt = NonNullable<ReturnType<typeof useRecenteBeurtenVerrijkt>>[number];
 
 const TYPE_BADGE_KLEUR: Record<string, string> = {
     "Grote Beurt": "var(--color-error)",
@@ -57,7 +59,8 @@ type SortRichting = "asc" | "desc";
 // ---------------------------------------------------------------------------
 
 export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void }) {
-    const beurten = useRecenteOnderhoudsbeurten(200);
+    // ✅ FIX: gebruik de verrijkte query — bevat voertuig (kenteken) + klant (naam)
+    const beurten = useRecenteBeurtenVerrijkt(200);
     const verwijder = useVerwijderOnderhoud();
     const [sortVeld, setSortVeld] = useState<SortVeld>("datum");
     const [sortRichting, setSortRichting] = useState<SortRichting>("desc");
@@ -75,15 +78,17 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
     // Beschikbare types uit de geladen data
     const beschikbareTypes = useMemo(() => {
         if (!beurten) return [];
-        const set = new Set(beurten.map((b) => b.typeWerk));
+        const set = new Set(beurten.map((b: BeurtVerrijkt) => b.typeWerk));
         return Array.from(set).sort();
     }, [beurten]);
 
     // Sorteren + filteren
     const gesorteerd = useMemo(() => {
         if (!beurten) return [];
-        let result = filterType === "Alle" ? beurten : beurten.filter((b) => b.typeWerk === filterType);
-        return [...result].sort((a, b) => {
+        let result = filterType === "Alle"
+            ? beurten
+            : beurten.filter((b: BeurtVerrijkt) => b.typeWerk === filterType);
+        return [...result].sort((a: BeurtVerrijkt, b: BeurtVerrijkt) => {
             let cmp = 0;
             if (sortVeld === "datum") cmp = a.datumUitgevoerd - b.datumUitgevoerd;
             if (sortVeld === "km") cmp = (a.kmStandOnderhoud ?? 0) - (b.kmStandOnderhoud ?? 0);
@@ -101,9 +106,9 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
         startMaand.setHours(0, 0, 0, 0);
         return {
             totaal: beurten.length,
-            apkDezeMaand: beurten.filter((b) => b.typeWerk === "APK" && b.datumUitgevoerd >= startMaand.getTime()).length,
-            groteBeurten: beurten.filter((b) => b.typeWerk === "Grote Beurt").length,
-            kleineBeurten: beurten.filter((b) => b.typeWerk === "Kleine Beurt").length,
+            apkDezeMaand: beurten.filter((b: BeurtVerrijkt) => b.typeWerk === "APK" && b.datumUitgevoerd >= startMaand.getTime()).length,
+            groteBeurten: beurten.filter((b: BeurtVerrijkt) => b.typeWerk === "Grote Beurt").length,
+            kleineBeurten: beurten.filter((b: BeurtVerrijkt) => b.typeWerk === "Kleine Beurt").length,
         };
     }, [beurten]);
 
@@ -144,7 +149,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
     };
 
     return (
-        <ModalShell onSluit={onSluit} ariaLabel="Beurten overzicht" maxWidth="900px">
+        <ModalShell onSluit={onSluit} ariaLabel="Beurten overzicht" maxWidth="1000px">
             {/* ── Header ─────────────────────────────────────────────── */}
             <div style={{
                 padding: "var(--space-4) var(--space-5)",
@@ -220,6 +225,8 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                         <thead>
                             <tr>
                                 <th style={thStyle}>#</th>
+                                <th style={thStyle}>Kenteken</th>
+                                <th style={thStyle}>Klant</th>
                                 <th
                                     style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
                                     onClick={() => toggleSort("type")}
@@ -244,7 +251,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                             </tr>
                         </thead>
                         <tbody>
-                            {gesorteerd.map((beurt, idx) => (
+                            {gesorteerd.map((beurt: BeurtVerrijkt, idx: number) => (
                                 <tr
                                     key={beurt._id}
                                     style={{
@@ -259,11 +266,37 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                         {idx + 1}
                                     </td>
 
+                                    {/* Kenteken */}
+                                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                                        {beurt.voertuig ? (
+                                            <span style={{
+                                                fontFamily: "var(--font-mono)", fontWeight: 700,
+                                                fontSize: "var(--text-xs)", letterSpacing: "0.05em",
+                                                color: "var(--color-heading)",
+                                            }}>
+                                                {beurt.voertuig.kenteken}
+                                            </span>
+                                        ) : (
+                                            <span style={{ color: "var(--color-border)", fontSize: "var(--text-xs)" }}>—</span>
+                                        )}
+                                    </td>
+
+                                    {/* Klantnaam */}
+                                    <td style={{ ...tdStyle, whiteSpace: "nowrap", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {beurt.klant ? (
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-body)" }}>
+                                                {beurt.klant.voornaam} {beurt.klant.achternaam}
+                                            </span>
+                                        ) : (
+                                            <span style={{ color: "var(--color-border)", fontSize: "var(--text-xs)" }}>—</span>
+                                        )}
+                                    </td>
+
                                     {/* Type werk + icoon */}
                                     <td style={tdStyle}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                                             <span style={{ fontSize: "var(--text-base)" }}>
-                                                {TYPE_ICOON[beurt.typeWerk] ?? "🔧"}
+                                                {TYPE_ICOON[beurt.typeWerk as TypeWerk] ?? "🔧"}
                                             </span>
                                             <span
                                                 style={{
@@ -289,7 +322,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                     </td>
 
                                     {/* Notities */}
-                                    <td style={{ ...tdStyle, maxWidth: "260px" }}>
+                                    <td style={{ ...tdStyle, maxWidth: "200px" }}>
                                         {beurt.werkNotities ? (
                                             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                                                 {beurt.werkNotities}
@@ -351,7 +384,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                                 disabled={!!verwijderBezig}
                                                 style={{
                                                     background: "none", border: "none", cursor: "pointer",
-                                                    color: "var(--color-error, #dc2626)", padding: "var(--space-1)",
+                                                    color: "var(--color-error)", padding: "var(--space-1)",
                                                     borderRadius: "var(--radius-sm)", display: "inline-flex",
                                                     alignItems: "center", justifyContent: "center",
                                                     minHeight: "32px", minWidth: "32px",
