@@ -19,6 +19,9 @@ import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
 import NieuweKlantModal from "../modals/NieuweKlantModal";
 import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
 import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
+import ScanKlantKeuzeModal from "../modals/ScanKlantKeuzeModal";
+import type { ScanKlantKeuzeResult } from "../modals/ScanKlantKeuzeModal";
+import type { NieuwVoertuigPreFill } from "../modals/NieuwVoertuigModal";
 
 // ---------------------------------------------------------------------------
 // SVG Icons
@@ -610,9 +613,28 @@ export default function GarageDashboard() {
     const { isBalie, isEigenaar, domeinRol, isLoading } = useRol();
     const { isMobile, isTabletOrSmaller } = useResponsive();
 
+    const [toonVoertuigKlantKeuze, setToonVoertuigKlantKeuze] = useState(false);
     const [toonVoertuigModal, setToonVoertuigModal] = useState(false);
+    const [voertuigPreFill, setVoertuigPreFill] = useState<NieuwVoertuigPreFill | undefined>(undefined);
     const [toonKlantModal, setToonKlantModal] = useState(false);
     const [toonOrderModal, setToonOrderModal] = useState(false);
+
+    function openNieuwVoertuig() {
+        setVoertuigPreFill(undefined);
+        setToonVoertuigKlantKeuze(true);
+    }
+
+    function handleKlantKeuze(keuze: ScanKlantKeuzeResult) {
+        setToonVoertuigKlantKeuze(false);
+        setVoertuigPreFill(keuze.klantId ? { klantId: keuze.klantId, klantNaam: keuze.klantNaam } : undefined);
+        setToonVoertuigModal(true);
+    }
+
+    function sluitVoertuigModals() {
+        setToonVoertuigKlantKeuze(false);
+        setToonVoertuigModal(false);
+        setVoertuigPreFill(undefined);
+    }
 
     if (isLoading) {
         return (
@@ -651,7 +673,7 @@ export default function GarageDashboard() {
             {isMobile && isBalie && (
                 <Snelacties
                     isBalie={isBalie} isEigenaar={isEigenaar} isMobile={true}
-                    onNieuwVoertuig={() => setToonVoertuigModal(true)}
+                    onNieuwVoertuig={openNieuwVoertuig}
                     onNieuweKlant={() => setToonKlantModal(true)}
                     onNieuweOrder={() => setToonOrderModal(true)}
                 />
@@ -683,7 +705,7 @@ export default function GarageDashboard() {
                     {!isMobile && (
                         <Snelacties
                             isBalie={isBalie} isEigenaar={isEigenaar} isMobile={false}
-                            onNieuwVoertuig={() => setToonVoertuigModal(true)}
+                            onNieuwVoertuig={openNieuwVoertuig}
                             onNieuweKlant={() => setToonKlantModal(true)}
                             onNieuweOrder={() => setToonOrderModal(true)}
                         />
@@ -694,7 +716,18 @@ export default function GarageDashboard() {
             </div>
 
             {/* ── Modals ── */}
-            {toonVoertuigModal && <NieuwVoertuigModal onSluit={() => setToonVoertuigModal(false)} />}
+            {toonVoertuigKlantKeuze && (
+                <ScanKlantKeuzeModal
+                    onKeuze={handleKlantKeuze}
+                    onSluit={sluitVoertuigModals}
+                />
+            )}
+            {toonVoertuigModal && (
+                <NieuwVoertuigModal
+                    preFill={voertuigPreFill}
+                    onSluit={sluitVoertuigModals}
+                />
+            )}
             {toonKlantModal && <NieuweKlantModal onSluit={() => setToonKlantModal(false)} />}
             {toonOrderModal && <NieuweWerkorderModal onSluit={() => setToonOrderModal(false)} />}
         </div>

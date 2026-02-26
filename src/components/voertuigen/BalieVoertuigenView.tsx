@@ -15,6 +15,8 @@ import { useRol } from "../../hooks/useRol";
 import type { ScanVoertuigData, ScanPreFillData } from "../../hooks/useScannerActie";
 import ScannerSlot from "./scanner/ScannerSlot";
 import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
+import ScanKlantKeuzeModal from "../modals/ScanKlantKeuzeModal";
+import type { ScanKlantKeuzeResult } from "../modals/ScanKlantKeuzeModal";
 import VoertuigBewerkModal from "../modals/VoertuigBewerkModal";
 
 // ---------------------------------------------------------------------------
@@ -212,7 +214,10 @@ export default function BalieVoertuigenView() {
     const [toonNieuw, setToonNieuw] = useState(false);
     const [teBewerken, setTeBewerken] = useState<Doc<"voertuigen"> | null>(null);
     const [highlightId, setHighlightId] = useState<string | null>(null);
+    // ScanPreFill: verrijkte scan data (RDW) voor NieuwVoertuigModal
     const [scanPreFill, setScanPreFill] = useState<ScanPreFillData | null>(null);
+    // Two-step flow: na scan eerst keuze-modal
+    const [toonScanKeuze, setToonScanKeuze] = useState(false);
 
     const voertuigen = useVoertuigenLijst();
     const verlopen = useVerlopenApk() ?? [];         // APK < nu (eigen query)
@@ -229,9 +234,32 @@ export default function BalieVoertuigenView() {
     function handleGescandResultaat(kenteken: string, voertuigInfo?: ScanVoertuigData) {
         const preFill = handleScanResultaat(kenteken, voertuigInfo);
         if (preFill) {
+            // Nieuw voertuig — open eerst de keuze-modal (klant koppelen of niet)
             setScanPreFill(preFill);
-            setToonNieuw(true);
+            setToonScanKeuze(true);
         }
+        // Als preFill null is: bestaand voertuig gevonden → highlight (side-effect in hook)
+    }
+
+    /**
+     * Callback vanuit ScanKlantKeuzeModal:
+     * Gebruiker heeft gekozen met of zonder klant.
+     * Sluit keuze-modal, opent NieuwVoertuigModal met klantId (optioneel) in preFill.
+     */
+    function handleKlantKeuze(keuze: ScanKlantKeuzeResult) {
+        setToonScanKeuze(false);
+        setScanPreFill((prev) => prev ? {
+            ...prev,
+            klantId: keuze.klantId,
+            klantNaam: keuze.klantNaam,
+        } : null);
+        setToonNieuw(true);
+    }
+
+    function sluitAlleModals() {
+        setToonNieuw(false);
+        setToonScanKeuze(false);
+        setScanPreFill(null);
     }
 
     const gefilterd = (voertuigen ?? []).filter((v) => {
@@ -318,10 +346,30 @@ export default function BalieVoertuigenView() {
             )}
 
             {/* Modals */}
+            {/* Stap 1: keuze-modal na scan */}
+            {toonScanKeuze && scanPreFill && (
+                <ScanKlantKeuzeModal
+                    preFill={scanPreFill}
+                    onKeuze={handleKlantKeuze}
+                    onSluit={sluitAlleModals}
+                />
+            )}
+            {/* Stap 2: voertuig aanmaken (met of zonder klant) */}
             {toonNieuw && (
                 <NieuwVoertuigModal
-                    onSluit={() => { setToonNieuw(false); setScanPreFill(null); }}
-                    preFill={scanPreFill ?? undefined}
+                    onSluit={sluitAlleModals}
+                    preFill={scanPreFill
+                        ? {
+                            kenteken: scanPreFill.kenteken,
+                            merk: scanPreFill.merk,
+                            model: scanPreFill.model,
+                            bouwjaar: scanPreFill.bouwjaar,
+                            brandstof: scanPreFill.brandstof,
+                            apkVervaldatum: scanPreFill.apkVervaldatum,
+                            klantId: scanPreFill.klantId,
+                            klantNaam: scanPreFill.klantNaam,
+                        }
+                        : undefined}
                 />
             )}
             {teBewerken && <VoertuigBewerkModal voertuig={teBewerken} onSluit={() => setTeBewerken(null)} />}

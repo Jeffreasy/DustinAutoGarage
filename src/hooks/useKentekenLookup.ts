@@ -24,22 +24,57 @@ import { apiFetch, ApiError } from "../lib/api";
 // Types
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 export interface RDWVoertuigInfo {
+    // Identificatie
     kenteken: string;
     merk: string;
     model: string;
     bouwjaar: number;
+    voertuigsoort?: string;          // "Personenauto", "Bedrijfsauto", "Motor"
     inrichting?: string;             // "hatchback", "sedan"
+
+    // Kleuren
+    kleur?: string;                  // Eerste geregistreerde kleur
+    tweedeKleur?: string;            // Tweede kleur (bijv. "ZWART" op tweekleurige auto)
+
+    // Brandstof & techniek
     brandstof: "Benzine" | "Diesel" | "EV" | "Hybride" | "LPG";
     cilinderinhoud?: number;         // cc
-    vermogen?: number;               // kW
+    vermogen?: number;               // kW verbrandingsmotor
     emissieklasse?: string;          // "Euro 6"
+    co2Uitstoot?: number;            // g/km gecombineerd
+
+    // Gewichten & zitplaatsen
+    massaRijklaar?: number;          // kg rijklaar gewicht
+    maxTrekgewichtOngeremd?: number; // kg maximaal trekgewicht ongeremd
+    maxTrekgewichtGeremd?: number;   // kg maximaal trekgewicht geremd
+    aantalZitplaatsen?: number;      // aantal zitplaatsen (bijv. 5)
+
+    // APK & tenaamstelling
     apkVervaldatum?: string;         // "YYYY-MM-DD"
-    kleur?: string;                  // Geregistreerde kleur
+    eersteTenaamstelling?: string;   // "YYYY-MM-DD" — eerste NL registratie
+
+    // Garage-signalen
     wok: boolean;                    // true = wacht op keuren
-    heeftRecall: boolean;            // true = openstaande terugroepactie
+    heeftRecall: boolean;            // true = openstaande terugroepactie (boolean fallback)
+    recalls?: RecallDetail[];        // Gedetailleerde recall-informatie
     nap?: string;                    // "Logisch" | "Onlogisch"
 }
+
+/** Eén openstaande terugroepactie (RDW dataset j9yh-4bf6). */
+export interface RecallDetail {
+    code: string;
+    omschrijving?: string;
+    oorzaak?: string;
+    remedie?: string;
+    datum?: string; // "YYYY-MM-DD"
+}
+
+
 
 export type KentekenStatus = "idle" | "loading" | "ok" | "notfound" | "error";
 

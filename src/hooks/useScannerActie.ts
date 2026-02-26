@@ -6,13 +6,45 @@
  *   - Kenteken niet gevonden → preFill data retourneren voor NieuwVoertuigModal
  */
 
+import type { RecallDetail } from "./useKentekenLookup";
+import type { Id } from "../../convex/_generated/dataModel";
+
+export type { RecallDetail };
+
 export interface ScanVoertuigData {
+    // Identificatie
     merk?: string;
     model?: string;
     bouwjaar?: number | string;
-    brandstof?: string;
+    voertuigsoort?: string;
+    inrichting?: string;
+
+    // Kleuren
     kleur?: string;
+    tweedeKleur?: string;
+
+    // Brandstof & techniek
+    brandstof?: string;
+    cilinderinhoud?: number;
+    vermogen?: number;
+    emissieklasse?: string;
+    co2Uitstoot?: number;
+
+    // Gewichten & zitplaatsen
+    massaRijklaar?: number;
+    maxTrekgewichtOngeremd?: number;
+    maxTrekgewichtGeremd?: number;
+    aantalZitplaatsen?: number;
+
+    // APK & tenaamstelling
     apkVervaldatum?: string;
+    eersteTenaamstelling?: string;
+
+    // Garage-signalen
+    wok?: boolean;
+    heeftRecall?: boolean;
+    recalls?: RecallDetail[];
+    nap?: string;
 }
 
 export interface ScanPreFillData {
@@ -20,9 +52,26 @@ export interface ScanPreFillData {
     merk?: string;
     model?: string;
     bouwjaar?: number;
+    voertuigsoort?: string;
     brandstof?: string;
+    kleur?: string;
+    tweedeKleur?: string;
+    co2Uitstoot?: number;
+    massaRijklaar?: number;
+    aantalZitplaatsen?: number;
     apkVervaldatum?: string;
+    eersteTenaamstelling?: string;
+    // Recall-data meegeven zodat NieuwVoertuigModal ze direct kan tonen
+    wok?: boolean;
+    heeftRecall?: boolean;
+    recalls?: RecallDetail[];
+    nap?: string;
+    // Klant-koppeling vanuit ScanKlantKeuzeModal (optioneel)
+    klantId?: Id<"klanten">;
+    klantNaam?: string;
 }
+
+
 
 interface ScannerActieResult {
     /**
@@ -75,13 +124,32 @@ export function useScannerActie(
         // Nieuw voertuig: geef preFill data terug voor NieuwVoertuigModal
         const preFill: ScanPreFillData = { kenteken: norm };
         if (voertuigInfo) {
+            // Identificatie
             if (voertuigInfo.merk) preFill.merk = voertuigInfo.merk;
             if (voertuigInfo.model) preFill.model = voertuigInfo.model;
             if (voertuigInfo.bouwjaar) preFill.bouwjaar = Number(voertuigInfo.bouwjaar);
+            if (voertuigInfo.voertuigsoort) preFill.voertuigsoort = voertuigInfo.voertuigsoort;
+            // Brandstof
             if (voertuigInfo.brandstof) preFill.brandstof = voertuigInfo.brandstof;
+            // Kleuren
+            if (voertuigInfo.kleur) preFill.kleur = voertuigInfo.kleur;
+            if (voertuigInfo.tweedeKleur) preFill.tweedeKleur = voertuigInfo.tweedeKleur;
+            // Techniek
+            if (voertuigInfo.co2Uitstoot) preFill.co2Uitstoot = voertuigInfo.co2Uitstoot;
+            // Gewichten & zitplaatsen
+            if (voertuigInfo.massaRijklaar) preFill.massaRijklaar = voertuigInfo.massaRijklaar;
+            if (voertuigInfo.aantalZitplaatsen) preFill.aantalZitplaatsen = voertuigInfo.aantalZitplaatsen;
+            // APK & tenaamstelling
             if (voertuigInfo.apkVervaldatum) preFill.apkVervaldatum = voertuigInfo.apkVervaldatum;
+            if (voertuigInfo.eersteTenaamstelling) preFill.eersteTenaamstelling = voertuigInfo.eersteTenaamstelling;
+            // Garage-signalen
+            if (voertuigInfo.wok !== undefined) preFill.wok = voertuigInfo.wok;
+            if (voertuigInfo.heeftRecall !== undefined) preFill.heeftRecall = voertuigInfo.heeftRecall;
+            if (voertuigInfo.recalls?.length) preFill.recalls = voertuigInfo.recalls;
+            if (voertuigInfo.nap) preFill.nap = voertuigInfo.nap;
         }
         return preFill;
+
     }
 
     return { handleScanResultaat };

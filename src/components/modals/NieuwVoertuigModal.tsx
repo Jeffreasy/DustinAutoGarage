@@ -98,6 +98,9 @@ export type NieuwVoertuigPreFill = {
     bouwjaar?: number;
     brandstof?: string;
     apkVervaldatum?: string;
+    // Optionele klant-koppeling vanuit ScanKlantKeuzeModal
+    klantId?: Id<"klanten">;
+    klantNaam?: string;
 };
 
 export default function NieuwVoertuigModal({
@@ -109,12 +112,17 @@ export default function NieuwVoertuigModal({
 }) {
     const createVoertuig = useMutation(api.voertuigen.create);
     const [zoekKlant, setZoekKlant] = useState("");
-    const [gekozenKlantId, setGekozenKlantId] = useState<Id<"klanten"> | null>(null);
-    const [gekozenKlantNaam, setGekozenKlantNaam] = useState("");
+    // Als klantId al via preFill meegegeven is, sla klant-stap over
+    const [gekozenKlantId, setGekozenKlantId] = useState<Id<"klanten"> | null>(preFill?.klantId ?? null);
+    const [gekozenKlantNaam, setGekozenKlantNaam] = useState(preFill?.klantNaam ?? "");
     const klantResultaten = useQuery(
         api.klanten.zoek,
         zoekKlant.length >= 2 ? { term: zoekKlant } : "skip",
     );
+
+    // Als preFill aanwezig is, is de klant-keuze al gemaakt buiten deze modal
+    // (via ScanKlantKeuzeModal). In dat geval altijd het voertuig-formulier tonen.
+    const klantKeuzeGedaan = preFill !== undefined || gekozenKlantId !== null;
 
     const [form, setForm] = useState({
         kenteken: preFill?.kenteken ?? "",
@@ -157,12 +165,12 @@ export default function NieuwVoertuigModal({
 
     async function handleOpslaan(e: React.FormEvent) {
         e.preventDefault();
-        if (!gekozenKlantId) { setFout("Kies eerst een klant."); return; }
+        // klantId is optioneel — voertuig mag zonder klant worden aangemaakt
         setBezig(true);
         setFout(null);
         try {
             await createVoertuig({
-                klantId: gekozenKlantId,
+                klantId: gekozenKlantId ?? undefined,
                 kenteken: form.kenteken.toUpperCase().replace(/\s/g, "-"),
                 merk: form.merk,
                 model: form.model,
@@ -235,8 +243,8 @@ export default function NieuwVoertuigModal({
                 onSubmit={handleOpslaan}
                 style={{ padding: "var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-4)", overflowY: "auto" }}
             >
-                {/* Stap 1: Klant kiezen */}
-                {!gekozenKlantId ? (
+                {/* Klant-stap: toon alleen als klantKeuzeGedaan=false (handmatige aanmaak zonder keuze-modal) */}
+                {!klantKeuzeGedaan ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                         <label style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)" }}>
                             Koppel aan klant <span style={{ color: "var(--color-error)" }}>*</span>
@@ -270,21 +278,34 @@ export default function NieuwVoertuigModal({
                     </div>
                 ) : (
                     <>
-                        {/* Gekozen klant chip */}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-3)", background: "var(--glass-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
-                            <span style={{ fontSize: "var(--text-sm)", color: "var(--color-heading)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                                <IconUser />
-                                <strong>{gekozenKlantNaam}</strong>
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => { setGekozenKlantId(null); setGekozenKlantNaam(""); }}
-                                className="btn btn-ghost btn-sm"
-                                style={{ fontSize: "var(--text-xs)" }}
-                            >
-                                Wijzig
-                            </button>
-                        </div>
+                        {/* Klant-chip: getoond als klant gekoppeld, anders 'Onbekende eigenaar' badge */}
+                        {gekozenKlantId ? (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-3)", background: "var(--color-success-bg)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-success-border)" }}>
+                                <span style={{ fontSize: "var(--text-sm)", color: "var(--color-success)", display: "flex", alignItems: "center", gap: "var(--space-2)", fontWeight: "var(--weight-semibold)" }}>
+                                    <IconUser />
+                                    <strong>{gekozenKlantNaam}</strong>
+                                </span>
+                                {/* Alleen wijzigbaar als de keuze niet via preFill is gezet */}
+                                {!preFill?.klantId && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setGekozenKlantId(null); setGekozenKlantNaam(""); }}
+                                        className="btn btn-ghost btn-sm"
+                                        style={{ fontSize: "var(--text-xs)" }}
+                                    >
+                                        Wijzig
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            /* Geen klant gekozen — badge tonen */
+                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", background: "var(--glass-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
+                                <span style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                    <IconCar />
+                                    Voertuig wordt opgeslagen zonder klant-koppeling
+                                </span>
+                            </div>
+                        )}
 
                         {/* Kenteken + RDW */}
                         <div>
@@ -323,24 +344,50 @@ export default function NieuwVoertuigModal({
                                             <IconAlertTriangle /> WOK — Wacht op keuren: dit voertuig mag de openbare weg niet op
                                         </div>
                                     )}
-                                    {rdwData.heeftRecall && (
+
+                                    {/* Recalls: gedetailleerde lijst als beschikbaar, anders generieke melding */}
+                                    {rdwData.recalls && rdwData.recalls.length > 0 ? (
+                                        <div role="alert" style={{ padding: "var(--space-3)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                                            <div style={{ fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                                <IconAlertTriangle /> {rdwData.recalls.length} openstaande terugroepactie{rdwData.recalls.length > 1 ? "s" : ""}
+                                            </div>
+                                            {rdwData.recalls.map((r, i) => (
+                                                <div key={r.code ?? i} style={{ paddingLeft: "var(--space-4)", borderLeft: "2px solid var(--color-warning-border)", display: "flex", flexDirection: "column", gap: "2px" }}>
+                                                    <span style={{ fontWeight: "var(--weight-semibold)", fontFamily: "var(--font-mono)" }}>{r.code}</span>
+                                                    {r.omschrijving && <span style={{ color: "var(--color-warning-text, var(--color-warning))" }}>{r.omschrijving}</span>}
+                                                    {r.oorzaak && <span style={{ color: "var(--color-muted)" }}>Oorzaak: {r.oorzaak}</span>}
+                                                    {r.remedie && <span style={{ color: "var(--color-muted)" }}>Remedie: {r.remedie}</span>}
+                                                    {r.datum && <span style={{ color: "var(--color-muted)" }}>Aankondiging: {r.datum}</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : rdwData.heeftRecall ? (
                                         <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                                             <IconAlertTriangle /> Openstaande terugroepactie (Recall)
                                         </div>
-                                    )}
+                                    ) : null}
+
                                     {rdwData.nap === "Onlogisch" && (
                                         <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                                             <IconAlertTriangle /> Onlogische kilometerstand (NAP: verdacht)
                                         </div>
                                     )}
+
+                                    {/* Info-badges: alle beschikbare RDW metadata */}
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-                                        {rdwData.kleur && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>🎨 {rdwData.kleur}</span>}
-                                        {rdwData.inrichting && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>🚗 {rdwData.inrichting}</span>}
-                                        {rdwData.cilinderinhoud ? <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>⚙️ {rdwData.cilinderinhoud} cc</span> : null}
-                                        {rdwData.vermogen ? <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>⚡ {rdwData.vermogen} kW</span> : null}
-                                        {rdwData.emissieklasse && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>🌿 {rdwData.emissieklasse}</span>}
+                                        {rdwData.voertuigsoort && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--color-accent-dim)", border: "1px solid var(--color-accent)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-accent-text, var(--color-heading))", fontWeight: "var(--weight-medium)" }}>{rdwData.voertuigsoort}</span>}
+                                        {rdwData.kleur && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>Kleur: {rdwData.kleur}{rdwData.tweedeKleur ? ` / ${rdwData.tweedeKleur}` : ""}</span>}
+                                        {rdwData.inrichting && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>{rdwData.inrichting}</span>}
+                                        {rdwData.aantalZitplaatsen ? <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>{rdwData.aantalZitplaatsen} zitplaatsen</span> : null}
+                                        {rdwData.cilinderinhoud ? <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>{rdwData.cilinderinhoud} cc</span> : null}
+                                        {rdwData.vermogen ? <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>{rdwData.vermogen} kW</span> : null}
+                                        {rdwData.co2Uitstoot ? <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>{rdwData.co2Uitstoot} g/km CO₂</span> : null}
+                                        {rdwData.massaRijklaar ? <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>{rdwData.massaRijklaar} kg rijklaar</span> : null}
+                                        {rdwData.emissieklasse && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>{rdwData.emissieklasse}</span>}
+                                        {rdwData.eersteTenaamstelling && <span style={{ padding: "var(--space-1) var(--space-2)", background: "var(--glass-bg-subtle)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-body)" }}>1e tenaamstelling: {rdwData.eersteTenaamstelling}</span>}
                                     </div>
                                 </div>
+
                             )}
                         </div>
 
@@ -376,7 +423,8 @@ export default function NieuwVoertuigModal({
 
                 {fout && <div className="alert alert-error" role="alert">{fout}</div>}
 
-                {gekozenKlantId && (
+                {/* Submit-knop: altijd tonen als klantKeuzeGedaan (offwel via preFill, offwel na selectie) */}
+                {klantKeuzeGedaan && (
                     <button type="submit" disabled={bezig} className="btn btn-primary" style={{ minHeight: "52px", gap: "var(--space-2)" }}>
                         <IconCar />
                         {bezig ? "Aanmaken…" : "Voertuig registreren"}

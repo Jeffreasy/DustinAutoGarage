@@ -258,8 +258,8 @@ export default defineSchema({
     //   Technische en autogegevens. Gekoppeld aan klanten via klantId.
     // ──────────────────────────────────────────────────────────────────────────
     voertuigen: defineTable({
-        /** FK → klanten._id */
-        klantId: v.id("klanten"),
+        /** FK → klanten._id — optioneel: voertuig kan ongebonden zijn (later te koppelen). */
+        klantId: v.optional(v.id("klanten")),
 
         // ── Identificatie ─────────────────────────────────────────────────────
         /** Kentekenplaat zonder streepjes, bijv. "AB123C". Uniek binnen tenant. */

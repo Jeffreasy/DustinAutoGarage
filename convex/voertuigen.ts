@@ -163,11 +163,13 @@ export const zoekOpKenteken = query({
 // ---------------------------------------------------------------------------
 
 /**
- * create — Registreer een nieuw voertuig voor een klant.
+ * create — Registreer een nieuw voertuig. klantId is optioneel:
+ *   - Met klantId  → voertuig direct gekoppeld aan bestaande klant
+ *   - Zonder klantId → voertuig als "ongebonden" opgeslagen (later te koppelen)
  */
 export const create = mutation({
     args: {
-        klantId: v.id("klanten"),
+        klantId: v.optional(v.id("klanten")),
         kenteken: v.string(),
         merk: v.string(),
         model: v.string(),
@@ -184,11 +186,14 @@ export const create = mutation({
         const profiel = await requireDomainRole(ctx, "monteur");
         const tokenIdentifier = profiel.tokenIdentifier;
 
-        const klant = await ctx.db.get(args.klantId);
-        if (!klant || klant.tokenIdentifier !== tokenIdentifier) {
-            throw new Error(
-                "FORBIDDEN: Het opgegeven klantId behoort niet tot de huidige sessie."
-            );
+        // Valideer klantId alleen als meegegeven
+        if (args.klantId !== undefined) {
+            const klant = await ctx.db.get(args.klantId);
+            if (!klant || klant.tokenIdentifier !== tokenIdentifier) {
+                throw new Error(
+                    "FORBIDDEN: Het opgegeven klantId behoort niet tot de huidige sessie."
+                );
+            }
         }
 
         // Normaliseer kenteken: altijd uppercase, geen streepjes (bijv. "GH-446-V" → "GH446V")
@@ -217,9 +222,35 @@ export const create = mutation({
     },
 });
 
+
 /**
- * update — Wijzig voertuiggegevens (patch semantiek).
+ * koppelKlant — Koppel een ongebonden voertuig aan een bestaande klant.
+ * Vereist minimaal balie-rol (klant-koppeling is een administratieve actie).
  */
+export const koppelKlant = mutation({
+    args: {
+        voertuigId: v.id("voertuigen"),
+        klantId: v.id("klanten"),
+    },
+    handler: async (ctx, args): Promise<void> => {
+        const profiel = await requireDomainRole(ctx, "balie");
+        const tokenIdentifier = profiel.tokenIdentifier;
+
+        const voertuig = await ctx.db.get(args.voertuigId);
+        if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {
+            throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
+        }
+
+        const klant = await ctx.db.get(args.klantId);
+        if (!klant || klant.tokenIdentifier !== tokenIdentifier) {
+            throw new Error("FORBIDDEN: Klant niet gevonden of geen toegang.");
+        }
+
+        await ctx.db.patch(args.voertuigId, { klantId: args.klantId });
+    },
+});
+
+
 export const update = mutation({
     args: {
         voertuigId: v.id("voertuigen"),

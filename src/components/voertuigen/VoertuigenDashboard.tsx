@@ -19,6 +19,9 @@ import type { Doc } from "../../../convex/_generated/dataModel";
 import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
 import NieuweKlantModal from "../modals/NieuweKlantModal";
 import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
+import ScanKlantKeuzeModal from "../modals/ScanKlantKeuzeModal";
+import type { ScanKlantKeuzeResult } from "../modals/ScanKlantKeuzeModal";
+import type { NieuwVoertuigPreFill } from "../modals/NieuwVoertuigModal";
 
 // ---------------------------------------------------------------------------
 // SVG Icons (inline, Lucide-stijl, 24×24 viewBox)
@@ -217,10 +220,29 @@ export default function VoertuigenDashboard() {
     const apkWaarschuwingen = useApkWaarschuwingen(30);
     const { isBalie, isEigenaar, domeinRol, isLoading: rolLaden } = useRol();
 
+    const [toonVoertuigKlantKeuze, setToonVoertuigKlantKeuze] = useState(false);
     const [toonVoertuigModal, setToonVoertuigModal] = useState(false);
+    const [voertuigPreFill, setVoertuigPreFill] = useState<NieuwVoertuigPreFill | undefined>(undefined);
     const [toonKlantModal, setToonKlantModal] = useState(false);
     const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "info" | "success" | "warning" } | null>(null);
+
+    function openNieuwVoertuig() {
+        setVoertuigPreFill(undefined);
+        setToonVoertuigKlantKeuze(true);
+    }
+
+    function handleKlantKeuze(keuze: ScanKlantKeuzeResult) {
+        setToonVoertuigKlantKeuze(false);
+        setVoertuigPreFill(keuze.klantId ? { klantId: keuze.klantId, klantNaam: keuze.klantNaam } : undefined);
+        setToonVoertuigModal(true);
+    }
+
+    function sluitVoertuigModals() {
+        setToonVoertuigKlantKeuze(false);
+        setToonVoertuigModal(false);
+        setVoertuigPreFill(undefined);
+    }
 
     // ── Loading state — skeleton ───────────────────────────────────────────
     if (voertuigen === undefined || apkWaarschuwingen === undefined) {
@@ -269,7 +291,7 @@ export default function VoertuigenDashboard() {
                         className="btn btn-primary btn-sm"
                         id="voertuig-toevoegen-btn"
                         aria-label="Voertuig toevoegen"
-                        onClick={() => setToonVoertuigModal(true)}
+                        onClick={openNieuwVoertuig}
                     >
                         + Voertuig toevoegen
                     </button>
@@ -374,8 +396,17 @@ export default function VoertuigenDashboard() {
             </section>
 
             {/* ── Modals ── */}
+            {toonVoertuigKlantKeuze && (
+                <ScanKlantKeuzeModal
+                    onKeuze={handleKlantKeuze}
+                    onSluit={sluitVoertuigModals}
+                />
+            )}
             {toonVoertuigModal && (
-                <NieuwVoertuigModal onSluit={() => setToonVoertuigModal(false)} />
+                <NieuwVoertuigModal
+                    preFill={voertuigPreFill}
+                    onSluit={sluitVoertuigModals}
+                />
             )}
             {toonKlantModal && (
                 <NieuweKlantModal onSluit={() => setToonKlantModal(false)} />

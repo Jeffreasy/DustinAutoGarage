@@ -23,17 +23,48 @@ const isMobileDevice = typeof navigator !== "undefined" && navigator.maxTouchPoi
 // Types
 // ---------------------------------------------------------------------------
 
+interface RecallDetail {
+    code: string;
+    omschrijving?: string;
+    oorzaak?: string;
+    remedie?: string;
+    datum?: string;
+}
+
 interface ScanResultaat {
     detected_kenteken: string;
     voertuig?: {
+        // Identificatie
         merk?: string;
         model?: string;
         bouwjaar?: number | string;
-        brandstof?: string;
+        voertuigsoort?: string;
+        inrichting?: string;
+        // Kleuren
         kleur?: string;
+        tweedeKleur?: string;
+        // Brandstof & techniek
+        brandstof?: string;
+        cilinderinhoud?: number;
+        vermogen?: number;
+        emissieklasse?: string;
+        co2Uitstoot?: number;
+        // Gewichten & zitplaatsen
+        massaRijklaar?: number;
+        maxTrekgewichtOngeremd?: number;
+        maxTrekgewichtGeremd?: number;
+        aantalZitplaatsen?: number;
+        // APK & tenaamstelling
         apkVervaldatum?: string;
+        eersteTenaamstelling?: string;
+        // Garage-signalen
+        wok?: boolean;
+        heeftRecall?: boolean;
+        recalls?: RecallDetail[];
+        nap?: string;
     };
 }
+
 
 interface KentekenScannerProps {
     /** Callback: kenteken string zodra OCR slaagt */
