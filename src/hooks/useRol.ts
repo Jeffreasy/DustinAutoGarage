@@ -30,7 +30,19 @@ interface RolState {
     /** Balie of hoger: klantbeheer, voertuigen, facturen opstellen */
     isBalie: boolean;
 
-    /** Monteur of hoger: werkorders inkijken, notities toevoegen */
+    /**
+     * Minimaal monteur (eigenaar, balie, monteur) — heeft werkplaats-schrijfrechten.
+     * Stagiairs zijn uitgesloten.
+     */
+    isMonteurOfHoger: boolean;
+
+    /** True als de user überhaupt een actief medewerkers-record heeft (ook stagiairs). */
+    isGekoppeld: boolean;
+
+    /**
+     * @deprecated Gebruik `isGekoppeld` voor "heeft een rol" of `isMonteurOfHoger` voor
+     * "minimaal monteur-rechten". `isMonteur` dekte ook stagiairs wat misleidend was.
+     */
     isMonteur: boolean;
 
     /** Nog dooraan het ophalen van het profiel */
@@ -65,6 +77,11 @@ export function useRol(): RolState {
         domeinRol,
         isEigenaar: domeinRol === "eigenaar",
         isBalie: domeinRol === "eigenaar" || domeinRol === "balie",
+        // Minimaal monteur = schrijfrechten in werkplaats/voertuigen, stagiairs uitgesloten
+        isMonteurOfHoger: domeinRol === "monteur" || domeinRol === "balie" || domeinRol === "eigenaar",
+        // isGekoppeld = überhaupt een actief medewerkers-record (ook stagiairs)
+        isGekoppeld: domeinRol !== null,
+        // @deprecated — backward compat alias
         isMonteur: domeinRol !== null,
         isLoading,
         isNietGekoppeld: !isLoading && profiel === null,

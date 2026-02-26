@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { useVoertuigenLijst } from "../../hooks/useVoertuigen";
+import { useRol } from "../../hooks/useRol";
 import ScannerSlot from "./scanner/ScannerSlot";
 import type { Doc } from "../../../convex/_generated/dataModel";
 
@@ -124,6 +125,8 @@ function VoertuigKaartMonteur({ voertuig }: { voertuig: Doc<"voertuigen"> }) {
 export default function MonteurVoertuigenView() {
     const [zoek, setZoek] = useState("");
     const voertuigen = useVoertuigenLijst();
+    // F-03: uit useRol halen — isMonteurOfHoger is nu correct gedefinieerd in de hook
+    const { isMonteurOfHoger } = useRol();
 
     const gefilterd = (voertuigen ?? []).filter((v) => {
         if (zoek.length < 2) return true;
@@ -148,7 +151,10 @@ export default function MonteurVoertuigenView() {
                         style={{ minHeight: "48px", paddingLeft: "40px" }}
                     />
                 </div>
-                <ScannerSlot />
+                {/* F-03: scanner alleen voor monteur+ rollen, niet voor stagiairs */}
+                {isMonteurOfHoger && (
+                    <ScannerSlot onKenteken={(k) => setZoek(k)} label="Scan Kenteken" />
+                )}
             </div>
 
             {/* Grid */}

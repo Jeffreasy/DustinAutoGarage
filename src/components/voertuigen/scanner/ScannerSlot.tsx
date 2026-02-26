@@ -2,20 +2,33 @@
  * src/components/voertuigen/scanner/ScannerSlot.tsx
  *
  * Activatie-wrapper voor de KentekenScanner.
- * Stuurt het gevonden kenteken door via de `onKenteken` callback.
+ * Ondersteunt twee callbacks:
+ *   - onKenteken: alleen het kenteken (backward compat, Monteur)
+ *   - onGescandResultaat: kenteken + volledige voertuigdata (smart handler, Balie)
  */
 
 import KentekenScanner from "./KentekenScanner";
+import type { ScanVoertuigData } from "../../../hooks/useScannerActie";
 
 interface ScannerSlotProps {
+    /** Backward compat: alleen kenteken string (Monteur zoekfilter) */
     onKenteken?: (kenteken: string) => void;
+    /** Smart handler: kenteken + volledige voertuigdata uit OCR+RDW pipeline */
+    onGescandResultaat?: (kenteken: string, voertuig?: ScanVoertuigData) => void;
     label?: string;
 }
 
-export default function ScannerSlot({ onKenteken, label = "Scan Kenteken" }: ScannerSlotProps) {
+export default function ScannerSlot({
+    onKenteken,
+    onGescandResultaat,
+    label = "Scan Kenteken",
+}: ScannerSlotProps) {
     return (
         <KentekenScanner
-            onGescanned={(kenteken) => onKenteken?.(kenteken)}
+            onGescanned={(kenteken, voertuig) => {
+                onKenteken?.(kenteken);
+                onGescandResultaat?.(kenteken, voertuig);
+            }}
             label={label}
         />
     );

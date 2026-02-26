@@ -18,6 +18,60 @@ import type { KentekenStatus } from "../../hooks/useKentekenLookup";
 import ModalShell from "./ModalShell";
 
 // ---------------------------------------------------------------------------
+// SVG micro-icons (design system: geen emoji's als UI-iconen)
+// ---------------------------------------------------------------------------
+
+function IconCar() {
+    return (
+        <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2" />
+            <circle cx="9" cy="17" r="2" /><circle cx="17" cy="17" r="2" />
+        </svg>
+    );
+}
+
+function IconUser() {
+    return (
+        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+        </svg>
+    );
+}
+
+function IconSearch() {
+    return (
+        <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+    );
+}
+
+function IconCheck() {
+    return (
+        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12" />
+        </svg>
+    );
+}
+
+function IconX() {
+    return (
+        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+    );
+}
+
+function IconAlertTriangle() {
+    return (
+        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -37,7 +91,22 @@ const inputStyle: React.CSSProperties = {
 // NieuwVoertuigModal
 // ---------------------------------------------------------------------------
 
-export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void }) {
+export type NieuwVoertuigPreFill = {
+    kenteken?: string;
+    merk?: string;
+    model?: string;
+    bouwjaar?: number;
+    brandstof?: string;
+    apkVervaldatum?: string;
+};
+
+export default function NieuwVoertuigModal({
+    onSluit,
+    preFill,
+}: {
+    onSluit: () => void;
+    preFill?: NieuwVoertuigPreFill;
+}) {
     const createVoertuig = useMutation(api.voertuigen.create);
     const [zoekKlant, setZoekKlant] = useState("");
     const [gekozenKlantId, setGekozenKlantId] = useState<Id<"klanten"> | null>(null);
@@ -48,13 +117,13 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
     );
 
     const [form, setForm] = useState({
-        kenteken: "",
-        merk: "",
-        model: "",
-        bouwjaar: new Date().getFullYear(),
-        brandstof: "Benzine" as "Benzine" | "Diesel" | "EV" | "Hybride" | "LPG",
+        kenteken: preFill?.kenteken ?? "",
+        merk: preFill?.merk ?? "",
+        model: preFill?.model ?? "",
+        bouwjaar: preFill?.bouwjaar ?? new Date().getFullYear(),
+        brandstof: (preFill?.brandstof ?? "Benzine") as "Benzine" | "Diesel" | "EV" | "Hybride" | "LPG",
         kilometerstand: "" as string | number,
-        apkVervaldatum: "",
+        apkVervaldatum: preFill?.apkVervaldatum ?? "",
         voertuigNotities: "",
     });
     const [bezig, setBezig] = useState(false);
@@ -69,9 +138,10 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
         if (rdwStatus !== "ok" || !rdwData) return;
         setForm((f) => ({
             ...f,
+            // Overschrijf alleen lege velden — preFill-data heeft voorrang
             merk: f.merk || rdwData.merk,
             model: f.model || rdwData.model,
-            bouwjaar: f.bouwjaar === new Date().getFullYear() ? rdwData.bouwjaar : f.bouwjaar,
+            bouwjaar: (f.bouwjaar === (preFill?.bouwjaar ?? new Date().getFullYear())) ? rdwData.bouwjaar : f.bouwjaar,
             brandstof: rdwData.brandstof,
             apkVervaldatum: f.apkVervaldatum || (rdwData.apkVervaldatum ?? ""),
         }));
@@ -126,9 +196,21 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
     );
 
     const rdwBadge = () => {
-        if (rdwStatus === "ok") return <span style={{ fontSize: "var(--text-xs)", color: "var(--color-success, #16a34a)", fontWeight: "var(--weight-semibold)" }}>✓ Gevonden</span>;
-        if (rdwStatus === "notfound") return <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error, #dc2626)" }}>✗ Niet gevonden</span>;
-        if (rdwStatus === "error") return <span style={{ fontSize: "var(--text-xs)", color: "var(--color-warning, #d97706)" }}>⚠ Probeer opnieuw</span>;
+        if (rdwStatus === "ok") return (
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-success)", fontWeight: "var(--weight-semibold)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <IconCheck /> Gevonden
+            </span>
+        );
+        if (rdwStatus === "notfound") return (
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <IconX /> Niet gevonden
+            </span>
+        );
+        if (rdwStatus === "error") return (
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-warning)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <IconAlertTriangle /> Probeer opnieuw
+            </span>
+        );
         return null;
     };
 
@@ -136,8 +218,8 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
         <ModalShell onSluit={onSluit} ariaLabel="Nieuw voertuig toevoegen" maxWidth="560px">
             {/* Header */}
             <div style={{ padding: "var(--space-4) var(--space-5)", borderBottom: "1px solid var(--color-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)" }}>
-                    🚗 Nieuw Voertuig
+                <h2 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                    <IconCar /> Nieuw Voertuig
                 </h2>
                 <button
                     onClick={onSluit}
@@ -173,7 +255,13 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
                                 key={k._id}
                                 type="button"
                                 onClick={() => { setGekozenKlantId(k._id); setGekozenKlantNaam(`${k.voornaam} ${k.achternaam}`); }}
-                                style={{ textAlign: "left", padding: "var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "var(--color-surface)", cursor: "pointer", minHeight: "48px" }}
+                                style={{
+                                    textAlign: "left", padding: "var(--space-3)", borderRadius: "var(--radius-md)",
+                                    border: "1px solid var(--color-border)",
+                                    background: "var(--glass-bg-subtle)",
+                                    cursor: "pointer", minHeight: "48px",
+                                    transition: "border-color var(--transition-fast), background-color var(--transition-fast)",
+                                }}
                             >
                                 <strong style={{ color: "var(--color-heading)", display: "block", fontSize: "var(--text-sm)" }}>{k.voornaam} {k.achternaam}</strong>
                                 <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{k.emailadres}</span>
@@ -184,8 +272,9 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
                     <>
                         {/* Gekozen klant chip */}
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-3)", background: "var(--glass-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
-                            <span style={{ fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
-                                👤 <strong>{gekozenKlantNaam}</strong>
+                            <span style={{ fontSize: "var(--text-sm)", color: "var(--color-heading)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                <IconUser />
+                                <strong>{gekozenKlantNaam}</strong>
                             </span>
                             <button
                                 type="button"
@@ -218,10 +307,10 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
                                     onClick={handleRdwLookup}
                                     disabled={rdwStatus === "loading" || !form.kenteken.trim()}
                                     className="btn btn-secondary"
-                                    style={{ minHeight: "44px", whiteSpace: "nowrap", flexShrink: 0 }}
+                                    style={{ minHeight: "44px", whiteSpace: "nowrap", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
                                     aria-label="Kenteken opzoeken via RDW"
                                 >
-                                    {rdwStatus === "loading" ? "⏳" : "🔍 Ophalen"}
+                                    {rdwStatus === "loading" ? "Laden…" : <><IconSearch /> Ophalen</>}
                                 </button>
                             </div>
                             {rdwBadge() && <div style={{ marginTop: "var(--space-1)" }}>{rdwBadge()}</div>}
@@ -230,18 +319,18 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
                             {rdwStatus === "ok" && rdwData && (
                                 <div style={{ marginTop: "var(--space-2)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                                     {rdwData.wok && (
-                                        <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "rgba(220,38,38,0.1)", border: "1px solid var(--color-error, #dc2626)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-error, #dc2626)", fontWeight: "var(--weight-semibold)" }}>
-                                            🚫 WOK — Wacht op keuren: dit voertuig mag de openbare weg niet op
+                                        <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-error)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                            <IconAlertTriangle /> WOK — Wacht op keuren: dit voertuig mag de openbare weg niet op
                                         </div>
                                     )}
                                     {rdwData.heeftRecall && (
-                                        <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "rgba(217,119,6,0.1)", border: "1px solid var(--color-warning, #d97706)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning, #d97706)", fontWeight: "var(--weight-semibold)" }}>
-                                            ⚠️ Openstaande terugroepactie (Recall)
+                                        <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                            <IconAlertTriangle /> Openstaande terugroepactie (Recall)
                                         </div>
                                     )}
                                     {rdwData.nap === "Onlogisch" && (
-                                        <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "rgba(217,119,6,0.1)", border: "1px solid var(--color-warning, #d97706)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning, #d97706)", fontWeight: "var(--weight-semibold)" }}>
-                                            🔢 Onlogische kilometerstand (NAP: verdacht)
+                                        <div role="alert" style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-md)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                            <IconAlertTriangle /> Onlogische kilometerstand (NAP: verdacht)
                                         </div>
                                     )}
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
@@ -288,8 +377,9 @@ export default function NieuwVoertuigModal({ onSluit }: { onSluit: () => void })
                 {fout && <div className="alert alert-error" role="alert">{fout}</div>}
 
                 {gekozenKlantId && (
-                    <button type="submit" disabled={bezig} className="btn btn-primary" style={{ minHeight: "52px" }}>
-                        {bezig ? "Aanmaken…" : "🚗 Voertuig registreren"}
+                    <button type="submit" disabled={bezig} className="btn btn-primary" style={{ minHeight: "52px", gap: "var(--space-2)" }}>
+                        <IconCar />
+                        {bezig ? "Aanmaken…" : "Voertuig registreren"}
                     </button>
                 )}
             </form>

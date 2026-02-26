@@ -15,6 +15,17 @@ const API_URL = (import.meta.env.API_URL as string)?.trim();
 const TENANT_ID = (import.meta.env.TENANT_ID as string)?.trim();
 
 export const POST: APIRoute = async ({ request }) => {
+    // F-01 FIX: Verifieer dat de inkomende request een session-cookie heeft.
+    // Requests zonder cookie (niet-ingelogde partijen, bots) worden afgewezen
+    // vóórdat de service account sessie en OCR-kosten worden verbruikt.
+    const inkomendeCookie = request.headers.get("cookie") ?? "";
+    if (!inkomendeCookie) {
+        return new Response(JSON.stringify({ error: "Authenticatie vereist" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+        });
+    }
+
     const targetUrl = `${API_URL}/api/v1/rdw/scan-foto`;
 
     const forwardHeaders = new Headers();

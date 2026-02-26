@@ -10,6 +10,9 @@ import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { useVoertuigenLijst, useApkWaarschuwingen, useVerlopenApk } from "../../hooks/useVoertuigen";
+import { useScannerActie } from "../../hooks/useScannerActie";
+import { useRol } from "../../hooks/useRol";
+import type { ScanVoertuigData, ScanPreFillData } from "../../hooks/useScannerActie";
 import ScannerSlot from "./scanner/ScannerSlot";
 import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
 import VoertuigBewerkModal from "../modals/VoertuigBewerkModal";
@@ -102,7 +105,11 @@ function VoertuigSkeleton() {
 // VoertuigKaartBalie
 // ---------------------------------------------------------------------------
 
-function VoertuigKaartBalie({ voertuig, onBewerk }: { voertuig: Doc<"voertuigen">; onBewerk: () => void }) {
+function VoertuigKaartBalie({ voertuig, onBewerk, highlighted }: {
+    voertuig: Doc<"voertuigen">;
+    onBewerk: () => void;
+    highlighted?: boolean;
+}) {
     const updateKm = useMutation(api.voertuigen.updateKilometerstand);
     const [km, setKm] = useState(String(voertuig.kilometerstand ?? ""));
     const [bezig, setBezig] = useState(false);
@@ -119,16 +126,23 @@ function VoertuigKaartBalie({ voertuig, onBewerk }: { voertuig: Doc<"voertuigen"
     const apk = apkStijl(voertuig.apkVervaldatum);
 
     return (
-        <div style={{
-            borderRadius: "var(--radius-xl)",
-            background: "var(--glass-bg)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            border: "1px solid var(--glass-border)",
-            boxShadow: "var(--glass-shadow)",
-            display: "flex", flexDirection: "column", gap: "var(--space-3)",
-            overflow: "hidden",
-        }}>
+        <div
+            id={`voertuig-${voertuig._id}`}
+            style={{
+                borderRadius: "var(--radius-xl)",
+                background: "var(--glass-bg)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: highlighted
+                    ? "2px solid var(--color-accent)"
+                    : "1px solid var(--glass-border)",
+                boxShadow: highlighted
+                    ? "0 0 0 4px var(--color-accent-dim), var(--shadow-glow)"
+                    : "var(--glass-shadow)",
+                display: "flex", flexDirection: "column", gap: "var(--space-3)",
+                overflow: "hidden",
+                transition: "border var(--transition-slow), box-shadow var(--transition-slow)",
+            }}>
             {/* Kaart header */}
             <div style={{ padding: "var(--space-4) var(--space-4) 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-2)" }}>
                 <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--weight-black)", fontSize: "var(--text-xl)", color: "var(--color-heading)", letterSpacing: "0.06em" }}>
@@ -174,9 +188,9 @@ function VoertuigKaartBalie({ voertuig, onBewerk }: { voertuig: Doc<"voertuigen"
                             flex: 1, padding: "var(--space-2) var(--space-3)",
                             borderRadius: "var(--radius-md)",
                             border: `1px solid ${kmFout ? "var(--color-error-border)" : "var(--color-border)"}`,
-                            background: "var(--color-surface-2, var(--color-surface))",
+                            background: "var(--glass-bg-subtle)",
                             color: "var(--color-heading)", fontSize: "var(--text-xs)",
-                            minHeight: "34px", boxSizing: "border-box",
+                            minHeight: "34px", boxSizing: "border-box" as const,
                         }}
                         onBlur={handleKmUpdate}
                         onKeyDown={(e) => e.key === "Enter" && handleKmUpdate()}
@@ -197,10 +211,28 @@ export default function BalieVoertuigenView() {
     const [zoek, setZoek] = useState("");
     const [toonNieuw, setToonNieuw] = useState(false);
     const [teBewerken, setTeBewerken] = useState<Doc<"voertuigen"> | null>(null);
+    const [highlightId, setHighlightId] = useState<string | null>(null);
+    const [scanPreFill, setScanPreFill] = useState<ScanPreFillData | null>(null);
 
     const voertuigen = useVoertuigenLijst();
     const verlopen = useVerlopenApk() ?? [];         // APK < nu (eigen query)
     const bijnaVerlopen = useApkWaarschuwingen(30) ?? []; // APK 0..30d (eigen query)
+    // F-02: rol-bewustzijn — scanner en mutatieknoppen zijn balie+ exclusief
+    const { isBalie } = useRol();
+
+    const { handleScanResultaat } = useScannerActie(voertuigen, (id) => {
+        setHighlightId(id);
+        setZoek(""); // reset zoekfilter zodat kaart zichtbaar is
+        setTimeout(() => setHighlightId(null), 3000);
+    });
+
+    function handleGescandResultaat(kenteken: string, voertuigInfo?: ScanVoertuigData) {
+        const preFill = handleScanResultaat(kenteken, voertuigInfo);
+        if (preFill) {
+            setScanPreFill(preFill);
+            setToonNieuw(true);
+        }
+    }
 
     const gefilterd = (voertuigen ?? []).filter((v) => {
         if (zoek.length < 2) return true;
@@ -231,11 +263,13 @@ export default function BalieVoertuigenView() {
                 </div>
             )}
 
-            {/* Actiebalk */}
+            {/* Actiebalk — F-02: uitsluitend voor balie-rollen en hoger */}
             <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center" }}>
-                <button onClick={() => setToonNieuw(true)} className="btn btn-primary" style={{ minHeight: "48px", display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}>
-                    <IconPlus /> Nieuw Voertuig
-                </button>
+                {isBalie && (
+                    <button onClick={() => setToonNieuw(true)} className="btn btn-primary" style={{ minHeight: "48px", display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <IconPlus /> Nieuw Voertuig
+                    </button>
+                )}
                 <div style={{ flex: 1, maxWidth: "320px", position: "relative" }}>
                     <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--color-muted)", pointerEvents: "none" }}>
                         <IconSearch />
@@ -247,7 +281,9 @@ export default function BalieVoertuigenView() {
                         aria-label="Voertuigen zoeken"
                     />
                 </div>
-                <ScannerSlot onKenteken={(k) => setZoek(k)} label="Scan Kenteken" />
+                {isBalie && (
+                    <ScannerSlot onGescandResultaat={handleGescandResultaat} label="Scan Kenteken" />
+                )}
             </div>
 
             {/* Teller */}
@@ -265,7 +301,12 @@ export default function BalieVoertuigenView() {
             ) : (
                 <div style={{ display: "grid", gap: "var(--space-3)", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
                     {gefilterd.map((v) => (
-                        <VoertuigKaartBalie key={v._id} voertuig={v} onBewerk={() => setTeBewerken(v)} />
+                        <VoertuigKaartBalie
+                            key={v._id}
+                            voertuig={v}
+                            onBewerk={() => setTeBewerken(v)}
+                            highlighted={highlightId === v._id}
+                        />
                     ))}
                     {gefilterd.length === 0 && (
                         <div className="empty-state" style={{ gridColumn: "1 / -1" }}>
@@ -277,7 +318,12 @@ export default function BalieVoertuigenView() {
             )}
 
             {/* Modals */}
-            {toonNieuw && <NieuwVoertuigModal onSluit={() => setToonNieuw(false)} />}
+            {toonNieuw && (
+                <NieuwVoertuigModal
+                    onSluit={() => { setToonNieuw(false); setScanPreFill(null); }}
+                    preFill={scanPreFill ?? undefined}
+                />
+            )}
             {teBewerken && <VoertuigBewerkModal voertuig={teBewerken} onSluit={() => setTeBewerken(null)} />}
         </div>
     );
