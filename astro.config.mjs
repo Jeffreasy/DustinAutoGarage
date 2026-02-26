@@ -16,6 +16,15 @@ export default defineConfig({
      */
     output: "server",
 
+    /**
+     * security.checkOrigin is disabled: Astro 5 blokkeert POST requests zonder
+     * correcte Origin header (mobiele browsers). Onze LaventeCare backend heeft
+     * eigen CSRF-bescherming via de Double-Submit Cookie Pattern.
+     */
+    security: {
+        checkOrigin: false,
+    },
+
     adapter: vercel({
         /**
          * Web Analytics — gratis op Vercel; toont pageviews zonder cookies.
