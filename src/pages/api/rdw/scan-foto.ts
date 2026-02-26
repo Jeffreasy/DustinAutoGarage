@@ -13,6 +13,13 @@ const API_URL = (import.meta.env.API_URL as string)?.trim();
 const TENANT_ID = (import.meta.env.TENANT_ID as string)?.trim();
 
 export const POST: APIRoute = async ({ request }) => {
+    // 🔍 DEBUG PROBE — remove after debugging
+    console.log("[scan-foto] PROBE HIT — handler is running, method:", request.method);
+    return new Response(JSON.stringify({ debug: "probe-ok", ts: Date.now() }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+    });
+
     const targetUrl = `${API_URL}/api/v1/rdw/scan-foto`;
 
     const forwardHeaders = new Headers();
