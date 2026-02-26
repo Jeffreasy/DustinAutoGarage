@@ -19,6 +19,7 @@ import {
 } from "../../hooks/useOnderhoud";
 import NieuweBeurtModal from "../modals/NieuweBeurtModal";
 import BeurtenOverzichtModal from "../modals/BeurtenOverzichtModal";
+import RecenteBeurtenModal from "../modals/RecenteBeurtenModal";
 import { TYPE_ICOON, formatDatum } from "./utils";
 import type { TypeWerk } from "./utils";
 
@@ -365,6 +366,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 export default function BalieOnderhoudView() {
     const [actieveTab, setActieveTab] = useState<Tab>("overzicht");
     const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
+    const [toonRecenteModal, setToonRecenteModal] = useState(false);
 
     function handleOpenDossier(v: Doc<"voertuigen">) {
         setGeselecteerdVoertuig(v);
@@ -416,9 +418,18 @@ export default function BalieOnderhoudView() {
                         </section>
 
                         <section>
-                            <h2 style={{ margin: "0 0 var(--space-3)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)" }}>
-                                Recente onderhoudsbeurten
-                            </h2>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
+                                <h2 style={{ margin: 0, fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)" }}>
+                                    Recente onderhoudsbeurten
+                                </h2>
+                                <button
+                                    onClick={() => setToonRecenteModal(true)}
+                                    className="btn btn-ghost btn-sm"
+                                    style={{ fontSize: "var(--text-xs)", minHeight: "30px", gap: "var(--space-1)" }}
+                                >
+                                    🔧 Bekijk alle
+                                </button>
+                            </div>
                             <ActiviteitsFeed onOpenDossier={handleOpenDossier} />
                         </section>
                     </div>
@@ -428,6 +439,13 @@ export default function BalieOnderhoudView() {
                     geselecteerdVoertuig
                         ? <OnderhoudsDossier voertuig={geselecteerdVoertuig} onTerug={() => setGeselecteerdVoertuig(null)} />
                         : <VoertuigZoekenTab onOpenDossier={handleOpenDossier} />
+                )}
+
+                {toonRecenteModal && (
+                    <RecenteBeurtenModal
+                        onSluit={() => setToonRecenteModal(false)}
+                        onOpenVoertuig={handleOpenDossier}
+                    />
                 )}
             </div>
         </div>
