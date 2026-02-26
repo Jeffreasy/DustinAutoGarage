@@ -180,6 +180,16 @@ export const create = mutation({
         kilometerstand: v.optional(v.number()),
         apkVervaldatum: v.optional(v.number()),
         voertuigNotities: v.optional(v.string()),
+        // ── RDW-verrijking ────────────────────────────────────────────────────
+        voertuigsoort: v.optional(v.string()),
+        kleur: v.optional(v.string()),
+        tweedeKleur: v.optional(v.string()),
+        massaRijklaar: v.optional(v.number()),
+        maxTrekgewichtOngeremd: v.optional(v.number()),
+        maxTrekgewichtGeremd: v.optional(v.number()),
+        aantalZitplaatsen: v.optional(v.number()),
+        eersteTenaamstelling: v.optional(v.string()),
+        co2Uitstoot: v.optional(v.number()),
     },
     handler: async (ctx, args): Promise<Id<"voertuigen">> => {
         // B-12 FIX: Stagiairs zijn read-only — minimaal monteur vereist om voertuigen aan te maken.
@@ -264,6 +274,16 @@ export const update = mutation({
         kilometerstand: v.optional(v.number()),
         apkVervaldatum: v.optional(v.number()),
         voertuigNotities: v.optional(v.string()),
+        // ── RDW-verrijking ────────────────────────────────────────────────────
+        voertuigsoort: v.optional(v.string()),
+        kleur: v.optional(v.string()),
+        tweedeKleur: v.optional(v.string()),
+        massaRijklaar: v.optional(v.number()),
+        maxTrekgewichtOngeremd: v.optional(v.number()),
+        maxTrekgewichtGeremd: v.optional(v.number()),
+        aantalZitplaatsen: v.optional(v.number()),
+        eersteTenaamstelling: v.optional(v.string()),
+        co2Uitstoot: v.optional(v.number()),
     },
     handler: async (ctx, args): Promise<void> => {
         // B-12 FIX: Stagiairs zijn read-only — minimaal monteur vereist.

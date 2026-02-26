@@ -285,6 +285,34 @@ export default defineSchema({
 
         brandstof: vBrandstof,
 
+        // ── RDW-verrijking (opgeslagen bij aanmaken via scan of handmatig) ────
+        /** Soort voertuig, bijv. "Personenauto", "Bedrijfsauto", "Motor". */
+        voertuigsoort: v.optional(v.string()),
+
+        /** Eerste geregistreerde kleur, bijv. "WIT". */
+        kleur: v.optional(v.string()),
+
+        /** Tweede kleur (tweekleurige voertuigen), bijv. "ZWART". */
+        tweedeKleur: v.optional(v.string()),
+
+        /** Rijklaar gewicht in kg. */
+        massaRijklaar: v.optional(v.number()),
+
+        /** Maximaal trekgewicht ongeremd in kg. */
+        maxTrekgewichtOngeremd: v.optional(v.number()),
+
+        /** Maximaal trekgewicht geremd in kg. */
+        maxTrekgewichtGeremd: v.optional(v.number()),
+
+        /** Aantal zitplaatsen inclusief bestuurder. */
+        aantalZitplaatsen: v.optional(v.number()),
+
+        /** Eerste tenaamstelling in NL (YYYY-MM-DD). */
+        eersteTenaamstelling: v.optional(v.string()),
+
+        /** CO₂-uitstoot in g/km gecombineerd. */
+        co2Uitstoot: v.optional(v.number()),
+
         /** Laatste bekende kilometerstand. */
         kilometerstand: v.optional(v.number()),
 

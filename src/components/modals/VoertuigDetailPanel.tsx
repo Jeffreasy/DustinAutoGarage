@@ -147,15 +147,33 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
 
                 <Rij label="Merk & Model" waarde={`${voertuig.merk} ${voertuig.model}`} />
                 <Rij label="Bouwjaar" waarde={voertuig.bouwjaar} />
+                <Rij label="Voertuigsoort" waarde={voertuig.voertuigsoort} />
                 <Rij label="Brandstof" waarde={voertuig.brandstof} />
+                <Rij label="Kleur" waarde={voertuig.kleur
+                    ? voertuig.tweedeKleur ? `${voertuig.kleur} / ${voertuig.tweedeKleur}` : voertuig.kleur
+                    : undefined} />
                 <Rij label="Kilometerstand" waarde={voertuig.kilometerstand !== undefined ? `${voertuig.kilometerstand.toLocaleString("nl-NL")} km` : undefined} />
                 <Rij
                     label="APK Vervaldatum"
                     waarde={apkLabel(voertuig.apkVervaldatum)}
                     accent={apkKleur(voertuig.apkVervaldatum)}
                 />
+                <Rij label="1e Tenaamstelling" waarde={voertuig.eersteTenaamstelling} />
                 {voertuig.vin && <Rij label="VIN / Chassisnummer" waarde={<span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", letterSpacing: "0.04em" }}>{voertuig.vin}</span>} />}
                 {voertuig.meldcode && <Rij label="Meldcode" waarde={<span style={{ fontFamily: "var(--font-mono)" }}>{voertuig.meldcode}</span>} />}
+
+                {/* ── Technische specs ── alleen tonen als er data is */}
+                {(voertuig.massaRijklaar || voertuig.maxTrekgewichtGeremd || voertuig.maxTrekgewichtOngeremd || voertuig.aantalZitplaatsen || voertuig.co2Uitstoot) && (
+                    <>
+                        <SectieKop titel="Technische specificaties" icoon="⚙️" />
+                        <Rij label="Rijklaar gewicht" waarde={voertuig.massaRijklaar ? `${voertuig.massaRijklaar.toLocaleString("nl-NL")} kg` : undefined} />
+                        <Rij label="Trekgewicht geremd" waarde={voertuig.maxTrekgewichtGeremd ? `${voertuig.maxTrekgewichtGeremd.toLocaleString("nl-NL")} kg` : undefined} />
+                        <Rij label="Trekgewicht ongeremd" waarde={voertuig.maxTrekgewichtOngeremd ? `${voertuig.maxTrekgewichtOngeremd.toLocaleString("nl-NL")} kg` : undefined} />
+                        <Rij label="Zitplaatsen" waarde={voertuig.aantalZitplaatsen ? `${voertuig.aantalZitplaatsen}` : undefined} />
+                        <Rij label="CO₂-uitstoot" waarde={voertuig.co2Uitstoot ? `${voertuig.co2Uitstoot} g/km` : undefined} />
+                    </>
+                )}
+
                 {voertuig.voertuigNotities && (
                     <div style={{ marginTop: "var(--space-3)", padding: "var(--space-3)", background: "var(--glass-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
                         <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic" }}>
@@ -167,7 +185,11 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
                 {/* ── Sectie 2: Klant ── */}
                 <SectieKop titel="Eigenaar" icoon="👤" />
 
-                {klant === undefined ? (
+                {!voertuig.klantId ? (
+                    <p style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", fontStyle: "italic" }}>
+                        Geen klant gekoppeld aan dit voertuig.
+                    </p>
+                ) : klant === undefined ? (
                     <p style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)" }}>Klantgegevens laden…</p>
                 ) : klant === null ? (
                     <p style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", fontStyle: "italic" }}>Klant niet gevonden</p>

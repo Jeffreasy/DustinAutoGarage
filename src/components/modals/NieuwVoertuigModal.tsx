@@ -98,6 +98,16 @@ export type NieuwVoertuigPreFill = {
     bouwjaar?: number;
     brandstof?: string;
     apkVervaldatum?: string;
+    // RDW-verrijking
+    voertuigsoort?: string;
+    kleur?: string;
+    tweedeKleur?: string;
+    massaRijklaar?: number;
+    maxTrekgewichtOngeremd?: number;
+    maxTrekgewichtGeremd?: number;
+    aantalZitplaatsen?: number;
+    eersteTenaamstelling?: string;
+    co2Uitstoot?: number;
     // Optionele klant-koppeling vanuit ScanKlantKeuzeModal
     klantId?: Id<"klanten">;
     klantNaam?: string;
@@ -169,6 +179,8 @@ export default function NieuwVoertuigModal({
         setBezig(true);
         setFout(null);
         try {
+            // RDW-data: live rdwData heeft voorrang, anders preFill-data als fallback
+            const rdw = rdwData ?? null;
             await createVoertuig({
                 klantId: gekozenKlantId ?? undefined,
                 kenteken: form.kenteken.toUpperCase().replace(/\s/g, "-"),
@@ -179,6 +191,16 @@ export default function NieuwVoertuigModal({
                 kilometerstand: form.kilometerstand ? Number(form.kilometerstand) : undefined,
                 apkVervaldatum: form.apkVervaldatum ? new Date(form.apkVervaldatum).getTime() : undefined,
                 voertuigNotities: form.voertuigNotities || undefined,
+                // ── RDW-verrijking ────────────────────────────────────────────
+                voertuigsoort: rdw?.voertuigsoort ?? preFill?.voertuigsoort,
+                kleur: rdw?.kleur ?? preFill?.kleur,
+                tweedeKleur: rdw?.tweedeKleur ?? preFill?.tweedeKleur,
+                massaRijklaar: rdw?.massaRijklaar ?? preFill?.massaRijklaar,
+                maxTrekgewichtOngeremd: rdw?.maxTrekgewichtOngeremd ?? preFill?.maxTrekgewichtOngeremd,
+                maxTrekgewichtGeremd: rdw?.maxTrekgewichtGeremd ?? preFill?.maxTrekgewichtGeremd,
+                aantalZitplaatsen: rdw?.aantalZitplaatsen ?? preFill?.aantalZitplaatsen,
+                eersteTenaamstelling: rdw?.eersteTenaamstelling ?? preFill?.eersteTenaamstelling,
+                co2Uitstoot: rdw?.co2Uitstoot ?? preFill?.co2Uitstoot,
             });
             onSluit();
         } catch (err) {

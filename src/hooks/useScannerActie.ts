@@ -58,6 +58,8 @@ export interface ScanPreFillData {
     tweedeKleur?: string;
     co2Uitstoot?: number;
     massaRijklaar?: number;
+    maxTrekgewichtOngeremd?: number;
+    maxTrekgewichtGeremd?: number;
     aantalZitplaatsen?: number;
     apkVervaldatum?: string;
     eersteTenaamstelling?: string;
@@ -138,6 +140,8 @@ export function useScannerActie(
             if (voertuigInfo.co2Uitstoot) preFill.co2Uitstoot = voertuigInfo.co2Uitstoot;
             // Gewichten & zitplaatsen
             if (voertuigInfo.massaRijklaar) preFill.massaRijklaar = voertuigInfo.massaRijklaar;
+            if (voertuigInfo.maxTrekgewichtOngeremd) preFill.maxTrekgewichtOngeremd = voertuigInfo.maxTrekgewichtOngeremd;
+            if (voertuigInfo.maxTrekgewichtGeremd) preFill.maxTrekgewichtGeremd = voertuigInfo.maxTrekgewichtGeremd;
             if (voertuigInfo.aantalZitplaatsen) preFill.aantalZitplaatsen = voertuigInfo.aantalZitplaatsen;
             // APK & tenaamstelling
             if (voertuigInfo.apkVervaldatum) preFill.apkVervaldatum = voertuigInfo.apkVervaldatum;

@@ -2,12 +2,8 @@
  * src/components/modals/VoertuigBewerkModal.tsx
  *
  * Modal voor het bewerken van een bestaand voertuig.
- *
- * Gebruikt door:
- *   - BalieVoertuigenView  (✏️ knop op elke voertuigkaart)
- *   - EigenaarVoertuigenView (via BalieVoertuigenView)
- *
- * Vereisten: binnen een LaventeConvexProvider-tree (voor useMutation).
+ * Inclusief "RDW vernieuwen" knop die live RDW-data ophaalt
+ * en technische specs (voertuigsoort, kleuren, gewichten, etc.) up-to-date houdt.
  */
 
 import { useState } from "react";
@@ -15,6 +11,9 @@ import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import ModalShell from "./ModalShell";
+import { useKentekenLookup } from "../../hooks/useKentekenLookup";
+import { apiFetch, ApiError } from "../../lib/api";
+import type { RDWVoertuigInfo } from "../../hooks/useKentekenLookup";
 
 // ---------------------------------------------------------------------------
 // Types & constanten
@@ -65,6 +64,37 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
     const [bezig, setBezig] = useState(false);
     const [fout, setFout] = useState<string | null>(null);
 
+    // ── RDW refresh state ──────────────────────────────────────────────────
+    const [rdwBezig, setRdwBezig] = useState(false);
+    const [rdwFout, setRdwFout] = useState<string | null>(null);
+    const [rdwData, setRdwData] = useState<RDWVoertuigInfo | null>(null);
+    const [rdwGeladen, setRdwGeladen] = useState(false);
+
+    async function handleRdwVernieuwen() {
+        setRdwBezig(true);
+        setRdwFout(null);
+        setRdwData(null);
+        try {
+            const norm = voertuig.kenteken.replace(/[\s-]/g, "").toUpperCase();
+            const data = await apiFetch<RDWVoertuigInfo>(`/api/rdw/${norm}`);
+            setRdwData(data);
+            setRdwGeladen(true);
+            // Auto-fill basisvelden
+            setForm((f) => ({
+                ...f,
+                merk: data.merk || f.merk,
+                model: data.model || f.model,
+                bouwjaar: data.bouwjaar ? String(data.bouwjaar) : f.bouwjaar,
+                brandstof: data.brandstof || f.brandstof,
+                apkVervaldatum: data.apkVervaldatum || f.apkVervaldatum,
+            }));
+        } catch (err) {
+            setRdwFout(err instanceof ApiError ? err.message : "RDW lookup mislukt — probeer opnieuw.");
+        } finally {
+            setRdwBezig(false);
+        }
+    }
+
     async function handleOpslaan(e: React.FormEvent) {
         e.preventDefault();
         setBezig(true);
@@ -84,6 +114,18 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                 voertuigNotities: form.voertuigNotities || undefined,
                 vin: form.vin || undefined,
                 meldcode: form.meldcode || undefined,
+                // ── RDW-verrijking (alleen opgeslagen als vers opgehaald) ──────
+                ...(rdwData ? {
+                    voertuigsoort: rdwData.voertuigsoort,
+                    kleur: rdwData.kleur,
+                    tweedeKleur: rdwData.tweedeKleur,
+                    massaRijklaar: rdwData.massaRijklaar,
+                    maxTrekgewichtOngeremd: rdwData.maxTrekgewichtOngeremd,
+                    maxTrekgewichtGeremd: rdwData.maxTrekgewichtGeremd,
+                    aantalZitplaatsen: rdwData.aantalZitplaatsen,
+                    eersteTenaamstelling: rdwData.eersteTenaamstelling,
+                    co2Uitstoot: rdwData.co2Uitstoot,
+                } : {}),
             });
             onSluit();
         } catch (err) {
@@ -121,6 +163,52 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                     </p>
                 </div>
                 <button onClick={onSluit} className="btn btn-ghost btn-sm" style={{ minHeight: "40px" }} aria-label="Modal sluiten">✕</button>
+            </div>
+
+            {/* RDW refresh banner */}
+            <div style={{
+                padding: "var(--space-3) var(--space-5)",
+                borderBottom: "1px solid var(--color-border)",
+                background: rdwGeladen ? "var(--color-success-bg)" : "var(--glass-bg-subtle)",
+                display: "flex", alignItems: "center", gap: "var(--space-3)",
+            }}>
+                <div style={{ flex: 1 }}>
+                    {rdwGeladen ? (
+                        <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-success)", fontWeight: "var(--weight-semibold)" }}>
+                            ✅ RDW-data geladen — basisvelden bijgewerkt. Sla op om technische specs te bewaren.
+                        </p>
+                    ) : (
+                        <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                            Haal de meest actuele RDW-gegevens op voor dit voertuig.
+                        </p>
+                    )}
+                    {rdwFout && (
+                        <p style={{ margin: "4px 0 0", fontSize: "var(--text-xs)", color: "var(--color-error)" }}>
+                            ⚠️ {rdwFout}
+                        </p>
+                    )}
+                    {rdwGeladen && rdwData && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-1)", marginTop: "var(--space-2)" }}>
+                            {rdwData.voertuigsoort && <span style={{ padding: "1px 6px", background: "var(--color-accent-dim)", border: "1px solid var(--color-accent)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-accent-text, var(--color-heading))" }}>{rdwData.voertuigsoort}</span>}
+                            {rdwData.kleur && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>🎨 {rdwData.kleur}{rdwData.tweedeKleur ? ` / ${rdwData.tweedeKleur}` : ""}</span>}
+                            {rdwData.massaRijklaar && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>⚖️ {rdwData.massaRijklaar} kg</span>}
+                            {rdwData.aantalZitplaatsen && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>💺 {rdwData.aantalZitplaatsen} zitpl.</span>}
+                            {rdwData.co2Uitstoot && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>🌿 {rdwData.co2Uitstoot} g/km</span>}
+                            {rdwData.wok && <span style={{ padding: "1px 6px", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-error)", fontWeight: "var(--weight-semibold)" }}>⚠️ WOK</span>}
+                            {rdwData.heeftRecall && <span style={{ padding: "1px 6px", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)" }}>📢 Recall</span>}
+                        </div>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    onClick={handleRdwVernieuwen}
+                    disabled={rdwBezig}
+                    className="btn btn-secondary btn-sm"
+                    style={{ whiteSpace: "nowrap", flexShrink: 0, minHeight: "40px" }}
+                    aria-label="RDW-gegevens vernieuwen"
+                >
+                    {rdwBezig ? "Ophalen…" : "🔄 RDW vernieuwen"}
+                </button>
             </div>
 
             {/* Form */}
