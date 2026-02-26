@@ -30,3 +30,5 @@ Thumbs.db
 BackendDocumentation/*.png
 BackendDocumentation/*.jpg
 BackendDocumentation/*.gif
+.vercel
+.env*.local
