@@ -54,7 +54,7 @@ export async function getServiceSession(): Promise<ServiceSession | null> {
         body: JSON.stringify({
             email: SVC_EMAIL,
             password: SVC_PASS,
-            tenant_slug: "dustin-auto-garage",
+            // tenant_slug removed: backend uses X-Tenant-ID header (DisallowUnknownFields rejects extras)
         }),
     });
 
