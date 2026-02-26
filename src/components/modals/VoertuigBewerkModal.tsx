@@ -11,7 +11,6 @@ import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import ModalShell from "./ModalShell";
-import { useKentekenLookup } from "../../hooks/useKentekenLookup";
 import { apiFetch, ApiError } from "../../lib/api";
 import type { RDWVoertuigInfo } from "../../hooks/useKentekenLookup";
 

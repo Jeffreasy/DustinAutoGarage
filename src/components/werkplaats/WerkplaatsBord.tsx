@@ -17,7 +17,8 @@ import WerkorderLogboek from "./WerkorderLogboek";
 import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
 import {
     IconWrench, IconPlus, IconCheckCircle,
-    WERKPLEK_TYPE_ICON,
+    getWerkplekIcon,
+    type WerkplekType,
 } from "../ui/Icons";
 
 
@@ -26,7 +27,7 @@ import {
 // ---------------------------------------------------------------------------
 
 function KolomHeader({ naam, type, teller, status }: { naam: string; type: string; teller: number; status?: WerkplekStatus }) {
-    const icon = WERKPLEK_TYPE_ICON[type as keyof typeof WERKPLEK_TYPE_ICON] ?? WERKPLEK_TYPE_ICON["Overig"];
+    const icon = getWerkplekIcon((type as WerkplekType) ?? "Overig");
     const isGeblokkeerd = status === "In onderhoud" || status === "Buiten gebruik";
     return (
         <div style={{

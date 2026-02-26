@@ -131,8 +131,7 @@ function TabOverzicht({ data, isEigenaar, isZichzelf, onSave }: {
     const kanBewerken = isZichzelf || isEigenaar;
     const rol = (data.domeinRol as string) ?? "monteur";
 
-    // Samengestelde weergavenaam: voornaam + achternaam, of fallback naar naam
-    const volledigeNaam = [voornaam, achternaam].filter(Boolean).join(" ") || (data.naam as string) || "?";
+    // Samengestelde weergavenaam: afhankelijk van editMode
     const displayNaamInHeader = editMode
         ? [voornaam, achternaam].filter(Boolean).join(" ") || (data.naam as string) || "?"
         : (data.voornaam || data.achternaam

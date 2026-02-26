@@ -24,7 +24,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import {
     IconSettings, IconPlus, IconX, IconPencil, IconSave, IconTrash,
     IconChevronUp, IconChevronDown,
-    WERKPLEK_TYPE_ICON, WERKPLEK_TYPES,
+    getWerkplekIcon, WERKPLEK_TYPES,
     type WerkplekType,
 } from "../ui/Icons";
 import type { WerkplekStatus } from "../../hooks/useWerkplaats";
@@ -307,7 +307,7 @@ function WerkplekRij({
                     display: "flex", alignItems: "center",
                     flexShrink: 0,
                 }}>
-                    {WERKPLEK_TYPE_ICON[werkplek.type as WerkplekType] ?? WERKPLEK_TYPE_ICON["Overig"]}
+                    {getWerkplekIcon((werkplek.type as WerkplekType) ?? "Overig")}
                 </span>
 
                 {/* Bewerk of lees modus */}
