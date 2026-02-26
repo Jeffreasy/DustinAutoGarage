@@ -4,56 +4,64 @@
  * BFF proxy: multipart foto-upload → LaventeCare /api/v1/rdw/scan-foto (POST)
  * → xAI Grok Vision OCR → RDW Open Data → JSON { detected_kenteken, voertuig }
  *
- * Auth-strategie:
- *   1. Service account token via getServiceToken() (server-side, gecached 14 min)
- *   2. Fallback: forward user-cookies (werkt alleen als user weight ≥ 2 heeft)
- *
- * Vereiste Vercel env vars:
- *   LAVENTECARE_SVC_EMAIL + LAVENTECARE_SVC_PASS (voor service account auth)
- *   API_URL, TENANT_ID
+ * Browser stuurt FormData met veld "foto" (JPEG/PNG/WebP, max 5 MB).
  */
 
 import type { APIRoute } from "astro";
-import { getServiceToken } from "../../../lib/laventecareToken";
 
-const API_URL = import.meta.env.API_URL as string;
-const TENANT_ID = import.meta.env.TENANT_ID as string;
+const API_URL = (import.meta.env.API_URL as string)?.trim();
+const TENANT_ID = (import.meta.env.TENANT_ID as string)?.trim();
 
 export const POST: APIRoute = async ({ request }) => {
     const targetUrl = `${API_URL}/api/v1/rdw/scan-foto`;
 
     const forwardHeaders = new Headers();
 
-    // Service account token (preferred) of user-cookies (fallback)
-    const svcToken = await getServiceToken();
+    const cookie = request.headers.get("cookie");
+    if (cookie) forwardHeaders.set("cookie", cookie);
 
-    if (svcToken) {
-        forwardHeaders.set("Authorization", `Bearer ${svcToken}`);
-    } else {
-        const cookie = request.headers.get("cookie");
-        if (cookie) forwardHeaders.set("cookie", cookie);
+    const authorization = request.headers.get("authorization");
+    if (authorization) forwardHeaders.set("authorization", authorization);
 
-        const authorization = request.headers.get("authorization");
-        if (authorization) forwardHeaders.set("authorization", authorization);
-
-        const csrf = request.headers.get("x-csrf-token");
-        if (csrf) forwardHeaders.set("x-csrf-token", csrf);
-    }
+    const csrf = request.headers.get("x-csrf-token");
+    if (csrf) forwardHeaders.set("x-csrf-token", csrf);
 
     if (TENANT_ID) forwardHeaders.set("X-Tenant-ID", TENANT_ID);
 
-    // Forward multipart/form-data body direct door — NIET zelf parsen
+    // Forward de multipart/form-data body direct door — NIET zelf parsen
     const body = await request.arrayBuffer();
     const contentType = request.headers.get("content-type");
     if (contentType) forwardHeaders.set("content-type", contentType);
 
-    const backendResponse = await fetch(targetUrl, {
-        method: "POST",
-        headers: forwardHeaders,
-        body,
-    });
+    // Debug: log incoming cookie names (no values) for Vercel log visibility
+    const cookieNames = (cookie ?? "").split(";").map(c => c.split("=")[0].trim()).filter(Boolean);
+    console.log("[scan-foto] cookie keys:", cookieNames.join(", ") || "(none)");
+    console.log("[scan-foto] TENANT_ID present:", !!TENANT_ID, "| body bytes:", body.byteLength);
+
+    let backendResponse: Response;
+    try {
+        backendResponse = await fetch(targetUrl, {
+            method: "POST",
+            headers: forwardHeaders,
+            body,
+        });
+    } catch (err) {
+        console.error("[scan-foto] fetch failed:", err);
+        return new Response(JSON.stringify({ error: "Backend niet bereikbaar" }), {
+            status: 502,
+            headers: { "Content-Type": "application/json" },
+        });
+    }
 
     const responseBody = await backendResponse.text();
+
+    // Log exact backend error for debugging
+    if (!backendResponse.ok) {
+        console.error(
+            `[scan-foto] backend ${backendResponse.status}:`,
+            responseBody.slice(0, 500),
+        );
+    }
 
     return new Response(responseBody, {
         status: backendResponse.status,

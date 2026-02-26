@@ -7,8 +7,8 @@
 
 import type { APIRoute } from "astro";
 
-const API_URL = import.meta.env.API_URL as string;
-const TENANT_ID = import.meta.env.TENANT_ID as string;
+const API_URL = (import.meta.env.API_URL as string)?.trim();
+const TENANT_ID = (import.meta.env.TENANT_ID as string)?.trim();
 
 export const GET: APIRoute = async ({ request }) => {
     const targetUrl = `${API_URL}/api/v1/rdw/scans`;

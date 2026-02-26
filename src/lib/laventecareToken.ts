@@ -1,38 +1,49 @@
 /**
  * src/lib/laventecareToken.ts
  *
- * Server-side service account token manager voor LaventeCare BFF proxies.
+ * Server-side service account sessie-manager voor LaventeCare BFF proxies.
  *
  * Werking:
- *   - Logt in als LAVENTECARE_SVC_EMAIL + LAVENTECARE_SVC_PASS (server-side only)
- *   - Cachet het JWT access token voor 14 minuten (net onder de 15-min expiry)
- *   - Geeft een geldig Bearer token terug voor alle RDW-proxy calls
+ *   1. Server-side login als LAVENTECARE_SVC_EMAIL + LAVENTECARE_SVC_PASS
+ *   2. Extraheert Set-Cookie → converteert naar Cookie header formaat
+ *   3. Cachet de cookies + csrf_token voor 14 minuten
+ *   4. Geeft { cookieHeader, csrfToken } terug voor proxy gebruik
  *
  * Vereiste Vercel env vars:
  *   LAVENTECARE_SVC_EMAIL  — bijv. admin@dustinautogarage.nl
- *   LAVENTECARE_SVC_PASS   — wachtwoord van het service account
+ *   LAVENTECARE_SVC_PASS   — wachtwoord
  *   API_URL                — bijv. https://laventecareauthsystems.onrender.com
- *   TENANT_ID              — UUID van de tenant
+ *   TENANT_ID              — UUID van de Dustin tenant
  */
 
-const API_URL = import.meta.env.API_URL as string;
-const TENANT_ID = import.meta.env.TENANT_ID as string;
-const SVC_EMAIL = import.meta.env.LAVENTECARE_SVC_EMAIL as string | undefined;
-const SVC_PASS = import.meta.env.LAVENTECARE_SVC_PASS as string | undefined;
+const API_URL = (import.meta.env.API_URL as string)?.trim();
+const TENANT_ID = (import.meta.env.TENANT_ID as string)?.trim();
+const SVC_EMAIL = (import.meta.env.LAVENTECARE_SVC_EMAIL as string | undefined)?.trim();
+const SVC_PASS = (import.meta.env.LAVENTECARE_SVC_PASS as string | undefined)?.trim();
 
-// Module-level cache (warm instance hergebruik in serverless)
-let _cached: { token: string; expiresAt: number } | null = null;
+interface ServiceSession {
+    /** Cookie header string voor forward naar Go backend */
+    cookieHeader: string;
+    /** CSRF token voor x-csrf-token header op POST requests */
+    csrfToken: string;
+    expiresAt: number;
+}
 
-/** Retourneert een geldig Bearer access token voor het service account. */
-export async function getServiceToken(): Promise<string | null> {
+let _session: ServiceSession | null = null;
+
+/**
+ * Retourneert een geldige service-sessie (cookies + csrf).
+ * Logt automatisch opnieuw in als de cache verlopen is.
+ */
+export async function getServiceSession(): Promise<ServiceSession | null> {
     if (!SVC_EMAIL || !SVC_PASS) return null;
 
-    // Cache check: nog geldig?
-    if (_cached && _cached.expiresAt > Date.now()) {
-        return _cached.token;
+    // Cache check
+    if (_session && _session.expiresAt > Date.now()) {
+        return _session;
     }
 
-    // Login server-side
+    // Server-side login
     const loginRes = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: "POST",
         headers: {
@@ -48,37 +59,43 @@ export async function getServiceToken(): Promise<string | null> {
     });
 
     if (!loginRes.ok) {
-        console.error("[laventecareToken] Login failed:", loginRes.status, await loginRes.text());
+        console.error("[laventecareToken] Login mislukt:", loginRes.status, await loginRes.text().catch(() => ""));
         return null;
     }
 
-    // Haal token op via /auth/token (stuurt cookies mee uit Set-Cookie)
-    const loginCookies = loginRes.headers.get("set-cookie") ?? "";
+    // Meerdere Set-Cookie headers correct verwerken
+    // Node 18+ fetch implementatie: gebruik getSetCookie() indien beschikbaar
+    let setCookieValues: string[] = [];
 
-    const tokenRes = await fetch(`${API_URL}/api/v1/auth/token`, {
-        method: "GET",
-        headers: {
-            "Accept": "application/json",
-            "Cookie": loginCookies,
-            ...(TENANT_ID ? { "X-Tenant-ID": TENANT_ID } : {}),
-        },
-    });
+    if (typeof (loginRes.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie === "function") {
+        // WHATWG standaard (Node 18.14+)
+        setCookieValues = (loginRes.headers as Headers & { getSetCookie: () => string[] }).getSetCookie();
+    } else {
+        // Fallback: parse raw header (komma-gescheiden in sommige implementaties)
+        const raw = loginRes.headers.get("set-cookie") ?? "";
+        setCookieValues = raw ? [raw] : [];
+    }
 
-    if (!tokenRes.ok) {
-        console.error("[laventecareToken] Token fetch failed:", tokenRes.status);
+    // Converteer Set-Cookie "name=value; Path=/; ..." naar "name=value; name2=value2"
+    const cookieHeader = setCookieValues
+        .map((h) => h.split(";")[0].trim())   // Alleen name=value
+        .filter(Boolean)
+        .join("; ");
+
+    // Extraheer csrf_token voor POST-requests
+    const csrfMatch = cookieHeader.match(/csrf_token=([^;]+)/);
+    const csrfToken = csrfMatch?.[1] ?? "";
+
+    if (!cookieHeader) {
+        console.error("[laventecareToken] Geen cookies ontvangen na login");
         return null;
     }
 
-    const body = await tokenRes.json() as { token?: string };
-    const token = body.token;
+    _session = {
+        cookieHeader,
+        csrfToken,
+        expiresAt: Date.now() + 14 * 60 * 1000, // 14 minuten cache
+    };
 
-    if (!token) {
-        console.error("[laventecareToken] No token in response");
-        return null;
-    }
-
-    // Cache 14 minuten (access token leeft ~15 min)
-    _cached = { token, expiresAt: Date.now() + 14 * 60 * 1000 };
-
-    return token;
+    return _session;
 }
