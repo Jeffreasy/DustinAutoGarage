@@ -76,8 +76,8 @@ export type WerkorderLogDoc = {
     notitie?: string;
     tijdstip: number;
     tokenIdentifier: string;
-    /** Naam van de medewerker — server-side verrijkt via JOIN op medewerkers tabel. */
-    medewerkerNaam?: string;
+    /** Naam van de medewerker — server-side verrijkt via JOIN op medewerkers tabel. Altijd ingevuld (fallback "Onbekend"). */
+    medewerkerNaam: string;
 };
 
 
@@ -201,4 +201,91 @@ export function useBevestigOphalen() {
 /** Zet operationele status van een werkplek (eigenaar-only). */
 export function useZetWerkplekStatus() {
     return useMutation(api.werkplekken.zetWerkplekStatus);
+}
+
+// ---------------------------------------------------------------------------
+// Rapport — werkorderBevindingen types
+// ---------------------------------------------------------------------------
+
+export type BevindingType = "Bevinding" | "Onderdeel" | "Uren" | "Taak";
+
+export type BevindingDoc = {
+    _id: Id<"werkorderBevindingen">;
+    werkorderId: Id<"werkorders">;
+    monteursId: Id<"medewerkers">;
+    type: BevindingType;
+    omschrijving: string;
+    tijdstip: number;
+    /** G4: voor welke werkdag zijn deze uren (ms since epoch) */
+    werkDatum?: number;
+    onderdeel?: {
+        artikelnummer?: string;
+        leverancier?: string;
+        prijs?: number;
+        aantal: number;
+    };
+    aantalUren?: number;
+    gedaan?: boolean;
+    tokenIdentifier: string;
+    /** Naam van de medewerker — server-side verrijkt. Altijd ingevuld. */
+    medewerkerNaam: string;
+};
+
+// ---------------------------------------------------------------------------
+// Rapport hooks — queries
+// ---------------------------------------------------------------------------
+
+/** Alle bevindingen voor één werkorder, chronologisch (monteur+). */
+export function useBevindingen(werkorderId: Id<"werkorders"> | null) {
+    return useQuery(
+        api.werkorderBevindingen.lijstBevindingen,
+        werkorderId ? { werkorderId } : "skip"
+    ) as BevindingDoc[] | undefined;
+}
+
+/** Totale inkoopprijs van alle onderdelen (balie+). Null = geen onderdelen met prijs. */
+export function useTotaalOnderdelenKosten(werkorderId: Id<"werkorders"> | null) {
+    return useQuery(
+        api.werkorderBevindingen.totaalOnderdelenKosten,
+        werkorderId ? { werkorderId } : "skip"
+    ) as number | null | undefined;
+}
+
+/** Totaal geregistreerde uren (monteur+). Null = geen uren. G1 FIX: was balie+. */
+export function useTotaalUren(werkorderId: Id<"werkorders"> | null) {
+    return useQuery(
+        api.werkorderBevindingen.totaalUren,
+        werkorderId ? { werkorderId } : "skip"
+    ) as number | null | undefined;
+}
+
+/**
+ * Uren uitgesplitst per monteur voor één werkorder.
+ * G2 FIX: Per-monteur aggregatie.
+ * G3 FIX: loonkosten aanwezig als eigenaar én uurloon ingesteld.
+ */
+export function useUrenPerMonteur(werkorderId: Id<"werkorders"> | null) {
+    return useQuery(
+        api.werkorderBevindingen.urenPerMonteur,
+        werkorderId ? { werkorderId } : "skip"
+    ) as { monteursId: string; monteurNaam: string; totaalUren: number; loonkosten?: number }[] | undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Rapport hooks — mutaties
+// ---------------------------------------------------------------------------
+
+/** Voeg een gestructureerde bevinding toe (monteur+). */
+export function useVoegBevindingToe() {
+    return useMutation(api.werkorderBevindingen.voegBevindingToe);
+}
+
+/** Wijzig omschrijving, taakstatus, uren of onderdeel-details (monteur own / eigenaar all). */
+export function useUpdateBevinding() {
+    return useMutation(api.werkorderBevindingen.updateBevinding);
+}
+
+/** Verwijder een bevinding permanent (eigenaar only). */
+export function useVerwijderBevinding() {
+    return useMutation(api.werkorderBevindingen.verwijderBevinding);
 }

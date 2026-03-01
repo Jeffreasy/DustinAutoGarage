@@ -61,8 +61,8 @@ export default function WerkorderAfsluitenModal({
 
     async function handleAfsluiten() {
         const km = parseInt(kmStand, 10);
-        if (!km || km < 0) {
-            setFout("Voer een geldige kilometerstand in.");
+        if (!km || km <= 0) {
+            setFout("Voer een geldige kilometerstand in (groter dan 0).");
             return;
         }
         setBezig(true);
@@ -78,7 +78,17 @@ export default function WerkorderAfsluitenModal({
             });
             onSluit();
         } catch (e) {
-            setFout(e instanceof Error ? e.message : "Onbekende fout");
+            const msg = e instanceof Error ? e.message : "Onbekende fout";
+            // Vertaal backend-foutprefixen naar leesbare meldingen
+            if (msg.startsWith("INVALID:")) {
+                setFout("De kilometerstand klopt niet — controleer de invoer en vergelijk met de huidige stand.");
+            } else if (msg.startsWith("CONFLICT:")) {
+                setFout("Deze werkorder is al afgesloten of geannuleerd.");
+            } else if (msg.startsWith("FORBIDDEN:")) {
+                setFout("Je hebt geen rechten om deze werkorder af te sluiten.");
+            } else {
+                setFout(msg);
+            }
         } finally {
             setBezig(false);
         }
@@ -145,6 +155,8 @@ export default function WerkorderAfsluitenModal({
                     <input
                         id="km-stand-input"
                         type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={kmStand}
                         onChange={(e) => setKmStand(e.target.value)}
                         placeholder="bijv. 87420"

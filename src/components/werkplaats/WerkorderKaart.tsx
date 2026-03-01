@@ -6,12 +6,14 @@
  */
 
 import { useState } from "react";
+import type React from "react"; // H2 FIX: expliciete import voor React.ReactNode type
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { WerkorderVerrijkt, WerkplekDoc, AfsluitingReden } from "../../hooks/useWerkplaats";
 import { useVerplaatsNaarWerkplek, useUpdateStatus, useWijsMonteurtoe, useAnnuleerWerkorder } from "../../hooks/useWerkplaats";
 import type { DomeinRol } from "../../../convex/helpers";
 import WerkorderAfsluitenModal from "../modals/WerkorderAfsluitenModal";
 import WerkorderDetailModal from "../modals/WerkorderDetailModal";
+import WerkorderRapportPanel from "./WerkorderRapportPanel";
 
 // ---------------------------------------------------------------------------
 // Avatar helpers
@@ -145,6 +147,7 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
     const [wachtNotitie, setWachtNotitie] = useState("");
     const [toonAfsluitenModal, setToonAfsluitenModal] = useState(false);
     const [toonDetail, setToonDetail] = useState(false);
+    const [toonRapport, setToonRapport] = useState(false);
     const [bezig, setBezig] = useState(false);
     const [toonAnnuleerConfirm, setToonAnnuleerConfirm] = useState(false);
     const [annuleerReden, setAnnuleerReden] = useState<AfsluitingReden>("Klant geannuleerd");
@@ -179,7 +182,11 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
         setBezig(true);
         setToonVerplaatsSheet(false);
         try {
-            await verplaats({ werkorderId: order._id, werkplekId, nieuweStatus: werkplekId ? "Bezig" : "Wachtend" });
+            // Als een "Klaar" order teruggeplaatst wordt naar een brug (aanvullend werk),
+            // reset de status expliciet naar "Bezig" — niet stilletjes via de catch-all.
+            // Andere orders: werkplekId aanwezig = Bezig, geen werkplekId = Wachtend.
+            const nieuweStatus = werkplekId ? "Bezig" : "Wachtend";
+            await verplaats({ werkorderId: order._id, werkplekId, nieuweStatus });
         } finally { setBezig(false); }
     }
 
@@ -239,6 +246,8 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
 
     return (
         <>
+            {/* K2 FIX: werkplek-btn hover via CSS — geen DOM-mutaties */}
+            <style>{`.werkplek-btn:hover,.werkplek-btn:focus-visible { border-color: var(--color-primary, #0d7a5f) !important; outline: none; }`}</style>
             <div style={{
                 borderRadius: "var(--radius-xl)",
                 background: "var(--glass-bg)",
@@ -253,14 +262,27 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                 {/* Accent streep */}
                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: statusCfg.accentKleur }} />
 
-                {/* Klikbare kaart-inhoud */}
+                {/* Klikbare kaart-inhoud: balie+ → DetailModal, monteur → Werkrapport direct */}
                 <div
-                    style={{ padding: "calc(var(--space-4) + 3px) var(--space-4) 0", cursor: isBalie ? "pointer" : "default" }}
-                    onClick={isBalie ? () => setToonDetail(true) : undefined}
-                    role={isBalie ? "button" : undefined}
-                    aria-label={isBalie ? `Werkorder details ${order.voertuig?.kenteken ?? ""}` : undefined}
-                    tabIndex={isBalie ? 0 : undefined}
-                    onKeyDown={isBalie ? (e) => { if (e.key === "Enter" || e.key === " ") setToonDetail(true); } : undefined}
+                    style={{ padding: "calc(var(--space-4) + 3px) var(--space-4) 0", cursor: (isBalie || isMonteur) ? "pointer" : "default" }}
+                    onClick={
+                        isBalie ? () => setToonDetail(true) :
+                            isMonteur ? () => setToonRapport(true) :
+                                undefined
+                    }
+                    role={(isBalie || isMonteur) ? "button" : undefined}
+                    aria-label={
+                        isBalie ? `Werkorder details ${order.voertuig?.kenteken ?? ""}` :
+                            isMonteur ? `Werkrapport openen voor ${order.voertuig?.kenteken ?? ""}` :
+                                undefined
+                    }
+                    tabIndex={(isBalie || isMonteur) ? 0 : undefined}
+                    onKeyDown={(isBalie || isMonteur) ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            if (isBalie) setToonDetail(true);
+                            else if (isMonteur) setToonRapport(true);
+                        }
+                    } : undefined}
                 >
                     {/* 1. Kenteken + Status */}
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-2)", flexWrap: "wrap" }}>
@@ -330,210 +352,271 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                         style={{ padding: "0 var(--space-4) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Rij 1: Verplaatsen + Wacht + Logboek */}
-                        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                            {/* Verplaatsen: altijd zichtbaar behalve bij definitief gesloten statussen */}
-                            {!["Afgerond", "Geannuleerd"].includes(order.status) && (
-                                <button
-                                    onClick={() => { setToonVerplaatsSheet(!toonVerplaatsSheet); setToonWachtInput(false); }}
-                                    disabled={bezig}
-                                    className="btn btn-primary btn-sm"
-                                    aria-expanded={toonVerplaatsSheet}
-                                    aria-label="Verplaatsen"
-                                    style={{ flex: 1, minHeight: "48px", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
-                                >
-                                    {toonVerplaatsSheet ? "Annuleren" : <><IconArrowRight /> Verplaatsen</>}
-                                </button>
-                            )}
+                        {/* Rij 1: Verplaatsen — volledige breedte zodat overflow onmogelijk is */}
+                        {!["Afgerond", "Geannuleerd"].includes(order.status) && (
+                            <button
+                                onClick={() => { setToonVerplaatsSheet(!toonVerplaatsSheet); setToonWachtInput(false); }}
+                                disabled={bezig}
+                                className={toonVerplaatsSheet ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"}
+                                aria-expanded={toonVerplaatsSheet}
+                                aria-label="Verplaatsen"
+                                style={{ width: "100%", minHeight: "48px", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
+                            >
+                                {toonVerplaatsSheet ? "Annuleren" : <><IconArrowRight /> Verplaatsen</>}
+                            </button>
+                        )}
 
+                        {/* Rij 2: Werkrapport — eigen prominente rij (primaire monteur-taak) */}
+                        <button
+                            onClick={() => setToonRapport(true)}
+                            className="btn btn-ghost btn-sm"
+                            aria-label="Werkrapport openen"
+                            style={{
+                                width: "100%", minHeight: "44px",
+                                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)",
+                                fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)",
+                                color: "var(--color-info)",
+                                border: "1px solid var(--color-info-border, rgba(59,130,246,0.3))",
+                                borderRadius: "var(--radius-md)",
+                            }}
+                        >
+                            <IconWrench /><span>Werkrapport openen</span>
+                        </button>
+
+                        {/* Rij 3: Utility-knoppen — Wacht + Logboek compact naast elkaar */}
+                        <div style={{ display: "flex", gap: "var(--space-2)" }}>
                             {isMonteur && order.status === "Bezig" && (
                                 <button
                                     onClick={() => { setToonWachtInput(!toonWachtInput); setToonVerplaatsSheet(false); }}
                                     disabled={bezig}
                                     className="btn btn-ghost btn-sm"
-                                    title="Wacht op onderdelen"
                                     aria-label="Wacht op onderdelen"
-                                    style={{ minHeight: "48px", minWidth: "48px", padding: "0 var(--space-2)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    style={{ flex: 1, minHeight: "40px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}
                                 >
-                                    <IconClock />
+                                    <IconClock /><span>Wacht op onderdelen</span>
                                 </button>
                             )}
-
                             <button
                                 onClick={() => onOpenLogboek(order._id)}
                                 className="btn btn-ghost btn-sm"
-                                title="Logboek bekijken"
                                 aria-label="Logboek bekijken"
-                                style={{ minHeight: "48px", minWidth: "48px", padding: "0 var(--space-2)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                style={{ flex: 1, minHeight: "40px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}
                             >
-                                <IconClipboard />
+                                <IconClipboard /><span>Logboek</span>
                             </button>
                         </div>
 
                         {/* Gepland → Aanwezig */}
-                        {isBalie && order.status === "Gepland" && (
-                            <button onClick={handleAanwezig} disabled={bezig} className="btn btn-sm" aria-label="Markeer als aanwezig"
-                                style={{ minHeight: "48px", width: "100%", background: "var(--color-info)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}>
-                                <IconFlag /> {bezig ? "…" : "Auto aanwezig"}
-                            </button>
-                        )}
-
-                        {/* Aanwezig → Wachtend */}
-                        {isBalie && order.status === "Aanwezig" && (
-                            <button onClick={handleNaarWachtend} disabled={bezig} className="btn btn-ghost btn-sm" aria-label="Klaarzetten voor brug"
-                                style={{ minHeight: "48px", width: "100%", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}>
-                                <IconChevronsRight /> {bezig ? "…" : "Klaarzetten voor brug"}
-                            </button>
-                        )}
-
-                        {/* Monteur: Auto klaar — zet op Klaar voor ophalen */}
-                        {isMonteur && (order.status === "Bezig" || order.status === "Wacht op onderdelen") && (
-                            <button
-                                onClick={handleAutoKlaar}
-                                disabled={bezig}
-                                className="btn btn-sm"
-                                aria-label="Auto klaar voor ophalen"
-                                style={{ minHeight: "48px", width: "100%", background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
-                            >
-                                <IconCheckCircle /> {bezig ? "…" : "Auto klaar"}
-                            </button>
-                        )}
-
-                        {/* Afsluiten */}
-                        {isBalie && order.status === "Klaar" && (
-                            <button onClick={() => setToonAfsluitenModal(true)} className="btn btn-sm"
-                                style={{ minHeight: "48px", width: "100%", background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
-                                aria-label="Werkorder definitief afsluiten">
-                                <IconCheckCircle /> Doorsturen
-                            </button>
-                        )}
-
-                        {/* Eigenaar/balie: zichzelf aanmelden als monteur op deze werkorder */}
-                        {isEigenaar && !['Afgerond', 'Geannuleerd'].includes(order.status) && (
-                            ikBenIngeschreven ? (
-                                <button
-                                    onClick={handleAfmelden}
-                                    disabled={bezig}
-                                    className="btn btn-ghost btn-sm"
-                                    aria-label="Zichzelf als monteur afmelden"
-                                    style={{ minHeight: "40px", width: "100%", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-muted)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
-                                >
-                                    <IconUserMinus /> Afmelden als monteur
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={handleInschrijven}
-                                    disabled={bezig || !mijnId}
-                                    className="btn btn-ghost btn-sm"
-                                    aria-label="Zichzelf als monteur aanmelden"
-                                    style={{ minHeight: "40px", width: "100%", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-info)", borderColor: "var(--color-info-border)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
-                                >
-                                    <IconUserCheck /> Aanmelden als monteur
+                        {
+                            isBalie && order.status === "Gepland" && (
+                                <button onClick={handleAanwezig} disabled={bezig} className="btn btn-sm" aria-label="Markeer als aanwezig"
+                                    style={{ minHeight: "48px", width: "100%", background: "var(--color-info)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}>
+                                    <IconFlag /> {bezig ? "…" : "Auto aanwezig"}
                                 </button>
                             )
-                        )}
+                        }
+
+                        {/* Aanwezig → Wachtend */}
+                        {
+                            isBalie && order.status === "Aanwezig" && (
+                                <button onClick={handleNaarWachtend} disabled={bezig} className="btn btn-ghost btn-sm" aria-label="Klaarzetten voor brug"
+                                    style={{ minHeight: "48px", width: "100%", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}>
+                                    <IconChevronsRight /> {bezig ? "…" : "Klaarzetten voor brug"}
+                                </button>
+                            )
+                        }
+
+                        {/* Monteur: Auto klaar — zet op Klaar voor ophalen */}
+                        {
+                            isMonteur && (order.status === "Bezig" || order.status === "Wacht op onderdelen") && (
+                                <button
+                                    onClick={handleAutoKlaar}
+                                    disabled={bezig}
+                                    className="btn btn-sm"
+                                    aria-label="Auto klaar voor ophalen"
+                                    style={{ minHeight: "48px", width: "100%", background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
+                                >
+                                    <IconCheckCircle /> {bezig ? "…" : "Auto klaar"}
+                                </button>
+                            )
+                        }
+
+                        {/* Afsluiten */}
+                        {
+                            isBalie && order.status === "Klaar" && (
+                                <button onClick={() => setToonAfsluitenModal(true)} className="btn btn-sm"
+                                    style={{ minHeight: "48px", width: "100%", background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
+                                    aria-label="Werkorder definitief afsluiten">
+                                    <IconCheckCircle /> Doorsturen
+                                </button>
+                            )
+                        }
+
+                        {/* Eigenaar: zichzelf aanmelden als monteur op deze werkorder.
+                            ⚠️ Bewust eigenaar-only (niet balie): de balie beheert het rooster
+                            via wijsMonteurtoe in de detailview — zelfregistratie is een
+                            "hands-on eigenaar" feature, niet een balie-workflow. */}
+                        {
+                            isEigenaar && !['Afgerond', 'Geannuleerd'].includes(order.status) && (
+                                ikBenIngeschreven ? (
+                                    <button
+                                        onClick={handleAfmelden}
+                                        disabled={bezig}
+                                        className="btn btn-ghost btn-sm"
+                                        aria-label="Zichzelf als monteur afmelden"
+                                        // K1 FIX: 40px → 44px (WCAG 2.5.5 touch target)
+                                        style={{ minHeight: "44px", width: "100%", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-muted)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
+                                    >
+                                        <IconUserMinus /> Afmelden als monteur
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleInschrijven}
+                                        disabled={bezig || !mijnId}
+                                        className="btn btn-ghost btn-sm"
+                                        aria-label="Zichzelf als monteur aanmelden"
+                                        // K1 FIX: 40px → 44px (WCAG 2.5.5 touch target)
+                                        style={{ minHeight: "44px", width: "100%", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-info)", borderColor: "var(--color-info-border)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
+                                    >
+                                        <IconUserCheck /> Aanmelden als monteur
+                                    </button>
+                                )
+                            )
+                        }
 
                         {/* Annuleer-knop + inline confirm (vervangt window.confirm) */}
-                        {isBalie && !["Klaar", "Afgerond", "Geannuleerd"].includes(order.status) && !toonAnnuleerConfirm && (
-                            <button onClick={() => setToonAnnuleerConfirm(true)} disabled={bezig} className="btn btn-ghost btn-sm"
-                                aria-label="Werkorder annuleren"
-                                style={{ minHeight: "40px", width: "100%", color: "var(--color-error, #dc2626)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", borderColor: "rgba(220,38,38,0.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}>
-                                <IconXCircle /> Afspraak annuleren
-                            </button>
-                        )}
+                        {
+                            isBalie && !["Klaar", "Afgerond", "Geannuleerd"].includes(order.status) && !toonAnnuleerConfirm && (
+                                <button onClick={() => setToonAnnuleerConfirm(true)} disabled={bezig} className="btn btn-ghost btn-sm"
+                                    aria-label="Werkorder annuleren"
+                                    style={{ minHeight: "40px", width: "100%", color: "var(--color-error, #dc2626)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", borderColor: "rgba(220,38,38,0.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}>
+                                    <IconXCircle /> Afspraak annuleren
+                                </button>
+                            )
+                        }
 
                         {/* Inline confirm banner */}
-                        {toonAnnuleerConfirm && (
-                            <div style={{ background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-md)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                                <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-semibold)" }}>
-                                    Werkorder voor {order.voertuig?.kenteken ?? "dit voertuig"} annuleren?
-                                </p>
-                                {/* Reden dropdown */}
-                                <select
-                                    value={annuleerReden}
-                                    onChange={(e) => setAnnuleerReden(e.target.value as AfsluitingReden)}
-                                    style={{
-                                        width: "100%", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)",
-                                        border: "1px solid var(--color-error-border)", background: "var(--color-error-bg)",
-                                        color: "var(--color-error-text)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                                        cursor: "pointer", minHeight: "36px",
-                                    }}
-                                    aria-label="Reden van annulering"
-                                >
-                                    {(["Klant geannuleerd", "Klant niet verschenen", "Geen toestemming klant", "Onderdelen niet leverbaar", "Dubbele boeking", "Overig"] as AfsluitingReden[]).map((r) => (
-                                        <option key={r} value={r}>{r}</option>
-                                    ))}
-                                </select>
-                                <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                                    <button onClick={handleGeannuleerd} disabled={bezig} className="btn btn-sm"
-                                        style={{ flex: 1, minHeight: "36px", background: "var(--color-error)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-xs)", cursor: "pointer" }}>
-                                        {bezig ? "…" : "Ja, annuleren"}
-                                    </button>
-                                    <button onClick={() => setToonAnnuleerConfirm(false)} className="btn btn-ghost btn-sm"
-                                        style={{ flex: 1, minHeight: "36px", fontSize: "var(--text-xs)" }}>
-                                        Nee
-                                    </button>
+                        {
+                            toonAnnuleerConfirm && (
+                                <div style={{ background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-md)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                                    <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-semibold)" }}>
+                                        Werkorder voor {order.voertuig?.kenteken ?? "dit voertuig"} annuleren?
+                                    </p>
+                                    {/* Reden dropdown */}
+                                    <select
+                                        value={annuleerReden}
+                                        onChange={(e) => setAnnuleerReden(e.target.value as AfsluitingReden)}
+                                        style={{
+                                            width: "100%", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)",
+                                            border: "1px solid var(--color-error-border)", background: "var(--color-error-bg)",
+                                            color: "var(--color-error-text)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                            // M2 FIX: 36px → 44px (WCAG 2.5.5 minimum touch target)
+                                            cursor: "pointer", minHeight: "44px",
+                                        }}
+                                        aria-label="Reden van annulering"
+                                    >
+                                        {(["Klant geannuleerd", "Klant niet verschenen", "Geen toestemming klant", "Onderdelen niet leverbaar", "Dubbele boeking", "Overig"] as AfsluitingReden[]).map((r) => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
+                                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                                        <button onClick={handleGeannuleerd} disabled={bezig} className="btn btn-sm"
+                                            // M2 FIX: confirm knoppen 36→44px
+                                            style={{ flex: 1, minHeight: "44px", background: "var(--color-error)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-xs)", cursor: "pointer" }}>
+                                            {bezig ? "…" : "Ja, annuleren"}
+                                        </button>
+                                        <button onClick={() => setToonAnnuleerConfirm(false)} className="btn btn-ghost btn-sm"
+                                            style={{ flex: 1, minHeight: "44px", fontSize: "var(--text-xs)" }}>
+                                            Nee
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
 
                         {/* Verplaats action sheet */}
-                        {toonVerplaatsSheet && (
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-                                {beschikbarePlekken.map((plek) => (
-                                    <button key={plek._id} onClick={() => handleVerplaats(plek._id)} disabled={bezig}
-                                        style={{ minHeight: "56px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "var(--glass-bg)", color: "var(--color-heading)", cursor: "pointer", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", transition: "border-color var(--transition-base)" }}
-                                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--color-primary, #0d7a5f)"; }}
-                                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)"; }}
-                                        aria-label={`Verplaats naar ${plek.naam}`}
-                                    >
-                                        <span style={{ color: "var(--color-muted)" }}>{WERKPLEK_TYPE_SVG[plek.type] ?? <IconGrid />}</span>
-                                        <span style={{ fontSize: "var(--text-xs)" }}>{plek.naam}</span>
-                                    </button>
-                                ))}
+                        {
+                            toonVerplaatsSheet && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                                    {/* Waarschuwing: "Klaar" orders terugplaatsen = aanvullend werk */}
+                                    {order.status === "Klaar" && (
+                                        <div style={{ padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", fontSize: "var(--text-xs)", color: "var(--color-warning-text)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                                            <IconClock /> Let op: status wordt teruggezet naar &ldquo;Bezig&rdquo;
+                                        </div>
+                                    )}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+                                        {beschikbarePlekken.map((plek) => (
+                                            <button key={plek._id} onClick={() => handleVerplaats(plek._id)} disabled={bezig}
+                                                // K2 FIX: hover via CSS class — inline DOM-mutatie verliest state bij re-render en werkt niet op touch
+                                                className="werkplek-btn"
+                                                style={{ minHeight: "56px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "var(--glass-bg)", color: "var(--color-heading)", cursor: "pointer", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", transition: "border-color var(--transition-base)" }}
+                                                aria-label={`Verplaats naar ${plek.naam}`}
+                                            >
+                                                <span style={{ color: "var(--color-muted)" }}>{WERKPLEK_TYPE_SVG[plek.type] ?? <IconGrid />}</span>
+                                                <span style={{ fontSize: "var(--text-xs)" }}>{plek.naam}</span>
+                                            </button>
+                                        ))}
 
-                                {order.werkplekId && (
-                                    <button onClick={() => handleVerplaats(undefined)} disabled={bezig}
-                                        style={{ minHeight: "56px", borderRadius: "var(--radius-md)", border: "1px dashed var(--color-border)", background: "transparent", color: "var(--color-muted)", cursor: "pointer", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px" }}
-                                        aria-label="Terug naar Wachtend / Buiten">
-                                        <IconArrowLeft />
-                                        <span>Buiten</span>
-                                    </button>
-                                )}
-                            </div>
-                        )}
+                                        {order.werkplekId && (
+                                            <button onClick={() => handleVerplaats(undefined)} disabled={bezig}
+                                                style={{ minHeight: "56px", borderRadius: "var(--radius-md)", border: "1px dashed var(--color-border)", background: "transparent", color: "var(--color-muted)", cursor: "pointer", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px" }}
+                                                aria-label="Terug naar Wachtend / Buiten">
+                                                <IconArrowLeft />
+                                                <span>Buiten</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        }
 
                         {/* Wacht op onderdelen invoer */}
-                        {toonWachtInput && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", background: "var(--color-info-bg)", border: "1px solid var(--color-info-border)" }}>
-                                <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-info-text)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                                    <IconClock /> Wacht op onderdelen — voeg notitie toe:
-                                </p>
-                                <input
-                                    type="text" value={wachtNotitie} onChange={(e) => setWachtNotitie(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === "Enter") handleWachtOpOnderdelen(); }}
-                                    placeholder="bijv. Draagarmrubber bestellen bij Van Mossel"
-                                    aria-label="Notitie voor wacht op onderdelen"
-                                    style={{ padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-info-border)", background: "var(--color-surface)", color: "var(--color-heading)", fontSize: "var(--text-sm)", minHeight: "44px" }}
-                                    autoFocus
-                                />
-                                <button onClick={handleWachtOpOnderdelen} disabled={bezig}
-                                    style={{ minHeight: "44px", borderRadius: "var(--radius-md)", background: "var(--color-info)", color: "#fff", border: "none", cursor: "pointer", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
-                                    aria-label="Bevestigen: wacht op onderdelen">
-                                    <IconClock /> {bezig ? "…" : "Bevestig — Wacht op onderdelen"}
-                                </button>
-                            </div>
-                        )}
+                        {
+                            toonWachtInput && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", background: "var(--color-info-bg)", border: "1px solid var(--color-info-border)" }}>
+                                    <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-info-text)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                                        <IconClock /> Wacht op onderdelen — voeg notitie toe:
+                                    </p>
+                                    <input
+                                        type="text" value={wachtNotitie} onChange={(e) => setWachtNotitie(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === "Enter") handleWachtOpOnderdelen(); }}
+                                        placeholder="bijv. Draagarmrubber bestellen bij Van Mossel"
+                                        aria-label="Notitie voor wacht op onderdelen"
+                                        style={{ padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-info-border)", background: "var(--color-surface)", color: "var(--color-heading)", fontSize: "var(--text-sm)", minHeight: "44px" }}
+                                    // M1 FIX: autoFocus verwijderd — schermlezers verstoren en inconsistent met rest van codebase
+                                    />
+                                    <button onClick={handleWachtOpOnderdelen} disabled={bezig}
+                                        style={{ minHeight: "44px", borderRadius: "var(--radius-md)", background: "var(--color-info)", color: "#fff", border: "none", cursor: "pointer", fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}
+                                        aria-label="Bevestigen: wacht op onderdelen">
+                                        <IconClock /> {bezig ? "…" : "Bevestig — Wacht op onderdelen"}
+                                    </button>
+                                </div>
+                            )
+                        }
                     </div>
                 )}
             </div>
 
             {toonAfsluitenModal && (
                 <WerkorderAfsluitenModal werkorderId={order._id} kenteken={order.voertuig?.kenteken ?? "—"} klacht={order.klacht} onSluit={() => setToonAfsluitenModal(false)} />
-            )}
+            )
+            }
             {toonDetail && (
-                <WerkorderDetailModal order={order} onSluit={() => setToonDetail(false)} />
+                <WerkorderDetailModal
+                    order={order}
+                    onSluit={() => setToonDetail(false)}
+                    onOpenRapport={() => { setToonDetail(false); setToonRapport(true); }}
+                />
             )}
+            {
+                toonRapport && (
+                    <WerkorderRapportPanel
+                        werkorderId={order._id}
+                        domeinRol={domeinRol}
+                        onSluit={() => setToonRapport(false)}
+                    />
+                )
+            }
         </>
     );
 }

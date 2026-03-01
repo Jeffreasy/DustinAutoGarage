@@ -52,7 +52,12 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
                 voertuigId: gekozenVoertuigId,
                 klantId: gekozenKlantId,
                 klacht: klacht.trim(),
-                afspraakDatum: new Date(afspraakDatum).getTime(),
+                // Parse als lokale datum — new Date("YYYY-MM-DD") is UTC midnight,
+                // wat in NL (CET +1) de vorige dag oplevert. Lokale Date voorkomt dit.
+                afspraakDatum: (() => {
+                    const [jaar, maand, dag] = afspraakDatum.split("-").map(Number);
+                    return new Date(jaar, maand - 1, dag, 8, 0, 0).getTime();
+                })(),
             });
             onSluit();
         } catch (e) {
@@ -76,6 +81,8 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
 
     return (
         <ModalShell onSluit={onSluit} ariaLabel="Nieuwe werkorder aanmaken" maxWidth="520px">
+            {/* H7 FIX: hover via CSS class — voorkomt inline DOM-mutaties die verloren gaan bij re-render */}
+            <style>{`.klant-optie-btn:hover,.klant-optie-btn:focus-visible{ background: var(--glass-bg) !important; outline: 2px solid var(--color-accent,#0d7a5f); outline-offset: -2px; }`}</style>
             {/* Header */}
             <div style={{
                 padding: "var(--space-4) var(--space-5)",
@@ -92,8 +99,8 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
                         Stap {stap} van 3
                     </p>
                 </div>
-                <button onClick={onSluit} className="btn btn-ghost btn-sm" aria-label="Sluiten" style={{ minHeight: "44px", minWidth: "44px" }}>
-                    ✕
+                <button onClick={onSluit} className="btn btn-ghost btn-sm" aria-label="Sluiten" style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
             </div>
 
@@ -147,6 +154,7 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
                                             setGekozenKlantNaam(`${klant.voornaam} ${klant.achternaam}`);
                                             setStap(2);
                                         }}
+                                        className="klant-optie-btn"
                                         style={{
                                             textAlign: "left",
                                             padding: "var(--space-3) var(--space-4)",
@@ -157,9 +165,8 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
                                             minHeight: "52px",
                                             color: "var(--color-body)",
                                             transition: "background var(--transition-base)",
+                                            width: "100%",
                                         }}
-                                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--glass-bg)"; }}
-                                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--color-surface)"; }}
                                     >
                                         <strong style={{ color: "var(--color-heading)", display: "block", fontSize: "var(--text-sm)" }}>
                                             {klant.voornaam} {klant.achternaam}
@@ -295,7 +302,12 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
                         style={{ width: "100%", minHeight: "52px", fontSize: "var(--text-sm)" }}
                         aria-label="Werkorder opslaan"
                     >
-                        {bezig ? "Aanmaken…" : "✅ Werkorder aanmaken"}
+                        {bezig ? "Aanmaken…" : (
+                            <>
+                                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                Werkorder aanmaken
+                            </>
+                        )}
                     </button>
                 </div>
             )}

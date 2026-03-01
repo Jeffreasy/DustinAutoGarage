@@ -5,7 +5,7 @@
  * ui-ux-pro-max: SVG icons, skeleton loader voor laadstatus.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { useWerkorderLogs, useVoegLogToe } from "../../hooks/useWerkplaats";
 
@@ -60,6 +60,13 @@ export default function WerkorderLogboek({ werkorderId, onSluit }: WerkorderLogb
 
     const [notitie, setNotitie] = useState("");
     const [bezig, setBezig] = useState(false);
+
+    // Sluit de modal via de Escape-toets (WCAG 2.5.3 — toetsenbord toegankelijkheid)
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onSluit(); };
+        document.addEventListener("keydown", handler);
+        return () => document.removeEventListener("keydown", handler);
+    }, [onSluit]);
 
     async function handleVoegNotiteToe() {
         if (!notitie.trim()) return;

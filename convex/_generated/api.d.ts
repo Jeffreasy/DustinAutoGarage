@@ -15,6 +15,7 @@ import type * as medewerkers from "../medewerkers.js";
 import type * as onderhoudshistorie from "../onderhoudshistorie.js";
 import type * as validators from "../validators.js";
 import type * as voertuigen from "../voertuigen.js";
+import type * as werkorderBevindingen from "../werkorderBevindingen.js";
 import type * as werkorderLogs from "../werkorderLogs.js";
 import type * as werkorders from "../werkorders.js";
 import type * as werkplekken from "../werkplekken.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   onderhoudshistorie: typeof onderhoudshistorie;
   validators: typeof validators;
   voertuigen: typeof voertuigen;
+  werkorderBevindingen: typeof werkorderBevindingen;
   werkorderLogs: typeof werkorderLogs;
   werkorders: typeof werkorders;
   werkplekken: typeof werkplekken;

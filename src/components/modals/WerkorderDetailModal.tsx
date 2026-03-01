@@ -10,7 +10,8 @@
  *   - Vaste footer met actie-knoppen
  */
 
-import React from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import ModalShell from "./ModalShell";
 import type { WerkorderVerrijkt } from "../../hooks/useWerkplaats";
 
@@ -92,11 +93,16 @@ function Sectie({ titel, children }: { titel: string; children: React.ReactNode 
 interface Props {
     order: WerkorderVerrijkt;
     onSluit: () => void;
+    /** Optioneel: opent Werkrapport direct vanuit het detail-modal */
+    onOpenRapport?: () => void;
 }
 
-export default function WerkorderDetailModal({ order, onSluit }: Props) {
+export default function WerkorderDetailModal({ order, onSluit, onOpenRapport }: Props) {
     const statusKleur = STATUS_KLEUR[order.status] ?? "#6b7280";
     const kenteken = order.voertuig?.kenteken ?? "—";
+
+    // Read-only bevindingen — eigenaar/balie ziet wat monteur noteert
+    const bevindingen = useQuery(api.werkorderBevindingen.lijstBevindingen, { werkorderId: order._id });
 
     return (
         <ModalShell ariaLabel={`Werkorder ${kenteken}`} onSluit={onSluit} maxWidth="620px">
@@ -132,7 +138,7 @@ export default function WerkorderDetailModal({ order, onSluit }: Props) {
                 <button
                     onClick={onSluit}
                     className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "40px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    style={{ minHeight: "44px", minWidth: "44px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
                     aria-label="Modal sluiten"
                 >
                     <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -189,30 +195,154 @@ export default function WerkorderDetailModal({ order, onSluit }: Props) {
                 {/* Financieel */}
                 {order.totaalKosten !== undefined && (
                     <Sectie titel="Financieel">
-                        <InfoRij label="Totaal (excl. BTW)" waarde={formatEuro(order.totaalKosten)} />
-                        <InfoRij label="BTW (21%)" waarde={formatEuro(order.totaalKosten * 0.21)} />
+                        {order.btwInbegrepen ? (
+                            <>
+                                <InfoRij label="Totaal (incl. BTW)" waarde={formatEuro(order.totaalKosten)} />
+                                <InfoRij label="BTW (21%)" waarde={formatEuro(order.totaalKosten - order.totaalKosten / 1.21)} />
+                                <InfoRij label="Excl. BTW" waarde={formatEuro(order.totaalKosten / 1.21)} />
+                            </>
+                        ) : (
+                            <>
+                                <InfoRij label="Totaal (excl. BTW)" waarde={formatEuro(order.totaalKosten)} />
+                                <InfoRij label="BTW (21%)" waarde={formatEuro(order.totaalKosten * 0.21)} />
+                                <InfoRij label="Totaal (incl. BTW)" waarde={formatEuro(order.totaalKosten * 1.21)} />
+                            </>
+                        )}
                     </Sectie>
                 )}
+
+                {/* Werkbevindingen — read-only overzicht van monteur-notities */}
+                <div>
+                    <p style={{
+                        margin: "0 0 var(--space-3)",
+                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                        color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "0.07em",
+                        borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)",
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                    }}>
+                        <span>Werkbevindingen</span>
+                        {bevindingen && bevindingen.length > 0 && (
+                            <span style={{ fontWeight: "var(--weight-medium)", color: "var(--color-body)", textTransform: "none", letterSpacing: 0 }}>
+                                {bevindingen.length} item{bevindingen.length !== 1 ? "s" : ""}
+                            </span>
+                        )}
+                    </p>
+
+                    {/* Laadindicator */}
+                    {bevindingen === undefined && (
+                        <p style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", fontStyle: "italic", margin: 0 }}>Laden…</p>
+                    )}
+
+                    {/* Leeg staat */}
+                    {bevindingen !== undefined && bevindingen.length === 0 && (
+                        <div style={{
+                            textAlign: "center", padding: "var(--space-5) var(--space-4)",
+                            border: "1px dashed var(--color-border)", borderRadius: "var(--radius-lg)",
+                        }}>
+                            <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-muted)" }}>Geen bevindingen geregistreerd</p>
+                        </div>
+                    )}
+
+                    {/* Bevindingen tijdlijn */}
+                    {bevindingen && bevindingen.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                            {bevindingen.map((b) => {
+                                const TYPE_KLEUR: Record<string, { bg: string; border: string; tekst: string }> = {
+                                    Bevinding: { bg: "var(--color-surface)", border: "var(--color-border)", tekst: "var(--color-body)" },
+                                    Onderdeel: { bg: "var(--color-success-bg)", border: "var(--color-success-border)", tekst: "var(--color-success-text)" },
+                                    Uren: { bg: "var(--color-info-bg)", border: "var(--color-info-border)", tekst: "var(--color-info-text)" },
+                                    Taak: { bg: "var(--color-warning-bg)", border: "var(--color-warning-border)", tekst: "var(--color-warning-text)" },
+                                };
+                                const stijl = TYPE_KLEUR[b.type] ?? TYPE_KLEUR.Bevinding;
+                                const datum = new Date(b.tijdstip ?? b._creationTime).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+                                return (
+                                    <div key={b._id} style={{
+                                        background: stijl.bg, border: `1px solid ${stijl.border}`,
+                                        borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)",
+                                        display: "flex", flexDirection: "column", gap: "var(--space-1)",
+                                    }}>
+                                        {/* Balk: type-badge + monteur + datum */}
+                                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                                            <span style={{
+                                                fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                                color: stijl.tekst, padding: "0.1em 0.5em",
+                                                background: stijl.border + "44", borderRadius: "var(--radius-full)",
+                                            }}>
+                                                {b.type === "Taak" && (b.gedaan ? "✓ " : "◻ ")}{b.type}
+                                            </span>
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginLeft: "auto" }}>
+                                                {b.medewerkerNaam} · {datum}
+                                            </span>
+                                        </div>
+
+                                        {/* Omschrijving */}
+                                        <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-heading)", lineHeight: 1.5 }}>
+                                            {b.omschrijving}
+                                        </p>
+
+                                        {/* Type-specifieke details */}
+                                        {b.type === "Onderdeel" && b.onderdeel && (
+                                            <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", marginTop: "2px" }}>
+                                                {b.onderdeel.artikelnummer && <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>Art: {b.onderdeel.artikelnummer}</span>}
+                                                {b.onderdeel.leverancier && <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{b.onderdeel.leverancier}</span>}
+                                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-success-text)", fontWeight: "var(--weight-semibold)", marginLeft: "auto" }}>
+                                                    {b.onderdeel.aantal}x {b.onderdeel.prijs !== undefined ? `€${b.onderdeel.prijs.toFixed(2)}` : ""}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {b.type === "Uren" && b.aantalUren !== undefined && (
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-info-text)", fontWeight: "var(--weight-semibold)" }}>
+                                                {b.aantalUren % 1 === 0 ? b.aantalUren : b.aantalUren.toFixed(1)} uur
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
             </div>
 
             {/* ── Vaste footer ── */}
             <div style={{
                 padding: "var(--space-4) var(--space-5)",
                 borderTop: "1px solid var(--color-border)",
-                display: "flex", gap: "var(--space-3)", flexWrap: "wrap",
+                display: "flex", flexDirection: "column", gap: "var(--space-3)",
                 flexShrink: 0,
             }}>
-                <button onClick={onSluit} className="btn btn-ghost btn-sm" style={{ minHeight: "44px" }}>
-                    Sluiten
-                </button>
-                <a
-                    href="/onderhoud"
-                    className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "44px", color: "var(--color-accent-text)", textDecoration: "none" }}
-                    title="Onderhoudsdossier bekijken"
-                >
-                    Onderhoudsdossier →
-                </a>
+                {/* Werkrapport — prominente primary shortcut als prop aanwezig */}
+                {onOpenRapport && (
+                    <button
+                        onClick={() => { onSluit(); onOpenRapport(); }}
+                        className="btn btn-sm"
+                        style={{
+                            width: "100%", minHeight: "48px",
+                            display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)",
+                            fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)",
+                            background: "var(--color-info)", color: "#fff", border: "none",
+                            borderRadius: "var(--radius-md)", cursor: "pointer",
+                        }}
+                        aria-label="Werkrapport openen"
+                    >
+                        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
+                        Werkrapport openen
+                    </button>
+                )}
+                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                    <button onClick={onSluit} className="btn btn-ghost btn-sm" style={{ minHeight: "44px" }}>
+                        Sluiten
+                    </button>
+                    <a
+                        href={`/onderhoud?kenteken=${encodeURIComponent(kenteken)}`}
+                        className="btn btn-ghost btn-sm"
+                        style={{ minHeight: "44px", color: "var(--color-accent-text)", textDecoration: "none" }}
+                        title={`Onderhoudsdossier bekijken voor ${kenteken}`}
+                    >
+                        Onderhoudsdossier →
+                    </a>
+                </div>
             </div>
 
         </ModalShell>

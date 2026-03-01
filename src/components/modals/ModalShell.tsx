@@ -21,7 +21,7 @@
  *   </ModalShell>
  */
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobiel } from "../../hooks/useMediaQuery";
 
@@ -43,6 +43,15 @@ export default function ModalShell({
     children,
 }: ModalShellProps) {
     const isMobiel = useIsMobiel();
+    // Ref voor de inner container — gebruikt door focus-trap.
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // K1: Body-scroll-lock — voorkomt dat achtergrond mee-scrolt op mobiel.
+    useEffect(() => {
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => { document.body.style.overflow = prev; };
+    }, []);
 
     // Escape-toets sluiting
     useEffect(() => {
@@ -52,6 +61,41 @@ export default function ModalShell({
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, [onSluit]);
+
+    // K2: Minimale focus-trap — Tab/Shift+Tab blijft binnen de modal (WCAG 2.1.2).
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const getFocusable = () => Array.from(
+            el.querySelectorAll<HTMLElement>(
+                'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+            )
+        );
+        // Auto-focus het eerste interactieve element
+        getFocusable()[0]?.focus();
+
+        function trapTab(e: KeyboardEvent) {
+            if (e.key !== "Tab") return;
+            const items = getFocusable();
+            if (!items.length) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (e.shiftKey) {
+                if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+            } else {
+                if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }
+        }
+        document.addEventListener("keydown", trapTab);
+        return () => document.removeEventListener("keydown", trapTab);
+    }, []);
+
+    // H2: Swipe-to-dismiss state (mobiel) — omlaag swipen > 80px = sluiten.
+    const touchStartY = useRef<number>(0);
+    function handleTouchStart(e: React.TouchEvent) { touchStartY.current = e.touches[0].clientY; }
+    function handleTouchEnd(e: React.TouchEvent) {
+        if (e.changedTouches[0].clientY - touchStartY.current > 80) onSluit();
+    }
 
     // ── Mobiel: Bottom Sheet ──────────────────────────────────────────────────
     if (isMobiel) {
@@ -75,6 +119,7 @@ export default function ModalShell({
             >
                 {/* Bottom sheet container */}
                 <div
+                    ref={containerRef}
                     onClick={(e) => e.stopPropagation()}
                     style={{
                         width: "100%",
@@ -89,7 +134,7 @@ export default function ModalShell({
                         animation: "slideUp 220ms cubic-bezier(0.22, 1, 0.36, 1) both",
                     }}
                 >
-                    {/* Drag handle */}
+                    {/* Drag handle — H2: swipe-to-dismiss via touch events */}
                     <div
                         style={{
                             display: "flex",
@@ -99,7 +144,9 @@ export default function ModalShell({
                             cursor: "pointer",
                         }}
                         onClick={onSluit}
-                        aria-label="Sluit paneel"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                        aria-label="Sluit paneel (of swipe omlaag)"
                         role="button"
                     >
                         <div style={{
@@ -110,10 +157,11 @@ export default function ModalShell({
                         }} />
                     </div>
 
-                    {/* Scrollbare inhoud */}
+                    {/* Scrollbare inhoud — M1: overscroll-behavior:contain voorkomt pull-to-refresh */}
                     <div style={{
                         overflowY: "auto",
                         flex: 1,
+                        overscrollBehavior: "contain",
                         WebkitOverflowScrolling: "touch" as any,
                     }}>
                         {children}
@@ -153,6 +201,7 @@ export default function ModalShell({
             }}
         >
             <div
+                ref={containerRef}
                 onClick={(e) => e.stopPropagation()}
                 style={{
                     width: "100%",

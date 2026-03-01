@@ -553,4 +553,89 @@ export default defineSchema({
         .index("by_token_identifier", ["tokenIdentifier"])
         // L-1 FIX: datum-index voor tenant-brede audit queries (bijv. "alle acties van vandaag").
         .index("by_datum_and_token", ["tokenIdentifier", "tijdstip"]),
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Tabel 7: werkorderBevindingen  (Reparatie-Rapport — Fase 3)
+    //
+    //   Gestructureerde bevindingen per werkorder, gescheiden van de audit trail.
+    //   Bedoeld voor de monteur om tijdens het werk bij te houden:
+    //     - Technische bevindingen (observaties)
+    //     - Gebruikte / bestelde onderdelen
+    //     - Tijdregistratie per sessie
+    //     - Taken / checklist-items
+    //
+    //   Rol-gating:
+    //     Lezen  → monteur+
+    //     Schrijven → monteur+
+    //     Verwijderen → eigenaar only
+    // ──────────────────────────────────────────────────────────────────────────
+    werkorderBevindingen: defineTable({
+        /** FK → werkorders._id */
+        werkorderId: v.id("werkorders"),
+
+        /** FK → medewerkers._id (wie heeft dit ingevuld?) */
+        monteursId: v.id("medewerkers"),
+
+        /**
+         * Type bevinding — bepaalt welke extra velden aanwezig zijn:
+         *   Bevinding  → alleen omschrijving
+         *   Onderdeel  → omschrijving + onderdeelInfo
+         *   Uren       → omschrijving + aantalUren
+         *   Taak       → omschrijving + gedaan
+         */
+        type: v.union(
+            v.literal("Bevinding"),  // Technische observatie ("Draagarm versleten")
+            v.literal("Onderdeel"),  // Gebruikt of besteld onderdeel
+            v.literal("Uren"),       // Tijdregistratie (uren)
+            v.literal("Taak"),       // Checklist-item (wel/niet uitgevoerd)
+        ),
+
+        /** Omschrijving — verplicht voor alle types. */
+        omschrijving: v.string(),
+
+        /** Tijdstip van aanmaak (ms since epoch). */
+        tijdstip: v.number(),
+
+        // ── Type-specifieke velden ────────────────────────────────────────────
+
+        /**
+         * Onderdeel-administratie — alleen aanwezig bij type "Onderdeel".
+         * Maakt het mogelijk om de totaalkosten automatisch op te tellen.
+         */
+        onderdeel: v.optional(v.object({
+            artikelnummer: v.optional(v.string()),  // bijv. "VW 1K0 407 151 J"
+            leverancier: v.optional(v.string()),  // bijv. "Van Mossel Parts"
+            prijs: v.optional(v.number()),  // inkoopprijs per stuk (euro)
+            aantal: v.number(),              // minimaal 1
+        })),
+
+        /**
+         * Tijdregistratie — alleen aanwezig bij type "Uren".
+         * Decimale uren: 1.5 = 1 uur en 30 minuten.
+         */
+        aantalUren: v.optional(v.number()),
+
+        /**
+         * Werkdatum — voor welke dag zijn deze uren?
+         * ms since epoch. Default = tijdstip (dag van invoer) als niet opgegeven.
+         * Optioneel voor backward-compatibiliteit met bestaande records.
+         */
+        werkDatum: v.optional(v.number()),
+
+        /**
+         * Taakstatus — alleen aanwezig bij type "Taak".
+         * true = uitgevoerd, false = niet gedaan (bijv. vanwege onderdeel).
+         * undefined bij aanmaak = nog niet beoordeeld (wordt later gezet).
+         */
+        gedaan: v.optional(v.boolean()),
+
+        /** Multi-tenant isolatie. */
+        tokenIdentifier: v.string(),
+    })
+        // Alle bevindingen per werkorder (voor het rapport-panel).
+        .index("by_werkorder", ["werkorderId"])
+        // Tenant-brede rapportage-query (bijv. onderdelen van vandaag).
+        .index("by_token_identifier", ["tokenIdentifier"])
+        // Type-filter per werkorder (bijv. alleen onderdelen ophalen).
+        .index("by_werkorder_and_type", ["werkorderId", "type"]),
 });

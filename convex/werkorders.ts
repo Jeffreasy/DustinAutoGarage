@@ -568,7 +568,7 @@ export const lijstAfgerondNietOpgehaald = query({
             })
         );
 
-        // Sorteer op afsluiting-tijdstip (opgehaald = undefined, sorteer op aangemaaktOp als proxy)
+        // Sorteer op aanmaakdatum (oudste orders bovenaan — geen afsluittijdstip beschikbaar)
         return verrijkt.sort((a, b) => a.aangemaaktOp - b.aangemaaktOp);
     },
 });
@@ -596,8 +596,8 @@ export const lijstPlanningVoorBalie = query({
         const tokenIdentifier = profiel.tokenIdentifier;
 
         const nu = Date.now();
-        const vanafMs = args.vanafMs ?? (nu - (nu % 86400000)); // begin vandaag
-        const totMs = args.totMs ?? (vanafMs + 8 * 24 * 60 * 60 * 1000);  // +8 dagen
+        const vanafMs = args.vanafMs ?? (nu - (nu % 86400000)); // begin vandaag (lokale UTC-midnight)
+        const totMs = args.totMs ?? (vanafMs + 7 * 24 * 60 * 60 * 1000);  // +7 dagen (week-overzicht)
 
         const orders = await ctx.db
             .query("werkorders")
