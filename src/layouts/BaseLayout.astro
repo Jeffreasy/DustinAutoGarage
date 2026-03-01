@@ -121,6 +121,11 @@ const isActief = (pad: string) =>
                 attributeFilter: ["data-theme"],
             });
         </script>
+        <!-- Vercel Analytics: pageviews + custom events -->
+        <script>
+            import { inject } from "@vercel/analytics";
+            inject();
+        </script>
     </body>
 </html>
 

@@ -29,7 +29,7 @@ export default defineConfig({
         /**
          * Web Analytics — gratis op Vercel; toont pageviews zonder cookies.
          */
-        webAnalytics: { enabled: true },
+        webAnalytics: { enabled: false },
 
         /**
          * isr: false — alle pagina's zijn fully dynamic SSR.

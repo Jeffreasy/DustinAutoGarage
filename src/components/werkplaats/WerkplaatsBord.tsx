@@ -20,6 +20,7 @@ import {
     getWerkplekIcon,
     type WerkplekType,
 } from "../ui/Icons";
+import { analyticsWerkplaatsVerplaatst } from "../../lib/analytics";
 
 
 // ---------------------------------------------------------------------------
@@ -252,7 +253,10 @@ export default function WerkplaatsBord() {
                         className="btn btn-primary btn-sm"
                         id="nieuwe-werkorder-btn"
                         aria-label="Nieuwe werkorder aanmaken"
-                        onClick={() => setToonNieuweWerkorderModal(true)}
+                        onClick={() => {
+                            analyticsWerkplaatsVerplaatst("Gepland");
+                            setToonNieuweWerkorderModal(true);
+                        }}
                         style={{ minHeight: "44px", display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
                     >
                         <IconPlus /> Nieuwe werkorder
@@ -284,7 +288,10 @@ export default function WerkplaatsBord() {
             </div>
 
             {logboekOrderId && (
-                <WerkorderLogboek werkorderId={logboekOrderId} onSluit={() => setLogboekOrderId(null)} />
+                <WerkorderLogboek
+                    werkorderId={logboekOrderId}
+                    onSluit={() => setLogboekOrderId(null)}
+                />
             )}
             {toonNieuweWerkorderModal && (
                 <NieuweWerkorderModal onSluit={() => setToonNieuweWerkorderModal(false)} />

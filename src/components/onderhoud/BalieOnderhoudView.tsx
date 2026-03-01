@@ -22,6 +22,7 @@ import BeurtenOverzichtModal from "../modals/BeurtenOverzichtModal";
 import RecenteBeurtenModal from "../modals/RecenteBeurtenModal";
 import { TYPE_ICOON, formatDatum } from "./utils";
 import type { TypeWerk } from "./utils";
+import { analyticsOnderhoudNieuw, analyticsVoertuigDetail } from "../../lib/analytics";
 
 // ---------------------------------------------------------------------------
 // SVG Icons
@@ -146,7 +147,12 @@ function ActiviteitsFeed({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuigen
             {beurten.map((b: BeurtVerrijkt) => (
                 <button
                     key={b._id}
-                    onClick={() => b.voertuig && onOpenDossier(b.voertuig as Doc<"voertuigen">)}
+                    onClick={() => {
+                        if (b.voertuig) {
+                            analyticsVoertuigDetail();
+                            onOpenDossier(b.voertuig as Doc<"voertuigen">);
+                        }
+                    }}
                     disabled={!b.voertuig}
                     className="card card-interactive"
                     style={{
@@ -238,7 +244,10 @@ function OnderhoudsDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">;
                         </span>
                     </div>
                 </div>
-                <button onClick={() => setToonNieuw(true)} className="btn btn-primary" style={{ minHeight: "40px", gap: "var(--space-1)" }}>
+                <button onClick={() => {
+                    analyticsOnderhoudNieuw("Beurt");
+                    setToonNieuw(true);
+                }} className="btn btn-primary" style={{ minHeight: "40px", gap: "var(--space-1)" }}>
                     <IconPlus /> Beurt registreren
                 </button>
             </div>

@@ -15,6 +15,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import ModalShell from "./ModalShell";
+import { analyticsOnderhoudNieuw } from "../../lib/analytics";
 
 // ---------------------------------------------------------------------------
 // Constanten
@@ -82,6 +83,7 @@ export default function NieuweBeurtModal({ voertuig, onSluit }: NieuweBeurtModal
                 werkNotities: form.werkNotities || undefined,
                 documentUrl: form.documentUrl || undefined,
             });
+            analyticsOnderhoudNieuw(form.typeWerk);
             onSluit();
         } catch (err) {
             setFout(err instanceof Error ? err.message : "Onbekende fout");

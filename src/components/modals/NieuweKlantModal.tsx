@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import ModalShell from "./ModalShell";
+import { analyticsKlantNieuw } from "../../lib/analytics";
 
 // ---------------------------------------------------------------------------
 // Types & constanten
@@ -73,6 +74,7 @@ export default function NieuweKlantModal({ onSluit }: { onSluit: () => void }) {
                 bedrijfsnaam: form.bedrijfsnaam || undefined,
                 klantNotities: form.klantNotities || undefined,
             });
+            analyticsKlantNieuw(form.klanttype);
             onSluit();
         } catch (err) {
             setFout(err instanceof Error ? err.message : "Onbekende fout");

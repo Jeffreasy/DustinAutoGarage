@@ -20,6 +20,7 @@ import {
     useMaakWerkorderAan,
 } from "../../hooks/useWerkplaats";
 import ModalShell from "./ModalShell";
+import { analyticsWerkorderAangemaakt } from "../../lib/analytics";
 
 interface NieuweWerkorderModalProps {
     onSluit: () => void;
@@ -59,6 +60,7 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
                     return new Date(jaar, maand - 1, dag, 8, 0, 0).getTime();
                 })(),
             });
+            analyticsWerkorderAangemaakt();
             onSluit();
         } catch (e) {
             setFout(e instanceof Error ? e.message : "Onbekende fout");

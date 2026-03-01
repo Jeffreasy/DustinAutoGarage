@@ -17,6 +17,12 @@ import type { Doc } from "../../../convex/_generated/dataModel";
 import { useKlantenLijst, useKlantenZoek } from "../../hooks/useKlanten";
 import NieuweKlantModal from "../modals/NieuweKlantModal";
 import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
+import {
+    analyticsKlantOpen,
+    analyticsKlantUpdate,
+    analyticsKlantNotitieOpgeslagen,
+    analyticsKlantVerwijder,
+} from "../../lib/analytics";
 
 type StatusFilter = "Alle" | "Actief" | "Inactief" | "Prospect";
 type TypeFilter = "Alle" | "Particulier" | "Zakelijk";
@@ -236,6 +242,7 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                 klanttype: bewerkData.klanttype,
                 status: bewerkData.status,
             });
+            analyticsKlantUpdate();
             setBewerkModus(false);
         } finally {
             setBewerkOpslaan(false);
@@ -246,6 +253,7 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
         setOpslaan(true);
         try {
             await updateBalie({ klantId: klant._id, klantNotities: notities, accepteertMarketing: marketing });
+            analyticsKlantNotitieOpgeslagen();
         } finally {
             setOpslaan(false);
         }
@@ -253,6 +261,7 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
 
     async function handleVerwijder() {
         await verwijderKlant({ klantId: klant._id });
+        analyticsKlantVerwijder();
         onSluit();
     }
 
@@ -761,7 +770,14 @@ export default function BalieKlantenView({ toonVerwijder = false }: { toonVerwij
             ) : (
                 <div style={{ display: "grid", gap: "var(--space-2)", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                     {gefilterd.map((klant) => (
-                        <KlantKaartBalie key={klant._id} klant={klant} onSelecteer={() => setGeselecteerd(klant)} />
+                        <KlantKaartBalie
+                            key={klant._id}
+                            klant={klant}
+                            onSelecteer={() => {
+                                analyticsKlantOpen(klant.klanttype);
+                                setGeselecteerd(klant);
+                            }}
+                        />
                     ))}
                     {gefilterd.length === 0 && (
                         <div className="empty-state" style={{ gridColumn: "1 / -1" }}>

@@ -16,6 +16,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { useKentekenLookup } from "../../hooks/useKentekenLookup";
 import type { KentekenStatus } from "../../hooks/useKentekenLookup";
 import ModalShell from "./ModalShell";
+import { analyticsVoertuigNieuw, analyticsRDWLookup } from "../../lib/analytics";
 
 // ---------------------------------------------------------------------------
 // SVG micro-icons (design system: geen emoji's als UI-iconen)
@@ -168,6 +169,7 @@ export default function NieuwVoertuigModal({
 
     function handleRdwLookup() {
         rdw.reset();
+        analyticsRDWLookup();
         const k = form.kenteken.trim();
         setForm((f) => ({ ...f, kenteken: k + " " }));
         setTimeout(() => setForm((f) => ({ ...f, kenteken: f.kenteken.trim() })), 20);
@@ -202,6 +204,7 @@ export default function NieuwVoertuigModal({
                 eersteTenaamstelling: rdw?.eersteTenaamstelling ?? preFill?.eersteTenaamstelling,
                 co2Uitstoot: rdw?.co2Uitstoot ?? preFill?.co2Uitstoot,
             });
+            analyticsVoertuigNieuw(form.merk, form.brandstof);
             onSluit();
         } catch (err) {
             setFout(err instanceof Error ? err.message : "Onbekende fout");
