@@ -63,6 +63,9 @@ export interface RDWVoertuigInfo {
     heeftRecall: boolean;            // true = openstaande terugroepactie (boolean fallback)
     recalls?: RecallDetail[];        // Gedetailleerde recall-informatie
     nap?: string;                    // "Logisch" | "Onlogisch"
+
+    // AI-gegenereerd beeld
+    ai_image_url?: string;           // Gegenereerd door grok-imagine-image, null op eerste scan
 }
 
 /** Eén openstaande terugroepactie (RDW dataset j9yh-4bf6). */

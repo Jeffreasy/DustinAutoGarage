@@ -43,6 +43,7 @@ interface RecallDetail {
 
 interface ScanResultaat {
     detected_kenteken: string;
+    ai_image_url?: string;   // AI-impressie van het voertuig (optioneel)
     voertuig?: {
         merk?: string;
         model?: string;
@@ -191,6 +192,7 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
     const [foutmelding, setFoutmelding] = useState("");
     const [gevondenKenteken, setGevondenKenteken] = useState("");
     const [voertuigInfo, setVoertuigInfo] = useState<ScanResultaat["voertuig"]>();
+    const [aiImageURL, setAiImageURL] = useState("");
     const [preview, setPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -302,6 +304,7 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
 
             setGevondenKenteken(data.detected_kenteken);
             setVoertuigInfo(data.voertuig);
+            setAiImageURL(data.ai_image_url ?? "");
             setStatus("success");
             onGescanned(data.detected_kenteken, data.voertuig);
 
@@ -318,6 +321,7 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
         setFoutmelding("");
         setGevondenKenteken("");
         setVoertuigInfo(undefined);
+        setAiImageURL("");
         setPreview(null);
         setIsCorrectieModus(false);
         setCorrectieInput("");
@@ -462,6 +466,22 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
                     }}>
                         {voertuigInfo.merk} {voertuigInfo.model}
                     </span>
+                )}
+
+                {/* AI-impressie thumbnail */}
+                {aiImageURL && (
+                    <img
+                        src={aiImageURL}
+                        alt={`AI-impressie ${gevondenKenteken}`}
+                        style={{
+                            width: 80,
+                            height: 54,
+                            objectFit: "cover",
+                            borderRadius: "var(--radius-sm)",
+                            border: "1px solid var(--color-border)",
+                            flexShrink: 0,
+                        }}
+                    />
                 )}
 
                 {/* Corrigeer-knop */}

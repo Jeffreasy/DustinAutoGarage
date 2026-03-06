@@ -221,6 +221,20 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                             {rdwData.heeftRecall && <span style={{ padding: "1px 6px", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)" }}>Recall</span>}
                         </div>
                     )}
+                    {rdwGeladen && rdwData?.ai_image_url && (
+                        <img
+                            src={rdwData.ai_image_url}
+                            alt="AI-impressie van dit voertuig"
+                            style={{
+                                width: 120,
+                                height: 80,
+                                objectFit: "cover",
+                                borderRadius: "var(--radius-md)",
+                                border: "1px solid var(--color-border)",
+                                marginTop: "var(--space-2)",
+                            }}
+                        />
+                    )}
                 </div>
                 <button
                     type="button"
