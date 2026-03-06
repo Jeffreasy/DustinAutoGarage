@@ -119,3 +119,27 @@ export function useUpdateKilometerstand() {
 export function useVerwijderVoertuig() {
     return useMutation(api.voertuigen.verwijder);
 }
+
+// ---------------------------------------------------------------------------
+// Hook: mijn interne klant-ID (voor "Mijn auto" badge)
+// ---------------------------------------------------------------------------
+
+import { api as _api } from "../../convex/_generated/api";
+
+/**
+ * Retourneert het Convex-ID van het interne klant-profiel van de ingelogde
+ * medewerker, of `null` als er geen profiel is, of `undefined` tijdens laden.
+ *
+ * Gebruik:
+ *   const mijnKlantId = useMijnKlantId();
+ *   const isEigen = voertuig.klantId === mijnKlantId;
+ */
+export function useMijnKlantId(): string | null | undefined {
+    const { isAuthenticated } = useConvexAuth();
+    const profiel = useQuery(
+        _api.klanten.getMijnKlantProfiel,
+        isAuthenticated ? {} : "skip"
+    );
+    if (profiel === undefined) return undefined;
+    return profiel ? profiel._id : null;
+}

@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
-import { useVoertuigenLijst, useApkWaarschuwingen, useVerlopenApk } from "../../hooks/useVoertuigen";
+import { useVoertuigenLijst, useApkWaarschuwingen, useVerlopenApk, useMijnKlantId } from "../../hooks/useVoertuigen";
 import { useScannerActie } from "../../hooks/useScannerActie";
 import { useRol } from "../../hooks/useRol";
 import type { ScanVoertuigData, ScanPreFillData } from "../../hooks/useScannerActie";
@@ -108,10 +108,11 @@ function VoertuigSkeleton() {
 // VoertuigKaartBalie
 // ---------------------------------------------------------------------------
 
-function VoertuigKaartBalie({ voertuig, onBewerk, highlighted }: {
+function VoertuigKaartBalie({ voertuig, onBewerk, highlighted, isEigenVoertuig }: {
     voertuig: Doc<"voertuigen">;
     onBewerk: () => void;
     highlighted?: boolean;
+    isEigenVoertuig?: boolean;
 }) {
     const updateKm = useMutation(api.voertuigen.updateKilometerstand);
     const [km, setKm] = useState(String(voertuig.kilometerstand ?? ""));
@@ -148,9 +149,32 @@ function VoertuigKaartBalie({ voertuig, onBewerk, highlighted }: {
             }}>
             {/* Kaart header */}
             <div style={{ padding: "var(--space-4) var(--space-4) 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-2)" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--weight-black)", fontSize: "var(--text-xl)", color: "var(--color-heading)", letterSpacing: "0.06em" }}>
-                    {voertuig.kenteken}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--weight-black)", fontSize: "var(--text-xl)", color: "var(--color-heading)", letterSpacing: "0.06em", flexShrink: 0 }}>
+                        {voertuig.kenteken}
+                    </span>
+                    {isEigenVoertuig && (
+                        <span
+                            style={{
+                                display: "inline-flex", alignItems: "center", gap: "0.3em",
+                                fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                color: "var(--color-accent-text, var(--color-accent))",
+                                background: "var(--color-accent-dim, rgba(99,102,241,0.12))",
+                                border: "1px solid var(--color-accent-border, rgba(99,102,241,0.3))",
+                                borderRadius: "var(--radius-full)",
+                                padding: "0.15em 0.55em",
+                                whiteSpace: "nowrap",
+                            }}
+                            aria-label="Dit is jouw persoonlijke voertuig"
+                        >
+                            <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+                                <circle cx="7" cy="7" r="5" />
+                                <path d="M12 7h10M19 4l3 3-3 3" />
+                            </svg>
+                            Mijn auto
+                        </span>
+                    )}
+                </div>
                 <button
                     onClick={onBewerk}
                     className="btn btn-ghost btn-sm"
@@ -226,6 +250,7 @@ export default function BalieVoertuigenView() {
     const bijnaVerlopen = useApkWaarschuwingen(30) ?? []; // APK 0..30d (eigen query)
     // F-02: rol-bewustzijn — scanner en mutatieknoppen zijn balie+ exclusief
     const { isBalie } = useRol();
+    const mijnKlantId = useMijnKlantId();
 
     const { handleScanResultaat } = useScannerActie(voertuigen, (id) => {
         setHighlightId(id);
@@ -370,6 +395,7 @@ export default function BalieVoertuigenView() {
                             voertuig={v}
                             onBewerk={() => setTeBewerken(v)}
                             highlighted={highlightId === v._id}
+                            isEigenVoertuig={!!mijnKlantId && v.klantId === mijnKlantId}
                         />
                     ))}
                     {gefilterd.length === 0 && (

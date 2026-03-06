@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { useVoertuigenLijst, useApkWaarschuwingen } from "../../hooks/useVoertuigen";
+import { useVoertuigenLijst, useApkWaarschuwingen, useMijnKlantId } from "../../hooks/useVoertuigen";
 import { useRol } from "../../hooks/useRol";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
@@ -217,6 +217,7 @@ export default function VoertuigenDashboard() {
     const voertuigen = useVoertuigenLijst();
     const apkWaarschuwingen = useApkWaarschuwingen(30);
     const { isBalie, isEigenaar, domeinRol, isLoading: rolLaden } = useRol();
+    const mijnKlantId = useMijnKlantId();
 
     const [toonVoertuigModal, setToonVoertuigModal] = useState(false);
     const [voertuigPreFill, setVoertuigPreFill] = useState<NieuwVoertuigPreFill | undefined>(undefined);
@@ -369,6 +370,7 @@ export default function VoertuigenDashboard() {
                                 key={v._id}
                                 voertuig={v}
                                 onClick={() => setGeselecteerdVoertuig(v)}
+                                isEigenVoertuig={!!mijnKlantId && v.klantId === mijnKlantId}
                             />
                         ))}
                     </div>
@@ -417,9 +419,10 @@ function apkUrgency(apkMs: number): { label: string; color: string; bg: string; 
 interface VoertuigCardProps {
     voertuig: Doc<"voertuigen">;
     onClick: () => void;
+    isEigenVoertuig?: boolean;
 }
 
-function VoertuigCard({ voertuig: v, onClick }: VoertuigCardProps) {
+function VoertuigCard({ voertuig: v, onClick, isEigenVoertuig = false }: VoertuigCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
 
@@ -444,7 +447,7 @@ function VoertuigCard({ voertuig: v, onClick }: VoertuigCardProps) {
         <div
             role="button"
             tabIndex={0}
-            aria-label={`Bekijk details van ${v.kenteken}`}
+            aria-label={`Bekijk details van ${v.kenteken}${isEigenVoertuig ? " (mijn auto)" : ""}`}
             onClick={onClick}
             onKeyDown={(e) => e.key === "Enter" && onClick()}
             onMouseEnter={() => setIsHovered(true)}
@@ -456,8 +459,12 @@ function VoertuigCard({ voertuig: v, onClick }: VoertuigCardProps) {
                 background: isHovered ? "var(--glass-bg-strong)" : "var(--glass-bg)",
                 backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
-                border: `1px solid ${isHovered ? "var(--color-border-luminous)" : "var(--glass-border)"}`,
-                boxShadow: isHovered ? "var(--shadow-accent)" : "var(--glass-shadow)",
+                border: isEigenVoertuig
+                    ? `2px solid var(--color-accent)`
+                    : `1px solid ${isHovered ? "var(--color-border-luminous)" : "var(--glass-border)"}`,
+                boxShadow: isEigenVoertuig
+                    ? "0 0 0 3px var(--color-accent-dim, rgba(var(--color-accent-raw,99,102,241),0.15)), var(--glass-shadow)"
+                    : isHovered ? "var(--shadow-accent)" : "var(--glass-shadow)",
                 transition,
                 transform: isPressed && !prefersReducedMotion ? "scale(0.98)" : "scale(1)",
                 cursor: "pointer",
@@ -466,27 +473,53 @@ function VoertuigCard({ voertuig: v, onClick }: VoertuigCardProps) {
                 flexDirection: "column",
             }}
         >
-            {/* ── Header: kenteken + brandstof badge ── */}
+            {/* ── Header: kenteken + 'Mijn auto' badge + brandstof ── */}
             <div style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "var(--space-3) var(--space-4)",
                 borderBottom: "1px solid var(--glass-border)",
+                gap: "var(--space-2)",
             }}>
-                <span style={{
-                    fontFamily: "var(--font-mono)",
-                    fontWeight: "var(--weight-bold)",
-                    fontSize: "var(--text-base)",
-                    color: "var(--color-heading)",
-                    letterSpacing: "var(--tracking-wider)",
-                    background: "var(--gradient-accent-subtle)",
-                    border: "1px solid var(--color-border-luminous)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "0.25em 0.75em",
-                }}>
-                    {v.kenteken}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0 }}>
+                    <span style={{
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: "var(--weight-bold)",
+                        fontSize: "var(--text-base)",
+                        color: "var(--color-heading)",
+                        letterSpacing: "var(--tracking-wider)",
+                        background: "var(--gradient-accent-subtle)",
+                        border: "1px solid var(--color-border-luminous)",
+                        borderRadius: "var(--radius-md)",
+                        padding: "0.25em 0.75em",
+                        flexShrink: 0,
+                    }}>
+                        {v.kenteken}
+                    </span>
+                    {isEigenVoertuig && (
+                        <span
+                            style={{
+                                display: "inline-flex", alignItems: "center", gap: "0.3em",
+                                fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                color: "var(--color-accent-text, var(--color-accent))",
+                                background: "var(--color-accent-dim, rgba(99,102,241,0.12))",
+                                border: "1px solid var(--color-accent-border, rgba(99,102,241,0.3))",
+                                borderRadius: "var(--radius-full)",
+                                padding: "0.15em 0.6em",
+                                whiteSpace: "nowrap",
+                            }}
+                            aria-label="Dit is jouw persoonlijke voertuig"
+                        >
+                            {/* Auto-sleutel icon */}
+                            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+                                <circle cx="7" cy="7" r="5" />
+                                <path d="M12 7h10M19 4l3 3-3 3" />
+                            </svg>
+                            Mijn auto
+                        </span>
+                    )}
+                </div>
 
                 <span style={{
                     fontSize: "var(--text-xs)",
