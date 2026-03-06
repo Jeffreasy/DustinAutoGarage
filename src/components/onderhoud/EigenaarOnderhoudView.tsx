@@ -271,8 +271,80 @@ function ActiviteitsFeed({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuigen
 
 type GarageLogRegel = NonNullable<ReturnType<typeof useGarageActiviteit>>[number];
 
+// Kleur per actie-type — gebaseerd op bekende acties in werkorders.ts
+function actieBadge(actie: string): { bg: string; kleur: string; label: string } {
+    const a = actie.toLowerCase();
+    if (a.includes("aangemaakt") || a.includes("registreer"))
+        return { bg: "var(--color-info-bg)", kleur: "var(--color-info)", label: actie };
+    if (a.includes("bezig") || a.includes("opgepakt"))
+        return { bg: "var(--color-warning-bg)", kleur: "var(--color-warning)", label: actie };
+    if (a.includes("klaar") || a.includes("afgerond") || a.includes("voltooid"))
+        return { bg: "var(--color-success-bg)", kleur: "var(--color-success)", label: actie };
+    if (a.includes("geannuleerd") || a.includes("verwijder"))
+        return { bg: "var(--color-error-bg)", kleur: "var(--color-error)", label: actie };
+    if (a.includes("notitie") || a.includes("opmerking"))
+        return { bg: "var(--color-surface-3)", kleur: "var(--color-muted)", label: actie };
+    if (a.includes("wacht") || a.includes("onderdeel"))
+        return { bg: "var(--color-info-bg)", kleur: "var(--color-info-text)", label: actie };
+    return { bg: "var(--color-surface-2)", kleur: "var(--color-body)", label: actie };
+}
+
+function avatarKleurVoor(naam: string): string {
+    const KLEUREN = ["#0d7a5f", "#2563eb", "#d97706", "#dc2626", "#0891b2", "#65a30d", "#7c3aed", "#db2777"];
+    let h = 0;
+    for (const c of naam) h = (h + c.charCodeAt(0)) % KLEUREN.length;
+    return KLEUREN[h];
+}
+
+const LIMIET_STAP = 50;
+
 function GarageAuditTrail() {
-    const logs = useGarageActiviteit(60);
+    const [limiet, setLimiet] = useState(LIMIET_STAP);
+    const [zoek, setZoek] = useState("");
+    const [filterMedewerker, setFilterMedewerker] = useState<string>("Alle");
+    const logs = useGarageActiviteit(limiet);
+
+    // Bouw unieke medewerker-lijst op uit geladen logs
+    const medewerkers = logs
+        ? Array.from(new Set(logs.map((l: GarageLogRegel) => l.medewerkerNaam).filter(Boolean))).sort()
+        : [];
+
+    // Vandaag-teller
+    const vandaag = new Date().toDateString();
+    const vandaagAantal = logs?.filter((l: GarageLogRegel) => new Date(l.tijdstip).toDateString() === vandaag).length ?? 0;
+
+    // Filter: medewerker + zoekterm
+    const gefilterd = (logs ?? []).filter((log: GarageLogRegel) => {
+        if (filterMedewerker !== "Alle" && log.medewerkerNaam !== filterMedewerker) return false;
+        if (zoek.trim()) {
+            const q = zoek.toLowerCase();
+            return (
+                log.medewerkerNaam?.toLowerCase().includes(q) ||
+                log.actie?.toLowerCase().includes(q) ||
+                log.voertuigKenteken?.toLowerCase().includes(q) ||
+                log.notitie?.toLowerCase().includes(q) ||
+                `${log.voertuigMerk ?? ""} ${log.voertuigModel ?? ""}`.toLowerCase().includes(q)
+            );
+        }
+        return true;
+    });
+
+    // Groepeer op datum
+    const groepen: Record<string, GarageLogRegel[]> = {};
+    gefilterd.forEach((log: GarageLogRegel) => {
+        const d = new Date(log.tijdstip);
+        const nu = new Date();
+        let sleutel: string;
+        if (d.toDateString() === nu.toDateString()) {
+            sleutel = "Vandaag";
+        } else if (d.toDateString() === new Date(nu.getTime() - 86400000).toDateString()) {
+            sleutel = "Gisteren";
+        } else {
+            sleutel = d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+        }
+        if (!groepen[sleutel]) groepen[sleutel] = [];
+        groepen[sleutel].push(log);
+    });
 
     if (logs === undefined) {
         return (
@@ -284,24 +356,86 @@ function GarageAuditTrail() {
         );
     }
 
-    if (logs.length === 0) {
-        return (
-            <div className="card" style={{ padding: "var(--space-8)", textAlign: "center", color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>
-                Nog geen activiteit geregistreerd.
-            </div>
-        );
-    }
-
-    // Groepeer op datum
-    const groepen: Record<string, GarageLogRegel[]> = {};
-    logs.forEach((log: GarageLogRegel) => {
-        const sleutel = new Date(log.tijdstip).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
-        if (!groepen[sleutel]) groepen[sleutel] = [];
-        groepen[sleutel].push(log);
-    });
-
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+
+            {/* ── KPI-balk + zoek ── */}
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                {/* Vandaag badge */}
+                <div style={{
+                    display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
+                    background: "var(--color-accent-dim)", borderRadius: "var(--radius-full)",
+                    padding: "var(--space-1) var(--space-3)", fontSize: "var(--text-xs)",
+                    fontWeight: "var(--weight-semibold)", color: "var(--color-accent-text)",
+                    flexShrink: 0,
+                }}>
+                    <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                    {vandaagAantal} acties vandaag
+                </div>
+
+                {/* Zoekbalk */}
+                <div style={{ position: "relative", flex: "1 1 200px", minWidth: "160px" }}>
+                    <div style={{ position: "absolute", left: "var(--space-3)", top: "50%", transform: "translateY(-50%)", color: "var(--color-muted)", pointerEvents: "none" }}>
+                        <IconSearch />
+                    </div>
+                    <input
+                        type="search"
+                        value={zoek}
+                        onChange={(e) => setZoek(e.target.value)}
+                        placeholder="Zoek op medewerker, actie, kenteken…"
+                        className="input"
+                        style={{ paddingLeft: "2.25rem", minHeight: "36px", fontSize: "var(--text-xs)" }}
+                    />
+                </div>
+
+                {/* Totaal teller */}
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", flexShrink: 0 }}>
+                    {gefilterd.length} {gefilterd.length === 1 ? "log" : "logs"}
+                    {logs.length > gefilterd.length && ` (van ${logs.length})`}
+                </span>
+            </div>
+
+            {/* ── Medewerker filter chips ── */}
+            {medewerkers.length > 0 && (
+                <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+                    {["Alle", ...medewerkers].map((naam) => (
+                        <button
+                            key={naam}
+                            onClick={() => setFilterMedewerker(naam)}
+                            className={`btn btn-sm ${filterMedewerker === naam ? "btn-primary" : "btn-ghost"}`}
+                            style={{ minHeight: "28px", fontSize: "var(--text-xs)", gap: "var(--space-2)", padding: "0 var(--space-3)" }}
+                        >
+                            {naam !== "Alle" && (
+                                <span style={{
+                                    width: "16px", height: "16px", borderRadius: "var(--radius-full)",
+                                    background: avatarKleurVoor(naam), color: "#fff",
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                    fontSize: "9px", fontWeight: "700", flexShrink: 0,
+                                }}>
+                                    {naam.charAt(0).toUpperCase()}
+                                </span>
+                            )}
+                            {naam}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* ── Lege staat ── */}
+            {gefilterd.length === 0 && (
+                <div className="card" style={{ padding: "var(--space-10)", textAlign: "center", color: "var(--color-muted)" }}>
+                    <svg viewBox="0 0 24 24" width={36} height={36} fill="none" stroke="var(--color-border)" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true" style={{ margin: "0 auto var(--space-3)", display: "block" }}>
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                    <div style={{ fontSize: "var(--text-sm)" }}>
+                        {zoek || filterMedewerker !== "Alle"
+                            ? "Geen resultaten gevonden — pas de filters aan."
+                            : "Nog geen activiteit geregistreerd."}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Tijdlijn per datum ── */}
             {Object.entries(groepen).map(([datum, regels]) => (
                 <div key={datum}>
                     {/* Datum-header */}
@@ -311,72 +445,125 @@ function GarageAuditTrail() {
                     }}>
                         <div style={{
                             fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                            color: "var(--color-muted)", textTransform: "uppercase",
-                            letterSpacing: "var(--tracking-wider)", whiteSpace: "nowrap",
+                            color: datum === "Vandaag" ? "var(--color-accent-text)" : "var(--color-muted)",
+                            textTransform: "uppercase", letterSpacing: "var(--tracking-wider)",
+                            whiteSpace: "nowrap",
                         }}>{datum}</div>
-                        <div style={{ flex: 1, height: "1px", background: "var(--color-border)" }} />
+                        <div style={{
+                            flex: 1, height: "1px",
+                            background: datum === "Vandaag" ? "var(--color-accent)" : "var(--color-border)",
+                            opacity: datum === "Vandaag" ? 0.4 : 1,
+                        }} />
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", flexShrink: 0 }}>
+                            {regels.length}
+                        </span>
                     </div>
 
-                    {/* Regels */}
+                    {/* Log regels */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-                        {regels.map((log: GarageLogRegel) => (
-                            <div key={log._id} style={{
-                                display: "grid", gridTemplateColumns: "auto 1fr auto",
-                                gap: "var(--space-3)", padding: "var(--space-2) var(--space-3)",
-                                borderRadius: "var(--radius-sm)",
-                                background: "var(--color-surface-2)",
-                                borderLeft: "2px solid var(--color-border)",
-                                alignItems: "center",
-                                transition: "var(--transition-fast)",
-                            }}
-                                onMouseEnter={(e) => (e.currentTarget.style.borderLeftColor = "var(--color-accent)")}
-                                onMouseLeave={(e) => (e.currentTarget.style.borderLeftColor = "var(--color-border)")}
-                            >
-                                {/* Avatar */}
-                                <div style={{
-                                    width: "28px", height: "28px", borderRadius: "var(--radius-full)",
-                                    background: "var(--color-accent-dim)", color: "var(--color-accent-text)",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)",
-                                    flexShrink: 0,
-                                }}>
-                                    {log.medewerkerNaam?.charAt(0).toUpperCase() ?? "?"}
-                                </div>
+                        {regels.map((log: GarageLogRegel) => {
+                            const badge = actieBadge(log.actie);
+                            const kleur = avatarKleurVoor(log.medewerkerNaam ?? "?");
+                            return (
+                                <div key={log._id} style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "auto 1fr auto",
+                                    gap: "var(--space-3)",
+                                    padding: "var(--space-3) var(--space-3)",
+                                    borderRadius: "var(--radius-md)",
+                                    background: "var(--color-surface-2)",
+                                    borderLeft: `3px solid ${badge.kleur}`,
+                                    alignItems: "flex-start",
+                                    transition: "background var(--transition-fast)",
+                                }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-3)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
+                                >
+                                    {/* Avatar */}
+                                    <div style={{
+                                        width: "30px", height: "30px", borderRadius: "var(--radius-full)",
+                                        background: kleur, color: "#fff",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)",
+                                        flexShrink: 0, marginTop: "1px",
+                                    }}>
+                                        {log.medewerkerNaam?.charAt(0).toUpperCase() ?? "?"}
+                                    </div>
 
-                                {/* Content */}
-                                <div style={{ minWidth: 0 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
-                                        <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)" }}>
-                                            {log.medewerkerNaam}
-                                        </span>
-                                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-body)" }}>
-                                            {log.actie}
-                                        </span>
-                                        {log.voertuigKenteken && (
+                                    {/* Content */}
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)" }}>
+                                                {log.medewerkerNaam}
+                                            </span>
+                                            {/* Actie badge */}
                                             <span style={{
-                                                fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)",
-                                                background: "var(--color-surface-4)", borderRadius: "var(--radius-xs)",
-                                                padding: "1px 5px", color: "var(--color-heading)",
-                                                fontWeight: "var(--weight-bold)",
-                                            }}>{log.voertuigKenteken}</span>
+                                                fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
+                                                color: badge.kleur, background: badge.bg,
+                                                borderRadius: "var(--radius-full)",
+                                                padding: "1px var(--space-2)",
+                                            }}>
+                                                {log.actie}
+                                            </span>
+                                            {/* Kenteken */}
+                                            {log.voertuigKenteken && (
+                                                <span style={{
+                                                    fontFamily: "var(--font-mono)", fontSize: "10px",
+                                                    background: "var(--color-surface-4)", border: "1px solid var(--color-border)",
+                                                    borderRadius: "var(--radius-xs)", padding: "1px 6px",
+                                                    color: "var(--color-heading)", fontWeight: "var(--weight-bold)",
+                                                    letterSpacing: "0.08em",
+                                                }}>
+                                                    {log.voertuigKenteken}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Voertuig merk/model */}
+                                        {(log.voertuigMerk || log.voertuigModel) && (
+                                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "2px" }}>
+                                                {log.voertuigMerk} {log.voertuigModel}
+                                            </div>
+                                        )}
+
+                                        {/* Notitie — BUG FIX: was `"{log.notitie}"` als string literal */}
+                                        {log.notitie && (
+                                            <div style={{
+                                                fontSize: "var(--text-xs)", color: "var(--color-body)",
+                                                fontStyle: "italic", marginTop: "var(--space-1)",
+                                                paddingLeft: "var(--space-2)",
+                                                borderLeft: "2px solid var(--color-border)",
+                                            }}>
+                                                {log.notitie}
+                                            </div>
                                         )}
                                     </div>
-                                    {log.notitie && (
-                                        <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic", marginTop: "2px" }}>
-                                            "{log.notitie}"
-                                        </div>
-                                    )}
-                                </div>
 
-                                {/* Tijd */}
-                                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                                    {new Date(log.tijdstip).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
+                                    {/* Tijdstip */}
+                                    <div style={{
+                                        fontSize: "var(--text-xs)", color: "var(--color-muted)",
+                                        whiteSpace: "nowrap", flexShrink: 0,
+                                        fontVariantNumeric: "tabular-nums",
+                                    }}>
+                                        {new Intl.DateTimeFormat("nl-NL", { hour: "2-digit", minute: "2-digit" }).format(new Date(log.tijdstip))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             ))}
+
+            {/* ── Meer laden ── */}
+            {logs.length >= limiet && gefilterd.length > 0 && (
+                <button
+                    onClick={() => setLimiet(l => l + LIMIET_STAP)}
+                    className="btn btn-ghost"
+                    style={{ width: "100%", minHeight: "40px", fontSize: "var(--text-sm)", marginTop: "var(--space-2)" }}
+                >
+                    Meer laden ({limiet} geladen — klik voor volgende {LIMIET_STAP})
+                </button>
+            )}
         </div>
     );
 }
