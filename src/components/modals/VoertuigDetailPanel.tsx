@@ -44,9 +44,9 @@ function formatDatum(ms: number) {
 function apkKleur(ms: number | undefined): string {
     if (!ms) return "var(--color-muted)";
     const nu = Date.now();
-    if (ms < nu) return "var(--color-error, #dc2626)";
-    if (ms < nu + 30 * 86400000) return "var(--color-warning, #d97706)";
-    return "var(--color-success, #16a34a)";
+    if (ms < nu) return "var(--color-error)";
+    if (ms < nu + 30 * 86400000) return "var(--color-warning)";
+    return "var(--color-success)";
 }
 
 function apkLabel(ms: number | undefined): string {
@@ -64,7 +64,7 @@ function apkLabel(ms: number | undefined): string {
 function Rij({ label, waarde, accent }: { label: string; waarde?: React.ReactNode; accent?: string }) {
     if (!waarde) return null;
     return (
-        <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start", padding: "var(--space-2) 0", borderBottom: "1px solid var(--color-border)", minHeight: "36px" }}>
+        <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start", padding: "var(--space-2) 0", borderBottom: "1px solid var(--color-border)", minHeight: "var(--control-height)" }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", width: "130px", flexShrink: 0, paddingTop: "2px" }}>{label}</span>
             <span style={{ fontSize: "var(--text-sm)", color: accent ?? "var(--color-heading)", fontWeight: "var(--weight-medium)", flex: 1, wordBreak: "break-word" }}>{waarde}</span>
         </div>
@@ -326,7 +326,7 @@ export default function VoertuigDetailPanel({ voertuig, onSluit }: Props) {
     return (
         <div
             style={{
-                position: "fixed", inset: 0, zIndex: 9999,
+                position: "fixed", inset: 0, zIndex: "var(--z-modal)",
                 background: "var(--color-surface)",
                 display: "flex", flexDirection: "column",
                 animation: "slideInRight 0.24s cubic-bezier(0.32, 0.72, 0, 1)",

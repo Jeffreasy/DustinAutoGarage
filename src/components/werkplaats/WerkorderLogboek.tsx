@@ -87,7 +87,7 @@ export default function WerkorderLogboek({ werkorderId, onSluit }: WerkorderLogb
                 position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
                 backdropFilter: "blur(4px)", display: "flex",
                 alignItems: "flex-end", justifyContent: "center",
-                zIndex: 9999, padding: "var(--space-4)",
+                zIndex: "var(--z-modal)", padding: "var(--space-4)",
             }}
         >
             <div

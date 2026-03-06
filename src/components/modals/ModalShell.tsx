@@ -111,7 +111,7 @@ export default function ModalShell({
                     background: "rgba(0,0,0,0.55)",
                     backdropFilter: "blur(6px)",
                     WebkitBackdropFilter: "blur(6px)",
-                    zIndex: 9999,
+                    zIndex: "var(--z-modal)",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "flex-end",
@@ -196,7 +196,7 @@ export default function ModalShell({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                zIndex: 9999,
+                zIndex: "var(--z-modal)",
                 padding: "var(--space-4)",
             }}
         >

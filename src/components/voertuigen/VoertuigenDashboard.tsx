@@ -102,7 +102,7 @@ function Toast({ message, type = "info", onClose }: ToastProps) {
                 position: "fixed",
                 bottom: "var(--space-6)",
                 right: "var(--space-6)",
-                zIndex: 9999,
+                zIndex: "var(--z-toast)",
                 padding: "var(--space-3) var(--space-5)",
                 borderRadius: "var(--radius-lg)",
                 background: bgMap[type],

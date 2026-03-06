@@ -221,7 +221,7 @@ function LiveWerkplaats({ onNieuw }: { onNieuw: () => void }) {
                                 padding: "var(--space-3) var(--space-4)",
                                 background: "var(--color-surface-2)",
                                 border: "1px solid var(--color-border)",
-                                borderLeft: `3px solid ${STATUS_KLEUR[order.status] ?? "#6b7280"}`,
+                                borderLeft: `3px solid ${STATUS_KLEUR[order.status] ?? "var(--color-muted)"}`,
                                 borderRadius: "var(--radius-md)",
                                 textDecoration: "none",
                                 cursor: "pointer",
@@ -242,7 +242,7 @@ function LiveWerkplaats({ onNieuw }: { onNieuw: () => void }) {
 
                                 <span style={{
                                     fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                                    color: STATUS_KLEUR[order.status] ?? "#6b7280", whiteSpace: "nowrap",
+                                    color: STATUS_KLEUR[order.status] ?? "var(--color-muted)", whiteSpace: "nowrap",
                                 }}>
                                     {order.status}
                                 </span>
@@ -641,9 +641,9 @@ export default function GarageDashboard() {
             {!domeinRol && (
                 <div role="status" style={{
                     padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)",
-                    background: "var(--color-warning-bg, #fffbeb)",
-                    border: "1px solid var(--color-warning-border, #fcd34d)",
-                    color: "var(--color-warning, #92400e)", fontSize: "var(--text-sm)",
+                    background: "var(--color-warning-bg)",
+                    border: "1px solid var(--color-warning-border)",
+                    color: "var(--color-warning-text)", fontSize: "var(--text-sm)",
                     display: "flex", alignItems: "flex-start", gap: "var(--space-2)",
                 }}>
                     <span style={{ flexShrink: 0, marginTop: "2px" }}><IconAlertTriangle size={16} /></span>

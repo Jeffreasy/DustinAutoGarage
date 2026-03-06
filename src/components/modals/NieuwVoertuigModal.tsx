@@ -387,7 +387,7 @@ export default function NieuwVoertuigModal({
                                     type="button"
                                     onClick={handleRdwLookup}
                                     disabled={rdwStatus === "loading" || !form.kenteken.trim()}
-                                    className="btn btn-secondary"
+                                    className="btn btn-outline"
                                     style={{ minHeight: "44px", whiteSpace: "nowrap", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
                                     aria-label="Kenteken opzoeken via RDW"
                                 >

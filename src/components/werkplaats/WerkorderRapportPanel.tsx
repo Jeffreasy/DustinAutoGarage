@@ -455,7 +455,7 @@ export default function WerkorderRapportPanel({ werkorderId, domeinRol, onSluit 
         <div
             role="dialog" aria-modal="true" aria-label="Werkorder rapport"
             onClick={onSluit}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 9999, padding: "var(--space-4)" }}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: "var(--z-modal)", padding: "var(--space-4)" }}
         >
             <div
                 onClick={(e) => e.stopPropagation()}
@@ -503,8 +503,9 @@ export default function WerkorderRapportPanel({ werkorderId, domeinRol, onSluit 
                                 </span>
                             )}
                             {toggleFout && (
-                                <span role="alert" style={{ fontSize: "var(--text-xs)", color: "var(--color-error)", fontWeight: "var(--weight-semibold)" }}>
-                                    ⚠ {toggleFout}
+                                <span role="alert" style={{ fontSize: "var(--text-xs)", color: "var(--color-error)", fontWeight: "var(--weight-semibold)", display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
+                                    <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                                    {toggleFout}
                                 </span>
                             )}
                         </div>
@@ -528,8 +529,8 @@ export default function WerkorderRapportPanel({ werkorderId, domeinRol, onSluit 
                                 style={{
                                     flex: 1, minWidth: "80px", padding: "var(--space-3) var(--space-2)",
                                     border: "none", background: "transparent",
-                                    borderBottom: isActief ? "2px solid var(--color-accent, #0d7a5f)" : "2px solid transparent",
-                                    color: isActief ? "var(--color-accent-text, #0d7a5f)" : "var(--color-muted)",
+                                    borderBottom: isActief ? "2px solid var(--color-accent)" : "2px solid transparent",
+                                    color: isActief ? "var(--color-accent-text)" : "var(--color-muted)",
                                     fontWeight: isActief ? "var(--weight-semibold)" : "var(--weight-normal)",
                                     fontSize: "var(--text-xs)", cursor: "pointer",
                                     display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
@@ -541,7 +542,7 @@ export default function WerkorderRapportPanel({ werkorderId, domeinRol, onSluit 
                                 {tab.icon}
                                 {tab.label}
                                 {aantalInTab > 0 && (
-                                    <span style={{ fontSize: "10px", fontWeight: "var(--weight-bold)", background: isActief ? "var(--color-accent, #0d7a5f)" : "var(--color-border)", color: isActief ? "#fff" : "var(--color-muted)", borderRadius: "var(--radius-full)", padding: "0 5px", lineHeight: "16px" }}>
+                                    <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)", background: isActief ? "var(--color-accent)" : "var(--color-border)", color: isActief ? "var(--color-on-accent)" : "var(--color-muted)", borderRadius: "var(--radius-full)", padding: "0 5px", lineHeight: "16px" }}>
                                         {aantalInTab}
                                     </span>
                                 )}
