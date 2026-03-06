@@ -386,11 +386,21 @@ export default function WerkorderRapportPanel({ werkorderId, domeinRol, onSluit 
         return () => document.removeEventListener("keydown", handler);
     }, [onSluit]);
 
-    // K3 FIX: body-scroll-lock consistent met ModalShell.
+    // K3 FIX: body-scroll-lock — ref-counted, consistent met ModalShell.
+    // Zelfde systeem: lock wordt pas vrijgegeven als de LAATSTE overlay sluit.
     useEffect(() => {
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
-        return () => { document.body.style.overflow = prev; };
+        const body = document.body;
+        const count = Number(body.dataset.modalCount ?? "0") + 1;
+        body.dataset.modalCount = String(count);
+        if (count === 1) body.style.overflow = "hidden";
+        return () => {
+            const next = Math.max(0, Number(body.dataset.modalCount ?? "1") - 1);
+            body.dataset.modalCount = String(next);
+            if (next === 0) {
+                body.style.overflow = "";
+                delete body.dataset.modalCount;
+            }
+        };
     }, []);
 
     // P2 FIX: useMemo voor tab-aantallen — voorheen 4× .filter() in render (per tab in map).
