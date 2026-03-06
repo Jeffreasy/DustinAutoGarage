@@ -18,6 +18,7 @@ import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
 import ScanKlantKeuzeModal from "../modals/ScanKlantKeuzeModal";
 import type { ScanKlantKeuzeResult } from "../modals/ScanKlantKeuzeModal";
 import VoertuigBewerkModal from "../modals/VoertuigBewerkModal";
+import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
 
 // ---------------------------------------------------------------------------
 // APK helpers
@@ -213,6 +214,7 @@ export default function BalieVoertuigenView() {
     const [zoek, setZoek] = useState("");
     const [toonNieuw, setToonNieuw] = useState(false);
     const [teBewerken, setTeBewerken] = useState<Doc<"voertuigen"> | null>(null);
+    const [detailVoertuig, setDetailVoertuig] = useState<Doc<"voertuigen"> | null>(null);
     const [highlightId, setHighlightId] = useState<string | null>(null);
     // ScanPreFill: verrijkte scan data (RDW) voor NieuwVoertuigModal
     const [scanPreFill, setScanPreFill] = useState<ScanPreFillData | null>(null);
@@ -275,18 +277,52 @@ export default function BalieVoertuigenView() {
             {verlopen.length > 0 && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-xl)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)" }} role="alert">
                     <span style={{ color: "var(--color-error)", flexShrink: 0, marginTop: "1px" }}><IconAlertTriangle /></span>
-                    <div style={{ fontSize: "var(--text-sm)", color: "var(--color-error-text)" }}>
+                    <div style={{ fontSize: "var(--text-sm)", color: "var(--color-error-text)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-2)" }}>
                         <strong>{verlopen.length} voertuig{verlopen.length > 1 ? "en" : ""} met verlopen APK:</strong>
-                        {" "}{verlopen.map((v) => v.kenteken).join(" · ")}
+                        {verlopen.map((v) => (
+                            <button
+                                key={v._id}
+                                onClick={() => setDetailVoertuig(v)}
+                                style={{
+                                    fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)",
+                                    fontSize: "var(--text-xs)", letterSpacing: "0.05em",
+                                    color: "var(--color-error)", background: "var(--color-error-bg)",
+                                    border: "1px solid var(--color-error-border)",
+                                    borderRadius: "var(--radius-full)", padding: "0.15em 0.6em",
+                                    cursor: "pointer", transition: "opacity 150ms",
+                                    textDecoration: "underline", textDecorationStyle: "dotted",
+                                }}
+                                aria-label={`Open details voor ${v.kenteken}`}
+                            >
+                                {v.kenteken}
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
             {bijnaVerlopen.length > 0 && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-xl)", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)" }} role="alert">
                     <span style={{ color: "var(--color-warning)", flexShrink: 0, marginTop: "1px" }}><IconClock /></span>
-                    <div style={{ fontSize: "var(--text-sm)", color: "var(--color-warning-text)" }}>
+                    <div style={{ fontSize: "var(--text-sm)", color: "var(--color-warning-text)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-2)" }}>
                         <strong>{bijnaVerlopen.length} voertuig{bijnaVerlopen.length > 1 ? "en" : ""} met APK binnen 30 dagen:</strong>
-                        {" "}{bijnaVerlopen.map((v) => v.kenteken).join(" · ")}
+                        {bijnaVerlopen.map((v) => (
+                            <button
+                                key={v._id}
+                                onClick={() => setDetailVoertuig(v)}
+                                style={{
+                                    fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)",
+                                    fontSize: "var(--text-xs)", letterSpacing: "0.05em",
+                                    color: "var(--color-warning)", background: "var(--color-warning-bg)",
+                                    border: "1px solid var(--color-warning-border)",
+                                    borderRadius: "var(--radius-full)", padding: "0.15em 0.6em",
+                                    cursor: "pointer", transition: "opacity 150ms",
+                                    textDecoration: "underline", textDecorationStyle: "dotted",
+                                }}
+                                aria-label={`Open details voor ${v.kenteken}`}
+                            >
+                                {v.kenteken}
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
@@ -373,6 +409,13 @@ export default function BalieVoertuigenView() {
                 />
             )}
             {teBewerken && <VoertuigBewerkModal voertuig={teBewerken} onSluit={() => setTeBewerken(null)} />}
+            {/* APK-banner: direct naar voertuig detail */}
+            {detailVoertuig && (
+                <VoertuigDetailPanel
+                    voertuig={detailVoertuig}
+                    onSluit={() => setDetailVoertuig(null)}
+                />
+            )}
         </div>
     );
 }
