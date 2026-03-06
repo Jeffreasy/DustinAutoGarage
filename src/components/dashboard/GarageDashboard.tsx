@@ -19,9 +19,6 @@ import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
 import NieuweKlantModal from "../modals/NieuweKlantModal";
 import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
 import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
-import ScanKlantKeuzeModal from "../modals/ScanKlantKeuzeModal";
-import type { ScanKlantKeuzeResult } from "../modals/ScanKlantKeuzeModal";
-import type { NieuwVoertuigPreFill } from "../modals/NieuwVoertuigModal";
 
 // ---------------------------------------------------------------------------
 // SVG Icons
@@ -213,17 +210,23 @@ function LiveWerkplaats({ onNieuw }: { onNieuw: () => void }) {
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                     {actief.map((order: WerkorderVerrijkt) => (
-                        <div key={order._id} style={{
-                            display: "flex",
-                            flexDirection: isMobile ? "column" : "row",
-                            alignItems: isMobile ? "flex-start" : "center",
-                            gap: isMobile ? "var(--space-1)" : "var(--space-3)",
-                            padding: "var(--space-3) var(--space-4)",
-                            background: "var(--color-surface-2)",
-                            border: "1px solid var(--color-border)",
-                            borderLeft: `3px solid ${STATUS_KLEUR[order.status] ?? "#6b7280"}`,
-                            borderRadius: "var(--radius-md)",
-                        }}>
+                        <a
+                            key={order._id}
+                            href="/werkplaats"
+                            style={{
+                                display: "flex",
+                                flexDirection: isMobile ? "column" : "row",
+                                alignItems: isMobile ? "flex-start" : "center",
+                                gap: isMobile ? "var(--space-1)" : "var(--space-3)",
+                                padding: "var(--space-3) var(--space-4)",
+                                background: "var(--color-surface-2)",
+                                border: "1px solid var(--color-border)",
+                                borderLeft: `3px solid ${STATUS_KLEUR[order.status] ?? "#6b7280"}`,
+                                borderRadius: "var(--radius-md)",
+                                textDecoration: "none",
+                                cursor: "pointer",
+                            }}
+                        >
                             {/* Rij 1 op mobiel: kenteken + status */}
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "var(--space-2)" }}>
                                 <span style={{
@@ -262,7 +265,7 @@ function LiveWerkplaats({ onNieuw }: { onNieuw: () => void }) {
                                     {formatDatum(order.afspraakDatum)}
                                 </span>
                             </div>
-                        </div>
+                        </a>
                     ))}
                 </div>
             )}
@@ -613,27 +616,12 @@ export default function GarageDashboard() {
     const { isBalie, isEigenaar, domeinRol, isLoading } = useRol();
     const { isMobile, isTabletOrSmaller } = useResponsive();
 
-    const [toonVoertuigKlantKeuze, setToonVoertuigKlantKeuze] = useState(false);
     const [toonVoertuigModal, setToonVoertuigModal] = useState(false);
-    const [voertuigPreFill, setVoertuigPreFill] = useState<NieuwVoertuigPreFill | undefined>(undefined);
     const [toonKlantModal, setToonKlantModal] = useState(false);
     const [toonOrderModal, setToonOrderModal] = useState(false);
 
     function openNieuwVoertuig() {
-        setVoertuigPreFill(undefined);
-        setToonVoertuigKlantKeuze(true);
-    }
-
-    function handleKlantKeuze(keuze: ScanKlantKeuzeResult) {
-        setToonVoertuigKlantKeuze(false);
-        setVoertuigPreFill(keuze.klantId ? { klantId: keuze.klantId, klantNaam: keuze.klantNaam } : {});
         setToonVoertuigModal(true);
-    }
-
-    function sluitVoertuigModals() {
-        setToonVoertuigKlantKeuze(false);
-        setToonVoertuigModal(false);
-        setVoertuigPreFill(undefined);
     }
 
     if (isLoading) {
@@ -716,16 +704,9 @@ export default function GarageDashboard() {
             </div>
 
             {/* ── Modals ── */}
-            {toonVoertuigKlantKeuze && (
-                <ScanKlantKeuzeModal
-                    onKeuze={handleKlantKeuze}
-                    onSluit={sluitVoertuigModals}
-                />
-            )}
             {toonVoertuigModal && (
                 <NieuwVoertuigModal
-                    preFill={voertuigPreFill}
-                    onSluit={sluitVoertuigModals}
+                    onSluit={() => setToonVoertuigModal(false)}
                 />
             )}
             {toonKlantModal && <NieuweKlantModal onSluit={() => setToonKlantModal(false)} />}

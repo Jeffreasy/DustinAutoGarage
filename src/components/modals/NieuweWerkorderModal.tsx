@@ -25,13 +25,15 @@ import { analyticsWerkorderAangemaakt } from "../../lib/analytics";
 
 interface NieuweWerkorderModalProps {
     onSluit: () => void;
+    /** Pre-selecteer klant en ga direct naar stap 2 (voor gebruik vanuit klantprofiel) */
+    preFill?: { klantId: Id<"klanten">; klantNaam: string };
 }
 
-export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalProps) {
-    const [stap, setStap] = useState<1 | 2 | 3>(1);
+export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkorderModalProps) {
+    const [stap, setStap] = useState<1 | 2 | 3>(preFill ? 2 : 1);
     const [zoekterm, setZoekterm] = useState("");
-    const [gekozenKlantId, setGekozenKlantId] = useState<Id<"klanten"> | null>(null);
-    const [gekozenKlantNaam, setGekozenKlantNaam] = useState("");
+    const [gekozenKlantId, setGekozenKlantId] = useState<Id<"klanten"> | null>(preFill?.klantId ?? null);
+    const [gekozenKlantNaam, setGekozenKlantNaam] = useState(preFill?.klantNaam ?? "");
     const [slaKlantOver, setSlaKlantOver] = useState(false);
     const [gekozenVoertuigId, setGekozenVoertuigId] = useState<Id<"voertuigen"> | null>(null);
     const [klacht, setKlacht] = useState("");

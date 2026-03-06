@@ -17,6 +17,7 @@ import type { Doc } from "../../../convex/_generated/dataModel";
 import { useKlantenLijst, useKlantenZoek } from "../../hooks/useKlanten";
 import NieuweKlantModal from "../modals/NieuweKlantModal";
 import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
+import NieuweWerkorderModal from "../modals/NieuweWerkorderModal";
 import {
     analyticsKlantOpen,
     analyticsKlantUpdate,
@@ -209,6 +210,7 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
     const [opslaan, setOpslaan] = useState(false);
     const [verwijderBevestig, setVerwijderBevestig] = useState(false);
     const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
+    const [werkorderPreFill, setWerkorderPreFill] = useState<{ klantId: import("../../../convex/_generated/dataModel").Id<"klanten">; klantNaam: string } | null>(null);
 
     // Inline edit state
     const [bewerkModus, setBewerkModus] = useState(false);
@@ -505,14 +507,45 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                                         APK: {new Date(v.apkVervaldatum).toLocaleDateString("nl-NL")}
                                     </span>
                                 )}
-                                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: "var(--color-muted)", flexShrink: 0 }}>
-                                    <polyline points="9 18 15 12 9 6" />
-                                </svg>
+                                <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0, alignItems: "center" }}>
+                                    {/* Werkorder aanmaken voor dit voertuig */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setWerkorderPreFill({ klantId: klant._id, klantNaam: `${klant.voornaam} ${klant.achternaam}` });
+                                        }}
+                                        className="btn btn-ghost btn-sm"
+                                        aria-label={`Werkorder aanmaken voor ${v.kenteken}`}
+                                        title="Werkorder aanmaken"
+                                        style={{
+                                            minHeight: "36px", fontSize: "var(--text-xs)",
+                                            color: "var(--color-accent-text)",
+                                            display: "inline-flex", alignItems: "center", gap: "4px",
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
+                                        Order
+                                    </button>
+                                    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: "var(--color-muted)", flexShrink: 0 }}>
+                                        <polyline points="9 18 15 12 9 6" />
+                                    </svg>
+                                </div>
                             </button>
                         ))}
                     </div>
                 )}
             </section>
+
+            {geselecteerdVoertuig && (
+                <VoertuigDetailPanel voertuig={geselecteerdVoertuig} onSluit={() => setGeselecteerdVoertuig(null)} />
+            )}
+            {werkorderPreFill && (
+                <NieuweWerkorderModal
+                    preFill={werkorderPreFill}
+                    onSluit={() => setWerkorderPreFill(null)}
+                />
+            )}
 
             {/* Balienotities + AVG */}
             <section className="card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
