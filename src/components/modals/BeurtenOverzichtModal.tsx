@@ -58,13 +58,13 @@ type SortRichting = "asc" | "desc";
 // BeurtenOverzichtModal
 // ---------------------------------------------------------------------------
 
-export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void }) {
+export default function BeurtenOverzichtModal({ onSluit, initieelFilter = "Alle" }: { onSluit: () => void; initieelFilter?: string }) {
     // ✅ FIX: gebruik de verrijkte query — bevat voertuig (kenteken) + klant (naam)
     const beurten = useRecenteBeurtenVerrijkt(200);
     const verwijder = useVerwijderOnderhoud();
     const [sortVeld, setSortVeld] = useState<SortVeld>("datum");
     const [sortRichting, setSortRichting] = useState<SortRichting>("desc");
-    const [filterType, setFilterType] = useState<string>("Alle");
+    const [filterType, setFilterType] = useState<string>(initieelFilter);
     const [verwijderConfirm, setVerwijderConfirm] = useState<string | null>(null);
     const [verwijderBezig, setVerwijderBezig] = useState<string | null>(null);
 

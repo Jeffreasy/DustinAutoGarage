@@ -24,7 +24,7 @@ import NieuweBeurtModal from "../modals/NieuweBeurtModal";
 import RecenteBeurtenModal from "../modals/RecenteBeurtenModal";
 import WerkorderDetailModal from "../modals/WerkorderDetailModal";
 import type { WerkorderVerrijkt } from "../../hooks/useWerkplaats";
-import { TYPE_ICOON, formatDatum } from "./utils";
+import { TYPE_ICOON, SOORT_CONFIG, formatDatum } from "./utils";
 import type { TypeWerk } from "./utils";
 
 // ---------------------------------------------------------------------------
@@ -86,65 +86,98 @@ const IconChevronLeft = () => (
 // KPI Blokken — correcte data via useTotaalStatistieken
 // ---------------------------------------------------------------------------
 
+// Inline SVG icon helper (data-only SOORT_CONFIG in utils.ts)
+function SoortSvg({ type, size = 16 }: { type: string; size?: number }) {
+    const cfg = SOORT_CONFIG[type];
+    if (!cfg) return null;
+    return (
+        <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d={cfg.iconPath} />
+        </svg>
+    );
+}
+
 function KPIDashboard() {
     const stats = useTotaalStatistieken();
     const [toonBeurtenModal, setToonBeurtenModal] = useState(false);
+    const [modalFilter, setModalFilter]           = useState("Alle");
+
+    function openGefilterd(filter: string) {
+        setModalFilter(filter);
+        setToonBeurtenModal(true);
+    }
 
     const kpis = [
         {
             label: "Totaal beurten",
             waarde: stats?.totaal ?? "—",
-            icon: <IconWrench />,
+            iconType: "Grote Beurt",
             color: "var(--color-accent-text)",
             bg: "var(--color-accent-dim)",
+            filter: "Alle",
         },
         {
             label: "APK's deze maand",
             waarde: stats?.apksDezeMaand ?? "—",
-            icon: <IconClipboard />,
-            color: "var(--color-info)",
-            bg: "var(--color-info-bg)",
+            iconType: "APK",
+            color: "var(--color-accent-text)",
+            bg: "var(--color-accent-dim)",
+            filter: "APK",
         },
         {
             label: "Grote beurten",
             waarde: stats?.groteBeurten ?? "—",
-            icon: <IconWrench />,
+            iconType: "Grote Beurt",
             color: "var(--color-warning)",
             bg: "var(--color-warning-bg)",
+            filter: "Grote Beurt",
+        },
+        {
+            label: "Kleine beurten",
+            waarde: stats?.kleineBeurten ?? "—",
+            iconType: "Kleine Beurt",
+            color: "var(--color-info)",
+            bg: "var(--color-info-bg)",
+            filter: "Kleine Beurt",
         },
         {
             label: "Reparaties",
             waarde: stats?.reparaties ?? "—",
-            icon: <IconWrench />,
+            iconType: "Reparatie",
             color: "var(--color-error)",
             bg: "var(--color-error-bg)",
+            filter: "Reparatie",
         },
     ];
 
     return (
         <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "var(--space-3)" }}>
-                {kpis.map(({ label, waarde, icon, color, bg }) => (
-                    <div key={label} className="card" style={{
-                        padding: "var(--space-4) var(--space-5)",
-                        display: "flex", flexDirection: "column", gap: "var(--space-3)",
-                        borderLeft: `3px solid ${color}`,
-                        position: "relative", overflow: "hidden",
-                        transition: "var(--transition-base)",
-                    }}>
-                        <div style={{
-                            position: "absolute", top: "var(--space-3)", right: "var(--space-3)",
-                            color, background: bg, borderRadius: "var(--radius-sm)",
-                            padding: "6px", display: "flex", alignItems: "center", justifyContent: "center",
-                        }}>
-                            {icon}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "var(--space-3)" }}>
+                {kpis.map(({ label, waarde, iconType, color, bg, filter }) => (
+                    <button
+                        key={label}
+                        onClick={() => openGefilterd(filter)}
+                        style={{
+                            all: "unset",
+                            display: "flex", flexDirection: "column", gap: "var(--space-3)",
+                            padding: "var(--space-4) var(--space-5)",
+                            borderLeft: `3px solid ${color}`,
+                            borderRadius: "var(--radius-md)",
+                            background: "var(--color-surface)",
+                            border: `1px solid var(--color-border)`,
+                            borderLeftWidth: "3px", borderLeftColor: color,
+                            position: "relative", overflow: "hidden",
+                            cursor: "pointer", boxSizing: "border-box", width: "100%",
+                            textAlign: "left", transition: "background var(--transition-fast)",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--color-surface-2)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--color-surface)"; }}
+                        aria-label={`${label} bekijken: ${waarde}`}
+                    >
+                        <div style={{ position: "absolute", top: "var(--space-3)", right: "var(--space-3)", color, background: bg, borderRadius: "var(--radius-sm)", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <SoortSvg type={iconType} />
                         </div>
-                        <div style={{
-                            fontSize: "var(--text-3xl)", fontWeight: "var(--weight-bold)",
-                            color: stats ? "var(--color-heading)" : "var(--color-muted)",
-                            fontVariantNumeric: "tabular-nums",
-                            lineHeight: 1,
-                        }}>
+                        <div style={{ fontSize: "var(--text-3xl)", fontWeight: "var(--weight-bold)", color: stats ? "var(--color-heading)" : "var(--color-muted)", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
                             {stats === undefined ? (
                                 <span style={{ display: "inline-block", width: "3ch", height: "1em", background: "var(--skeleton-base)", borderRadius: "var(--radius-xs)", animation: "pulse 1.5s ease infinite" }} />
                             ) : waarde}
@@ -152,21 +185,16 @@ function KPIDashboard() {
                         <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontWeight: "var(--weight-medium)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)" }}>
                             {label}
                         </div>
-                    </div>
+                        <div style={{ fontSize: "9px", color, fontWeight: "var(--weight-semibold)", marginTop: "auto" }}>
+                            bekijk →
+                        </div>
+                    </button>
                 ))}
             </div>
 
-            <div style={{ marginTop: "var(--space-3)", display: "flex", justifyContent: "flex-end" }}>
-                <button
-                    onClick={() => setToonBeurtenModal(true)}
-                    className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "36px", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)" }}
-                >
-                    <IconClipboard /> Beurten overzicht
-                </button>
-            </div>
-
-            {toonBeurtenModal && <BeurtenOverzichtModal onSluit={() => setToonBeurtenModal(false)} />}
+            {toonBeurtenModal && (
+                <BeurtenOverzichtModal onSluit={() => setToonBeurtenModal(false)} initieelFilter={modalFilter} />
+            )}
         </>
     );
 }
@@ -193,6 +221,9 @@ function ActiviteitsFeed({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuigen
     if (beurten.length === 0) {
         return (
             <div className="card" style={{ padding: "var(--space-10)", textAlign: "center" }}>
+                <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="var(--color-border)" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true" style={{ margin: "0 auto var(--space-3)", display: "block" }}>
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
                 <div style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>Nog geen onderhoudsbeurten geregistreerd.</div>
             </div>
         );
@@ -200,69 +231,74 @@ function ActiviteitsFeed({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuigen
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            {beurten.map((b: BeurtVerrijkt) => (
-                <button
-                    key={b._id}
-                    onClick={() => b.voertuig && onOpenDossier(b.voertuig as Doc<"voertuigen">)}
-                    disabled={!b.voertuig}
-                    className="card card-interactive"
-                    style={{
-                        textAlign: "left", width: "100%", cursor: b.voertuig ? "pointer" : "default",
-                        padding: "var(--space-3) var(--space-4)",
-                        display: "grid", gridTemplateColumns: "auto 1fr auto",
-                        gap: "var(--space-3)", alignItems: "center",
-                        transition: "var(--transition-base)",
-                    }}
-                    aria-label={b.voertuig ? `Open dossier ${b.voertuig.kenteken}` : b.typeWerk}
-                >
-                    {/* Type icoon */}
-                    <div style={{
-                        width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center",
-                        background: "var(--color-accent-dim)", borderRadius: "var(--radius-sm)",
-                        color: "var(--color-accent-text)", fontSize: "var(--text-lg)", flexShrink: 0,
-                    }}>
-                        {TYPE_ICOON[b.typeWerk as TypeWerk] ?? "OVR"}
-                    </div>
+            {beurten.map((b: BeurtVerrijkt) => {
+                const soort = SOORT_CONFIG[b.typeWerk] ?? SOORT_CONFIG["Overig"];
+                return (
+                    <button
+                        key={b._id}
+                        onClick={() => b.voertuig && onOpenDossier(b.voertuig as Doc<"voertuigen">)}
+                        disabled={!b.voertuig}
+                        className="card card-interactive"
+                        style={{
+                            textAlign: "left", width: "100%", cursor: b.voertuig ? "pointer" : "default",
+                            padding: "var(--space-3) var(--space-4)",
+                            display: "grid", gridTemplateColumns: "auto 1fr auto",
+                            gap: "var(--space-3)", alignItems: "center",
+                            transition: "var(--transition-base)",
+                            borderLeft: `3px solid ${soort.kleur}`,
+                            touchAction: "manipulation",
+                        }}
+                        aria-label={b.voertuig ? `Open dossier ${b.voertuig.kenteken}` : b.typeWerk}
+                    >
+                        {/* Type icoon — SOORT_CONFIG kleuren */}
+                        <div style={{
+                            width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center",
+                            background: soort.bg, borderRadius: "var(--radius-sm)",
+                            color: soort.kleur, flexShrink: 0,
+                        }}>
+                            <SoortSvg type={b.typeWerk} />
+                        </div>
 
-                    {/* Content */}
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
-                            <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
-                                {b.typeWerk}
-                            </span>
+                        {/* Content */}
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
+                                    {b.typeWerk}
+                                </span>
+                                {b.voertuig && (
+                                    <span style={{
+                                        fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)",
+                                        background: "var(--color-surface-3)", border: "1px solid var(--color-border)",
+                                        borderRadius: "var(--radius-xs)", padding: "1px 6px",
+                                        color: "var(--color-heading)", fontWeight: "var(--weight-bold)",
+                                        letterSpacing: "var(--tracking-wide)",
+                                    }}>
+                                        {b.voertuig.kenteken}
+                                    </span>
+                                )}
+                                {b.klant && (
+                                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                                        {b.klant.voornaam} {b.klant.achternaam}
+                                    </span>
+                                )}
+                            </div>
                             {b.voertuig && (
-                                <span style={{
-                                    fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)",
-                                    background: "var(--color-surface-3)", border: "1px solid var(--color-border)",
-                                    borderRadius: "var(--radius-xs)", padding: "1px 6px",
-                                    color: "var(--color-heading)", fontWeight: "var(--weight-bold)",
-                                    letterSpacing: "var(--tracking-wide)",
-                                }}>
-                                    {b.voertuig.kenteken}
-                                </span>
-                            )}
-                            {b.klant && (
-                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                                    {b.klant.voornaam} {b.klant.achternaam}
-                                </span>
+                                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "2px" }}>
+                                    {b.voertuig.merk} {b.voertuig.model} · {b.kmStandOnderhoud.toLocaleString("nl-NL")} km
+                                </div>
                             )}
                         </div>
-                        {b.voertuig && (
-                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "2px" }}>
-                                {b.voertuig.merk} {b.voertuig.model} · {b.kmStandOnderhoud.toLocaleString("nl-NL")} km
-                            </div>
-                        )}
-                    </div>
 
-                    {/* Datum + pijl */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", flexShrink: 0 }}>
-                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{formatDatum(b.datumUitgevoerd)}</span>
-                        {b.voertuig && (
-                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-accent-text)", fontWeight: "var(--weight-semibold)" }}>dossier →</span>
-                        )}
-                    </div>
-                </button>
-            ))}
+                        {/* Datum + pijl */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", flexShrink: 0 }}>
+                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{formatDatum(b.datumUitgevoerd)}</span>
+                            {b.voertuig && (
+                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-accent-text)", fontWeight: "var(--weight-semibold)" }}>dossier →</span>
+                            )}
+                        </div>
+                    </button>
+                );
+            })}
         </div>
     );
 }
@@ -632,41 +668,7 @@ function GarageAuditTrail() {
 // Voertuig Dossier + Zoeken (eigenaar)
 // ---------------------------------------------------------------------------
 
-// SVG icons per TypeWerk (geen tekstlabels)
-const SOORT_CONFIG: Record<string, { label: string; kleur: string; bg: string; icon: React.ReactNode }> = {
-    "Grote Beurt": {
-        label: "Grote Beurt", kleur: "var(--color-warning)", bg: "var(--color-warning-bg)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>,
-    },
-    "Kleine Beurt": {
-        label: "Kleine Beurt", kleur: "var(--color-info)", bg: "var(--color-info-bg)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M4.93 4.93a10 10 0 0 0 0 14.14" /></svg>,
-    },
-    "APK": {
-        label: "APK", kleur: "var(--color-accent-text)", bg: "var(--color-accent-dim)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
-    },
-    "Reparatie": {
-        label: "Reparatie", kleur: "var(--color-error)", bg: "var(--color-error-bg)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>,
-    },
-    "Bandenwisseling": {
-        label: "Bandenwisseling", kleur: "var(--color-muted)", bg: "var(--color-surface-3)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>,
-    },
-    "Schadeherstel": {
-        label: "Schadeherstel", kleur: "var(--color-error)", bg: "var(--color-error-bg)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
-    },
-    "Diagnostiek": {
-        label: "Diagnostiek", kleur: "var(--color-info)", bg: "var(--color-info-bg)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>,
-    },
-    "Overig": {
-        label: "Overig", kleur: "var(--color-muted)", bg: "var(--color-surface-2)",
-        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>,
-    },
-};
+// SOORT_CONFIG via utils.ts import
 
 const SORTEER_OPTIES = ["Nieuwste eerst", "Oudste eerst"] as const;
 type SorteerOptie = typeof SORTEER_OPTIES[number];
@@ -841,7 +843,7 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
                                 >
                                     {/* Type icon */}
                                     <div style={{ width: "36px", height: "36px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: soort.bg, borderRadius: "var(--radius-sm)", color: soort.kleur }}>
-                                        {soort.icon}
+                                        <SoortSvg type={beurt.typeWerk} />
                                     </div>
 
                                     {/* Info */}
