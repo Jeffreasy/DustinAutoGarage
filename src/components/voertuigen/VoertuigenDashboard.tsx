@@ -19,8 +19,6 @@ import type { Doc } from "../../../convex/_generated/dataModel";
 import NieuwVoertuigModal from "../modals/NieuwVoertuigModal";
 import NieuweKlantModal from "../modals/NieuweKlantModal";
 import VoertuigDetailPanel from "../modals/VoertuigDetailPanel";
-import ScanKlantKeuzeModal from "../modals/ScanKlantKeuzeModal";
-import type { ScanKlantKeuzeResult } from "../modals/ScanKlantKeuzeModal";
 import type { NieuwVoertuigPreFill } from "../modals/NieuwVoertuigModal";
 
 // ---------------------------------------------------------------------------
@@ -220,28 +218,17 @@ export default function VoertuigenDashboard() {
     const apkWaarschuwingen = useApkWaarschuwingen(30);
     const { isBalie, isEigenaar, domeinRol, isLoading: rolLaden } = useRol();
 
-    const [toonVoertuigKlantKeuze, setToonVoertuigKlantKeuze] = useState(false);
     const [toonVoertuigModal, setToonVoertuigModal] = useState(false);
     const [voertuigPreFill, setVoertuigPreFill] = useState<NieuwVoertuigPreFill | undefined>(undefined);
     const [toonKlantModal, setToonKlantModal] = useState(false);
     const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "info" | "success" | "warning" } | null>(null);
 
+    // Fix 3: directe NieuwVoertuigModal — geen ScanKlantKeuzeModal tussenstap nodig.
+    // NieuwVoertuigModal heeft nu zelf een optionele klant-stap ingebouwd.
     function openNieuwVoertuig() {
         setVoertuigPreFill(undefined);
-        setToonVoertuigKlantKeuze(true);
-    }
-
-    function handleKlantKeuze(keuze: ScanKlantKeuzeResult) {
-        setToonVoertuigKlantKeuze(false);
-        setVoertuigPreFill(keuze.klantId ? { klantId: keuze.klantId, klantNaam: keuze.klantNaam } : {});
         setToonVoertuigModal(true);
-    }
-
-    function sluitVoertuigModals() {
-        setToonVoertuigKlantKeuze(false);
-        setToonVoertuigModal(false);
-        setVoertuigPreFill(undefined);
     }
 
     // ── Loading state — skeleton ───────────────────────────────────────────
@@ -304,28 +291,10 @@ export default function VoertuigenDashboard() {
                     >
                         + Klant toevoegen
                     </button>
-
-                    {isEigenaar && (
-                        <button
-                            className="btn btn-ghost btn-sm"
-                            id="exporteer-btn"
-                            aria-label="Exporteer klantdata als CSV"
-                            style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}
-                            onClick={() =>
-                                setToast({
-                                    message: "Export-functionaliteit wordt binnenkort beschikbaar gesteld.",
-                                    type: "info",
-                                })
-                            }
-                        >
-                            <IconDownload />
-                            Exporteer klantdata
-                        </button>
-                    )}
                 </div>
             )}
 
-            {/* APK Waarschuwingen */}
+            {/* APK Waarschuwingen — klikbaar voor voertuigdetails */}
             {apkWaarschuwingen.length > 0 && (
                 <section>
                     <h2 style={{
@@ -342,20 +311,31 @@ export default function VoertuigenDashboard() {
                     </h2>
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                         {apkWaarschuwingen.map((v) => (
-                            <div
+                            <button
                                 key={v._id}
+                                onClick={() => setGeselecteerdVoertuig(v)}
                                 style={{
+                                    display: "flex", alignItems: "center", justifyContent: "space-between",
                                     padding: "var(--space-3) var(--space-4)",
                                     borderRadius: "var(--radius-md)",
                                     background: "var(--color-error-bg)",
                                     border: "1px solid var(--color-error-border)",
                                     color: "var(--color-error)",
                                     fontSize: "var(--text-sm)",
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                    width: "100%",
+                                    transition: "opacity 150ms",
                                 }}
+                                aria-label={`Open details voor ${v.kenteken}`}
                             >
-                                <strong>{v.kenteken}</strong> — {v.merk} {v.model}{" "}
-                                | APK verloopt: {v.apkVervaldatum ? formatDatum(v.apkVervaldatum) : "onbekend"}
-                            </div>
+                                <span>
+                                    <strong style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>{v.kenteken}</strong>
+                                    {" "}&mdash; {v.merk} {v.model}{" "}
+                                    | APK: {v.apkVervaldatum ? formatDatum(v.apkVervaldatum) : "onbekend"}
+                                </span>
+                                <span style={{ fontSize: "var(--text-xs)", opacity: 0.7, whiteSpace: "nowrap", marginLeft: "var(--space-3)" }}>Details →</span>
+                            </button>
                         ))}
                     </div>
                 </section>
@@ -396,16 +376,10 @@ export default function VoertuigenDashboard() {
             </section>
 
             {/* ── Modals ── */}
-            {toonVoertuigKlantKeuze && (
-                <ScanKlantKeuzeModal
-                    onKeuze={handleKlantKeuze}
-                    onSluit={sluitVoertuigModals}
-                />
-            )}
             {toonVoertuigModal && (
                 <NieuwVoertuigModal
                     preFill={voertuigPreFill}
-                    onSluit={sluitVoertuigModals}
+                    onSluit={() => { setToonVoertuigModal(false); setVoertuigPreFill(undefined); }}
                 />
             )}
             {toonKlantModal && (

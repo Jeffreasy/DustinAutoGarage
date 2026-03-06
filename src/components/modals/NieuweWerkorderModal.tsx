@@ -19,6 +19,7 @@ import {
     useVoertuigenVanKlant,
     useMaakWerkorderAan,
 } from "../../hooks/useWerkplaats";
+import { useVoertuigenLijst } from "../../hooks/useVoertuigen";
 import ModalShell from "./ModalShell";
 import { analyticsWerkorderAangemaakt } from "../../lib/analytics";
 
@@ -31,6 +32,7 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
     const [zoekterm, setZoekterm] = useState("");
     const [gekozenKlantId, setGekozenKlantId] = useState<Id<"klanten"> | null>(null);
     const [gekozenKlantNaam, setGekozenKlantNaam] = useState("");
+    const [slaKlantOver, setSlaKlantOver] = useState(false);
     const [gekozenVoertuigId, setGekozenVoertuigId] = useState<Id<"voertuigen"> | null>(null);
     const [klacht, setKlacht] = useState("");
     const [afspraakDatum, setAfspraakDatum] = useState(
@@ -41,17 +43,20 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
 
     const klantResultaten = useZoekKlanten(zoekterm);
     const voertuigen = useVoertuigenVanKlant(gekozenKlantId);
+    // Walk-in: alle voertuigen ophalen voor kenteken-filter
+    const alleVoertuigen = useVoertuigenLijst();
+    const [walkInZoek, setWalkInZoek] = useState("");
     const maakWerkorderAan = useMaakWerkorderAan();
 
     async function handleOpslaan() {
-        if (!gekozenVoertuigId || !gekozenKlantId || !klacht.trim()) return;
+        if (!gekozenVoertuigId || !klacht.trim()) return;
 
         setBezig(true);
         setFout(null);
         try {
             await maakWerkorderAan({
                 voertuigId: gekozenVoertuigId,
-                klantId: gekozenKlantId,
+                ...(gekozenKlantId ? { klantId: gekozenKlantId } : {}),
                 klacht: klacht.trim(),
                 // Parse als lokale datum — new Date("YYYY-MM-DD") is UTC midnight,
                 // wat in NL (CET +1) de vorige dag oplevert. Lokale Date voorkomt dit.
@@ -180,30 +185,80 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
                                 ))}
                             </div>
                         )}
+
+                        {/* Overslaan-knop: werkorder zonder klant */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-2)" }}>
+                            <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>Walk-in / geen klant?</p>
+                            <button
+                                type="button"
+                                onClick={() => { setSlaKlantOver(true); setStap(2); }}
+                                style={{
+                                    fontSize: "var(--text-xs)", color: "var(--color-accent-text)",
+                                    background: "none", border: "none", cursor: "pointer",
+                                    textDecoration: "underline", textDecorationStyle: "dotted",
+                                }}
+                            >
+                                Overslaan, geen klant →
+                            </button>
+                        </div>
                     </div>
                 )}
 
                 {/* ── STAP 2: Voertuig kiezen ──────────────────────────── */}
                 {stap === 2 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-                        <div style={{ background: "var(--gradient-accent-subtle)", border: "1px solid var(--color-border-luminous)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)" }}>
-                            <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
-                                👤 <strong>{gekozenKlantNaam}</strong>
-                            </p>
-                        </div>
+                        {/* Klant-badge: toon alleen als klant gekozen, anders walk-in badge */}
+                        {gekozenKlantNaam ? (
+                            <div style={{ background: "var(--gradient-accent-subtle)", border: "1px solid var(--color-border-luminous)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)" }}>
+                                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
+                                    👤 <strong>{gekozenKlantNaam}</strong>
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)" }}>
+                                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-muted)", fontStyle: "italic" }}>
+                                    🚶 Walk-in — geen klant gekoppeld
+                                </p>
+                            </div>
+                        )}
 
                         <div>
                             <p style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", margin: "0 0 var(--space-2)" }}>
                                 Selecteer voertuig
                             </p>
-                            {voertuigen === undefined && <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>Laden…</p>}
-                            {voertuigen?.length === 0 && (
-                                <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>
-                                    Deze klant heeft geen geregistreerde voertuigen.
-                                </p>
+                            {/* Met klant: voertuigen van die klant */}
+                            {!slaKlantOver && (
+                                <>
+                                    {voertuigen === undefined && <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>Laden…</p>}
+                                    {voertuigen?.length === 0 && (
+                                        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>
+                                            Deze klant heeft geen geregistreerde voertuigen.
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                            {/* Walk-in: zoek over alle voertuigen */}
+                            {slaKlantOver && (
+                                <input
+                                    type="search"
+                                    value={walkInZoek}
+                                    onChange={(e) => setWalkInZoek(e.target.value)}
+                                    placeholder="Zoek op kenteken, merk of model…"
+                                    style={{ ...inputStyle, marginBottom: "var(--space-2)" }}
+                                    autoFocus
+                                    aria-label="Voertuig zoeken"
+                                />
                             )}
                             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                                {voertuigen?.map((v) => (
+                                {/* Voertuigenlijst: klant-gebonden OF walk-in gefilterd */}
+                                {(slaKlantOver
+                                    ? (alleVoertuigen ?? []).filter((v) => {
+                                        if (walkInZoek.length < 2) return true;
+                                        const t = walkInZoek.toLowerCase();
+                                        return v.kenteken.toLowerCase().includes(t) || v.merk.toLowerCase().includes(t) || v.model.toLowerCase().includes(t);
+                                    })
+                                    : (voertuigen ?? [])
+                                ).map((v) => (
                                     <button
                                         key={v._id}
                                         onClick={() => {

@@ -426,8 +426,8 @@ export default defineSchema({
         /** FK → voertuigen._id (de auto die binnen is). */
         voertuigId: v.id("voertuigen"),
 
-        /** FK → klanten._id (snelle access voor telefoonnummer bij bellen). */
-        klantId: v.id("klanten"),
+        /** FK → klanten._id (snelle access voor telefoonnummer bij bellen). Optioneel voor voertuigen zonder klant. */
+        klantId: v.optional(v.id("klanten")),
 
         /**
          * FK → werkplekken._id (waar staat de auto nú?).

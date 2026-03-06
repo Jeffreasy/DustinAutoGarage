@@ -37,7 +37,7 @@ export type AfsluitingReden =
 export type WerkorderVerrijkt = {
     _id: Id<"werkorders">;
     voertuigId: Id<"voertuigen">;
-    klantId: Id<"klanten">;
+    klantId?: Id<"klanten">;
     werkplekId?: Id<"werkplekken">;
     monteursId?: Id<"medewerkers">;
     klacht: string;

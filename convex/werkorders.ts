@@ -59,7 +59,7 @@ export const lijstWerkordersVoorBord = query({
         const verrijkt = await Promise.all(
             actief.map(async (order) => {
                 const voertuig = await ctx.db.get(order.voertuigId);
-                const klant = await ctx.db.get(order.klantId);
+                const klant = order.klantId ? await ctx.db.get(order.klantId) : null;
                 const monteur = order.monteursId
                     ? await ctx.db.get(order.monteursId)
                     : null;
@@ -113,7 +113,7 @@ export const lijstWerkordersVoorWerkplek = query({
 export const maakWerkorderAan = mutation({
     args: {
         voertuigId: v.id("voertuigen"),
-        klantId: v.id("klanten"),
+        klantId: v.optional(v.id("klanten")),
         klacht: v.string(),
         afspraakDatum: v.number(),
         monteursId: v.optional(v.id("medewerkers")),
@@ -128,14 +128,17 @@ export const maakWerkorderAan = mutation({
             throw new Error("FORBIDDEN: Voertuig behoort niet tot deze garage.");
         }
 
-        const klant = await ctx.db.get(args.klantId);
-        if (!klant || klant.tokenIdentifier !== profiel.tokenIdentifier) {
-            throw new Error("FORBIDDEN: Klant behoort niet tot deze garage.");
-        }
-
-        // Controleer consistentie: klant moet eigenaar zijn van het voertuig
-        if (voertuig.klantId !== args.klantId) {
-            throw new Error("CONFLICT: Het opgegeven voertuig behoort niet tot de opgegeven klant.");
+        // Klant validatie — alleen als klantId opgegeven
+        let klant = null;
+        if (args.klantId) {
+            klant = await ctx.db.get(args.klantId);
+            if (!klant || klant.tokenIdentifier !== profiel.tokenIdentifier) {
+                throw new Error("FORBIDDEN: Klant behoort niet tot deze garage.");
+            }
+            // Controleer consistentie: voertuig moet aan deze klant hangen
+            if (voertuig.klantId && voertuig.klantId !== args.klantId) {
+                throw new Error("CONFLICT: Het opgegeven voertuig behoort niet tot de opgegeven klant.");
+            }
         }
 
         // B-10 FIX: Valideer dat de opgegeven monteur tot dezelfde tenant behoort.
@@ -158,17 +161,18 @@ export const maakWerkorderAan = mutation({
             afspraakDatum: args.afspraakDatum,
             monteursId: args.monteursId,
             werkplekId: undefined,
-            // Nieuwe werkorders starten als Gepland — ze zijn ingepland maar nog niet aanwezig
             status: "Gepland",
             tokenIdentifier: profiel.tokenIdentifier,
             aangemaaktOp: Date.now(),
         });
 
-        // Log de aanmaak
+        const logLabel = klant
+            ? `${voertuig.kenteken} (${klant.voornaam} ${klant.achternaam})`
+            : `${voertuig.kenteken} (geen klant)`;
         await ctx.db.insert("werkorderLogs", {
             werkorderId,
             monteursId: profiel._id,
-            actie: `Werkorder aangemaakt — ${voertuig.kenteken} (${klant.voornaam} ${klant.achternaam})`,
+            actie: `Werkorder aangemaakt — ${logLabel}`,
             tijdstip: Date.now(),
             tokenIdentifier: profiel.tokenIdentifier,
         });
@@ -556,7 +560,7 @@ export const lijstAfgerondNietOpgehaald = query({
         const verrijkt = await Promise.all(
             wachtend.map(async (order) => {
                 const voertuig = await ctx.db.get(order.voertuigId);
-                const klant = await ctx.db.get(order.klantId);
+                const klant = order.klantId ? await ctx.db.get(order.klantId) : null;
                 return {
                     ...order,
                     voertuig: voertuig
@@ -621,7 +625,7 @@ export const lijstPlanningVoorBalie = query({
         const verrijkt = await Promise.all(
             actief.map(async (order) => {
                 const voertuig = await ctx.db.get(order.voertuigId);
-                const klant = await ctx.db.get(order.klantId);
+                const klant = order.klantId ? await ctx.db.get(order.klantId) : null;
                 return {
                     ...order,
                     voertuig: voertuig
