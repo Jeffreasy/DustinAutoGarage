@@ -77,7 +77,8 @@ export default function NieuweKlantModal({ onSluit }: { onSluit: () => void }) {
             analyticsKlantNieuw(form.klanttype);
             onSluit();
         } catch (err) {
-            setFout(err instanceof Error ? err.message : "Onbekende fout");
+            // Strip interne Convex prefix-codes voor nettere user-facing melding
+            setFout(err instanceof Error ? err.message.replace(/^(INVALID|CONFLICT|FORBIDDEN): /, "") : "Onbekende fout");
         } finally {
             setBezig(false);
         }

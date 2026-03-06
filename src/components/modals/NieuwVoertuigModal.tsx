@@ -177,21 +177,41 @@ export default function NieuwVoertuigModal({
 
     async function handleOpslaan(e: React.FormEvent) {
         e.preventDefault();
+
+        // Normaliseer consistent met de backend: uppercase + strip spaties én hyphens.
+        const normalKenteken = form.kenteken.toUpperCase().replace(/[\s-]/g, "");
+        const merkTrimmed = form.merk.trim();
+        const modelTrimmed = form.model.trim();
+
+        // Vroege guards voor verplichte velden
+        if (normalKenteken.length === 0) { setFout("Vul een geldig kenteken in."); return; }
+        if (!merkTrimmed) { setFout("Merk is verplicht."); return; }
+        if (!modelTrimmed) { setFout("Model is verplicht."); return; }
+
         // klantId is optioneel — voertuig mag zonder klant worden aangemaakt
         setBezig(true);
         setFout(null);
         try {
             // RDW-data: live rdwData heeft voorrang, anders preFill-data als fallback
             const rdw = rdwData ?? null;
+
+            // Fix: locale datum-parsing — new Date("YYYY-MM-DD") = UTC midnight = dag eerder in NL
+            const apkMs = form.apkVervaldatum
+                ? (() => {
+                    const [j, m, d] = (form.apkVervaldatum as string).split("-").map(Number);
+                    return new Date(j, m - 1, d, 12, 0, 0).getTime();
+                })()
+                : undefined;
+
             await createVoertuig({
                 klantId: gekozenKlantId ?? undefined,
-                kenteken: form.kenteken.toUpperCase().replace(/\s/g, "-"),
-                merk: form.merk,
-                model: form.model,
+                kenteken: normalKenteken,
+                merk: merkTrimmed,
+                model: modelTrimmed,
                 bouwjaar: Number(form.bouwjaar),
                 brandstof: form.brandstof,
                 kilometerstand: form.kilometerstand ? Number(form.kilometerstand) : undefined,
-                apkVervaldatum: form.apkVervaldatum ? new Date(form.apkVervaldatum).getTime() : undefined,
+                apkVervaldatum: apkMs,
                 voertuigNotities: form.voertuigNotities || undefined,
                 // ── RDW-verrijking ────────────────────────────────────────────
                 voertuigsoort: rdw?.voertuigsoort ?? preFill?.voertuigsoort,
@@ -207,7 +227,8 @@ export default function NieuwVoertuigModal({
             analyticsVoertuigNieuw(form.merk, form.brandstof);
             onSluit();
         } catch (err) {
-            setFout(err instanceof Error ? err.message : "Onbekende fout");
+            // Strip interne Convex prefix-codes voor nettere user-facing melding
+            setFout(err instanceof Error ? err.message.replace(/^(INVALID|CONFLICT|FORBIDDEN): /, "") : "Onbekende fout");
         } finally {
             setBezig(false);
         }

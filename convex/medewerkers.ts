@@ -438,9 +438,13 @@ export const updateMijnProfiel = mutation({
             throw new Error("INVALID: Bio mag maximaal 500 tekens zijn.");
         }
 
-        // Bouw een schone patch (geen undefined-waarden doorgeven)
+        // Bouw een schone patch: filter undefined én lege naam (naam mag niet leeg worden)
         const patch = Object.fromEntries(
-            Object.entries(args).filter(([, val]) => val !== undefined)
+            Object.entries(args).filter(([key, val]) => {
+                if (val === undefined) return false;
+                if (key === "naam" && typeof val === "string" && val.trim() === "") return false;
+                return true;
+            })
         );
 
         await ctx.db.patch(profiel._id, patch);
@@ -498,8 +502,13 @@ export const updateMedewerkerProfiel = mutation({
         }
 
         const { medewerkerId, ...rest } = args;
+        // Filter undefined én lege naam (naam mag niet leeg worden)
         const patch = Object.fromEntries(
-            Object.entries(rest).filter(([, val]) => val !== undefined)
+            Object.entries(rest).filter(([key, val]) => {
+                if (val === undefined) return false;
+                if (key === "naam" && typeof val === "string" && val.trim() === "") return false;
+                return true;
+            })
         );
 
         await ctx.db.patch(medewerkerId, patch);

@@ -146,10 +146,15 @@ export const maakWerkorderAan = mutation({
             }
         }
 
+        // Guard: klacht mag niet leeg zijn — werkorder zonder omschrijving is nutteloos.
+        if (!args.klacht.trim()) {
+            throw new Error("INVALID: Klacht/taakomschrijving mag niet leeg zijn.");
+        }
+
         const werkorderId = await ctx.db.insert("werkorders", {
             voertuigId: args.voertuigId,
             klantId: args.klantId,
-            klacht: args.klacht,
+            klacht: args.klacht.trim(),
             afspraakDatum: args.afspraakDatum,
             monteursId: args.monteursId,
             werkplekId: undefined,

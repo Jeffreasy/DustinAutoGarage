@@ -63,7 +63,7 @@ export default function NieuweWerkorderModal({ onSluit }: NieuweWerkorderModalPr
             analyticsWerkorderAangemaakt();
             onSluit();
         } catch (e) {
-            setFout(e instanceof Error ? e.message : "Onbekende fout");
+            setFout(e instanceof Error ? e.message.replace(/^(INVALID|CONFLICT|FORBIDDEN): /, "") : "Onbekende fout");
         } finally {
             setBezig(false);
         }

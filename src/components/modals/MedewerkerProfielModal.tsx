@@ -326,11 +326,15 @@ function TabContract({ data, isEigenaar, isZichzelf, onSave }: {
 
     async function opslaan() {
         setBezig(true);
+        // Fix: locale datum-parsing — new Date("YYYY-MM-DD") = UTC midnight = dag eerder in NL
+        const inDienstMs = inDienst
+            ? (() => { const [j, m, d] = inDienst.split("-").map(Number); return new Date(j, m - 1, d, 12, 0, 0).getTime(); })()
+            : undefined;
         await onSave({
             contractType: contractType || undefined,
             uurloon: uurloon ? parseFloat(uurloon) : undefined,
-            contractUrenPerWeek: uren ? parseInt(uren) : undefined,
-            inDienstSinds: inDienst ? new Date(inDienst).getTime() : undefined,
+            contractUrenPerWeek: uren ? parseInt(uren, 10) : undefined,
+            inDienstSinds: inDienstMs,
             bsn: bsn || undefined,
         });
         setBezig(false);
@@ -425,8 +429,10 @@ function TabCV({ data, kanBewerken, onCVSave }: {
 
     async function slaWerkErvaringOp() {
         setBezig(true);
-        const vanafMs = vanafStr ? new Date(vanafStr + "-01").getTime() : new Date().getTime();
-        const nieuw = { bedrijf, functie, vanafMs, totMs: totStr ? new Date(totStr + "-01").getTime() : undefined, beschrijving: beschrijving || undefined };
+        // Fix: locale datum-parsing voor "YYYY-MM" (month picker) — voeg dag 1 toe en parse lokaal
+        const parseMonth = (str: string) => { const [j, m] = str.split("-").map(Number); return new Date(j, m - 1, 1, 12, 0, 0).getTime(); };
+        const vanafMs = vanafStr ? parseMonth(vanafStr) : new Date().getTime();
+        const nieuw = { bedrijf, functie, vanafMs, totMs: totStr ? parseMonth(totStr) : undefined, beschrijving: beschrijving || undefined };
         await onCVSave({ werkervaring: [...werkervaring, nieuw] });
         setBezig(false); setAddWerk(false);
         setBedrijf(""); setFunctie(""); setVanafStr(""); setTotStr(""); setBeschrijving("");
@@ -434,7 +440,9 @@ function TabCV({ data, kanBewerken, onCVSave }: {
 
     async function slaOpleidingOp() {
         setBezig(true);
-        const nieuw = { instelling, richting, niveau: niveau || undefined, behaaldOp: behaaldStr ? new Date(behaaldStr + "-01").getTime() : undefined, diploma };
+        // Fix: locale datum-parsing voor "YYYY-MM" — voeg dag 1 toe en parse lokaal
+        const parseMonth = (str: string) => { const [j, m] = str.split("-").map(Number); return new Date(j, m - 1, 1, 12, 0, 0).getTime(); };
+        const nieuw = { instelling, richting, niveau: niveau || undefined, behaaldOp: behaaldStr ? parseMonth(behaaldStr) : undefined, diploma };
         await onCVSave({ opleiding: [...opleiding, nieuw] });
         setBezig(false); setAddOpl(false);
         setInstelling(""); setRichting(""); setNiveau(""); setBehaaldStr(""); setDiploma(false);
@@ -591,7 +599,9 @@ function TabCertificaten({ data, kanBewerken, onCVSave }: {
 
     async function slaOp() {
         setBezig(true);
-        const nieuw = { naam, uitgever: uitgever || undefined, behaaldOp: new Date(behaaldStr).getTime(), verlooptOp: verlooptStr ? new Date(verlooptStr).getTime() : undefined };
+        // Fix: locale datum-parsing — new Date("YYYY-MM-DD") = UTC midnight = dag eerder in NL
+        const parseDag = (str: string) => { const [j, m, d] = str.split("-").map(Number); return new Date(j, m - 1, d, 12, 0, 0).getTime(); };
+        const nieuw = { naam, uitgever: uitgever || undefined, behaaldOp: parseDag(behaaldStr), verlooptOp: verlooptStr ? parseDag(verlooptStr) : undefined };
         await onCVSave({ certificaten: [...certs, nieuw] });
         setBezig(false); setAddCert(false);
         setNaam(""); setUitgever(""); setBehaaldStr(""); setVerlooptStr("");

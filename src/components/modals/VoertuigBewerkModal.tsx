@@ -96,14 +96,23 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
 
     async function handleOpslaan(e: React.FormEvent) {
         e.preventDefault();
+
+        // Normaliseer consistent met de backend: uppercase + strip spaties én hyphens
+        const normalKenteken = form.kenteken.toUpperCase().replace(/[\s-]/g, "");
+
+        // Vroege guards voor verplichte velden
+        if (normalKenteken.length === 0) { setFout("Vul een geldig kenteken in."); return; }
+        if (!form.merk.trim()) { setFout("Merk is verplicht."); return; }
+        if (!form.model.trim()) { setFout("Model is verplicht."); return; }
+
         setBezig(true);
         setFout(null);
         try {
             await updateVoertuig({
                 voertuigId: voertuig._id,
-                kenteken: form.kenteken.toUpperCase().replace(/\s/g, "-"),
-                merk: form.merk,
-                model: form.model,
+                kenteken: normalKenteken,
+                merk: form.merk.trim(),
+                model: form.model.trim(),
                 bouwjaar: Number(form.bouwjaar),
                 brandstof: form.brandstof,
                 kilometerstand: form.kilometerstand ? Number(form.kilometerstand) : undefined,
@@ -128,7 +137,8 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
             });
             onSluit();
         } catch (err) {
-            setFout(err instanceof Error ? err.message : "Onbekende fout");
+            // Strip interne Convex prefix-codes voor nettere user-facing melding
+            setFout(err instanceof Error ? err.message.replace(/^(INVALID|CONFLICT|FORBIDDEN): /, "") : "Onbekende fout");
         } finally {
             setBezig(false);
         }

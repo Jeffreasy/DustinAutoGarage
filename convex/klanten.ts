@@ -241,6 +241,22 @@ export const create = mutation({
         const profiel = await requireDomainRole(ctx, "monteur");
         const tokenIdentifier = profiel.tokenIdentifier;
 
+        // Guard: verplichte tekstvelden mogen niet leeg zijn ("" na trim).
+        // HTML-required is client-side en omzeild via directe API-calls.
+        const leegeVelden: string[] = [];
+        if (!args.voornaam.trim()) leegeVelden.push("voornaam");
+        if (!args.achternaam.trim()) leegeVelden.push("achternaam");
+        if (!args.emailadres.trim()) leegeVelden.push("emailadres");
+        if (!args.telefoonnummer.trim()) leegeVelden.push("telefoonnummer");
+        if (!args.adres.trim()) leegeVelden.push("adres");
+        if (!args.postcode.trim()) leegeVelden.push("postcode");
+        if (!args.woonplaats.trim()) leegeVelden.push("woonplaats");
+        if (leegeVelden.length > 0) {
+            throw new Error(
+                `INVALID: De volgende verplichte velden zijn leeg: ${leegeVelden.join(", ")}.`
+            );
+        }
+
         const bestaand = await ctx.db
             .query("klanten")
             .withIndex("by_email_and_token", (q) =>
@@ -257,7 +273,13 @@ export const create = mutation({
 
         return ctx.db.insert("klanten", {
             ...args,
-            emailadres: args.emailadres.toLowerCase(),
+            voornaam: args.voornaam.trim(),
+            achternaam: args.achternaam.trim(),
+            emailadres: args.emailadres.trim().toLowerCase(),
+            telefoonnummer: args.telefoonnummer.trim(),
+            adres: args.adres.trim(),
+            postcode: args.postcode.trim(),
+            woonplaats: args.woonplaats.trim(),
             tokenIdentifier,
             klantSinds: Date.now(),
         });
@@ -313,11 +335,18 @@ export const update = mutation({
 
         const patch = {
             ...rest,
-            ...(emailadres ? { emailadres: emailadres.toLowerCase() } : {}),
+            ...(emailadres ? { emailadres: emailadres.trim().toLowerCase() } : {}),
         };
 
+        // Filter undefined AND lege strings om te voorkomen dat een patch
+        // verplichte velden leeg maakt (bijv. voornaam: "").
+        const VERPLICHT = new Set(["voornaam", "achternaam", "emailadres", "telefoonnummer", "adres", "postcode", "woonplaats"]);
         const cleanPatch = Object.fromEntries(
-            Object.entries(patch).filter(([, val]) => val !== undefined)
+            Object.entries(patch).filter(([key, val]) => {
+                if (val === undefined) return false;
+                if (typeof val === "string" && val.trim() === "" && VERPLICHT.has(key)) return false;
+                return true;
+            })
         );
 
         await ctx.db.patch(klantId, cleanPatch);

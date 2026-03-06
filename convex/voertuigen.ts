@@ -209,6 +209,20 @@ export const create = mutation({
         // Normaliseer kenteken: altijd uppercase, geen streepjes (bijv. "GH-446-V" → "GH446V")
         const normalKenteken = args.kenteken.toUpperCase().replace(/[\s-]/g, "");
 
+        // Guard: lege kenteken nooit opslaan — vangt mislukte scans op waarbij de
+        // frontend toch een submit doet met een leeg of witruimte-only kenteken.
+        if (normalKenteken.length === 0) {
+            throw new Error(
+                "INVALID: Kenteken mag niet leeg zijn. Voer een geldig kenteken in."
+            );
+        }
+
+        // Normaliseer merk/model: trim en valideer
+        const merkTrimmed = args.merk.trim();
+        const modelTrimmed = args.model.trim();
+        if (!merkTrimmed) throw new Error("INVALID: Merk mag niet leeg zijn.");
+        if (!modelTrimmed) throw new Error("INVALID: Model mag niet leeg zijn.");
+
         // M-6 FIX: verifieer dat het kenteken niet al geregistreerd is voor deze tenant
         const bestaandVoertuig = await ctx.db
             .query("voertuigen")
@@ -226,6 +240,8 @@ export const create = mutation({
         return ctx.db.insert("voertuigen", {
             ...args,
             kenteken: normalKenteken,
+            merk: merkTrimmed,
+            model: modelTrimmed,
             tokenIdentifier,
             aangemaaktOp: Date.now(),
         });
@@ -295,15 +311,42 @@ export const update = mutation({
             throw new Error("FORBIDDEN: Voertuig niet gevonden of geen toegang.");
         }
 
-        const { voertuigId, ...fields } = args;
+        const { voertuigId, kenteken, ...rest } = args;
 
-        // Normaliseer kenteken indien meegestuurd
-        const patch = fields.kenteken
-            ? { ...fields, kenteken: fields.kenteken.toUpperCase().replace(/[\s-]/g, "") }
-            : { ...fields };
+        // Normaliseer en valideer nieuw kenteken indien meegestuurd
+        let normalKenteken: string | undefined;
+        if (kenteken !== undefined) {
+            normalKenteken = kenteken.toUpperCase().replace(/[\s-]/g, "");
+            if (normalKenteken.length === 0) {
+                throw new Error("INVALID: Kenteken mag niet leeg zijn.");
+            }
+            // Duplicate-check alleen als het kenteken daadwerkelijk wijzigt
+            if (normalKenteken !== voertuig.kenteken) {
+                const conflict = await ctx.db
+                    .query("voertuigen")
+                    .withIndex("by_token_and_kenteken", (q) =>
+                        q.eq("tokenIdentifier", tokenIdentifier).eq("kenteken", normalKenteken!)
+                    )
+                    .first();
+                if (conflict) {
+                    throw new Error(`CONFLICT: Kenteken "${normalKenteken}" is al geregistreerd in deze garage.`);
+                }
+            }
+        }
 
+        const patch = {
+            ...rest,
+            ...(normalKenteken !== undefined ? { kenteken: normalKenteken } : {}),
+        };
+
+        // Filter undefined AND lege strings voor verplichte velden
+        const VERPLICHT_VOERTUIG = new Set(["kenteken", "merk", "model"]);
         const cleanPatch = Object.fromEntries(
-            Object.entries(patch).filter(([, val]) => val !== undefined)
+            Object.entries(patch).filter(([key, val]) => {
+                if (val === undefined) return false;
+                if (typeof val === "string" && val.trim() === "" && VERPLICHT_VOERTUIG.has(key)) return false;
+                return true;
+            })
         );
 
         await ctx.db.patch(voertuigId, cleanPatch);
@@ -412,3 +455,45 @@ export const verwijder = mutation({
     },
 });
 
+/**
+ * verwijderLegeKentekens — Eigenaar-only cleanup mutatie.
+ *
+ * Verwijdert alle voertuigen voor de huidige tenant waarbij het kenteken
+ * leeg is ("") — wees-records aangemaakt vóór de lege-kenteken guard (bugfix).
+ *
+ * Cascade: verwijdert ook onderhoudshistorie van elk leeg-kenteken voertuig.
+ * Werkorders worden NIET gecascade (die hebben een verplicht kenteken in de UI).
+ *
+ * Gebruik: eenmalig uitvoeren via Convex dashboard of een tijdelijke admin-knop.
+ */
+export const verwijderLegeKentekens = mutation({
+    args: {},
+    handler: async (ctx): Promise<number> => {
+        const profiel = await requireDomainRole(ctx, "eigenaar");
+        const tokenIdentifier = profiel.tokenIdentifier;
+
+        const alleVoertuigen = await ctx.db
+            .query("voertuigen")
+            .withIndex("by_token_identifier", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier)
+            )
+            .collect();
+
+        const legeVoertuigen = alleVoertuigen.filter((v) => !v.kenteken || v.kenteken.trim() === "");
+
+        for (const voertuig of legeVoertuigen) {
+            // Cascade: verwijder onderhoudshistorie
+            const historie = await ctx.db
+                .query("onderhoudshistorie")
+                .withIndex("by_voertuig", (q) => q.eq("voertuigId", voertuig._id))
+                .collect();
+            for (const entry of historie) {
+                await ctx.db.delete(entry._id);
+            }
+
+            await ctx.db.delete(voertuig._id);
+        }
+
+        return legeVoertuigen.length;
+    },
+});

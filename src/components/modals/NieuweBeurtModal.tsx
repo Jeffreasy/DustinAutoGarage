@@ -71,22 +71,35 @@ export default function NieuweBeurtModal({ voertuig, onSluit }: NieuweBeurtModal
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!form.kmStandOnderhoud) return;
+
+        const km = parseInt(form.kmStandOnderhoud, 10);
+        // Guard: niet opslaan als kmStand leeg of niet-numeriek is
+        if (!form.kmStandOnderhoud || isNaN(km) || km <= 0) {
+            setFout("Vul een geldige kilometerstand in (groter dan 0).");
+            return;
+        }
+
         setBezig(true);
         setFout(null);
         try {
+            // Parse als lokale datum — new Date("YYYY-MM-DD") is UTC midnight,
+            // wat in NL (CET +1) de vorige dag oplevert.
+            const [jaar, maand, dag] = form.datumUitgevoerd.split("-").map(Number);
+            const datumMs = new Date(jaar, maand - 1, dag, 12, 0, 0).getTime();
+
             await registreer({
                 voertuigId: voertuig._id,
                 typeWerk: form.typeWerk,
-                datumUitgevoerd: new Date(form.datumUitgevoerd).getTime(),
-                kmStandOnderhoud: parseInt(form.kmStandOnderhoud),
+                datumUitgevoerd: datumMs,
+                kmStandOnderhoud: km,
                 werkNotities: form.werkNotities || undefined,
                 documentUrl: form.documentUrl || undefined,
             });
             analyticsOnderhoudNieuw(form.typeWerk);
             onSluit();
         } catch (err) {
-            setFout(err instanceof Error ? err.message : "Onbekende fout");
+            // Strip interne Convex prefix-codes voor nettere user-facing melding
+            setFout(err instanceof Error ? err.message.replace(/^(INVALID|CONFLICT|FORBIDDEN): /, "") : "Onbekende fout");
         } finally {
             setBezig(false);
         }
