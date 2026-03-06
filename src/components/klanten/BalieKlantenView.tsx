@@ -537,15 +537,6 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                 )}
             </section>
 
-            {geselecteerdVoertuig && (
-                <VoertuigDetailPanel voertuig={geselecteerdVoertuig} onSluit={() => setGeselecteerdVoertuig(null)} />
-            )}
-            {werkorderPreFill && (
-                <NieuweWerkorderModal
-                    preFill={werkorderPreFill}
-                    onSluit={() => setWerkorderPreFill(null)}
-                />
-            )}
 
             {/* Balienotities + AVG */}
             <section className="card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -619,11 +610,17 @@ function KlantDetailPanel({ klant, toonVerwijder, onSluit }: {
                 </div>
             </section>
 
-            {/* Voertuig detail modal — fixed overlay, rendert over het detail panel */}
+            {/* ── Portals: voertuig detail + werkorder — buiten sectie-flow, via ModalShell portal ── */}
             {geselecteerdVoertuig !== null && (
                 <VoertuigDetailPanel
                     voertuig={geselecteerdVoertuig}
                     onSluit={() => setGeselecteerdVoertuig(null)}
+                />
+            )}
+            {werkorderPreFill && (
+                <NieuweWerkorderModal
+                    preFill={werkorderPreFill}
+                    onSluit={() => setWerkorderPreFill(null)}
                 />
             )}
         </div>

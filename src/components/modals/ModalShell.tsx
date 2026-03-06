@@ -46,11 +46,24 @@ export default function ModalShell({
     // Ref voor de inner container — gebruikt door focus-trap.
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // K1: Body-scroll-lock — voorkomt dat achtergrond mee-scrolt op mobiel.
+    // K1: Body-scroll-lock met ref-counting — werkt correct bij meerdere gelijktijdige modals.
+    // Gebruik dataset op body als teller zodat de lock pas wordt opgeheven als de LAATSTE modal sluit.
     useEffect(() => {
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
-        return () => { document.body.style.overflow = prev; };
+        const body = document.body;
+        const count = Number(body.dataset.modalCount ?? "0") + 1;
+        body.dataset.modalCount = String(count);
+        if (count === 1) {
+            body.dataset.scrollTop = String(window.scrollY);
+            body.style.overflow = "hidden";
+        }
+        return () => {
+            const next = Math.max(0, Number(body.dataset.modalCount ?? "1") - 1);
+            body.dataset.modalCount = String(next);
+            if (next === 0) {
+                body.style.overflow = "";
+                delete body.dataset.modalCount;
+            }
+        };
     }, []);
 
     // Escape-toets sluiting
