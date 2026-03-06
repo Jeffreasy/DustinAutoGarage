@@ -67,6 +67,21 @@ function IconLink() {
         </svg>
     );
 }
+function IconWarning() {
+    return (
+        <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }}>
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+    );
+}
+function IconX() {
+    return (
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+    );
+}
 
 function SoortSvg({ type }: { type: string }) {
     const cfg = SOORT_CONFIG[type];
@@ -119,16 +134,20 @@ function VoertuigMiniKaart({
                 {/* Kenteken + info rij — klikbaar → dossier */}
                 <button
                     onClick={() => onOpenDossier(voertuig)}
+                    className="voertuig-kaart-btn"
                     style={{
-                        all: "unset", display: "flex", alignItems: "center",
+                        all: "unset",
+                        display: "flex", alignItems: "center",
                         gap: "var(--space-4)", padding: "var(--space-4)",
                         width: "100%", boxSizing: "border-box",
                         cursor: "pointer", flexWrap: "wrap",
-                        transition: "background var(--transition-fast)",
                         touchAction: "manipulation",
+                        // focus-visible ring — hersteld na all:unset
+                        outline: "2px solid transparent",
+                        outlineOffset: "2px",
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "var(--color-surface-2)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                    onFocus={e => { e.currentTarget.style.outline = "2px solid var(--color-accent)"; }}
+                    onBlur={e => { e.currentTarget.style.outline = "2px solid transparent"; }}
                     aria-label={`Open dossier – ${voertuig.kenteken} ${voertuig.merk} ${voertuig.model}`}
                 >
                     {/* Kenteken */}
@@ -151,14 +170,14 @@ function VoertuigMiniKaart({
                             {voertuig.bouwjaar} · {voertuig.brandstof}
                             {voertuig.kilometerstand !== undefined && ` · ${voertuig.kilometerstand.toLocaleString("nl-NL")} km`}
                         </div>
-                        {apkStatus === "verlopen" && (
+                        {apkStatus === "verlopen" && voertuig.apkVervaldatum !== undefined && (
                             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-error, #ef4444)", marginTop: "2px", fontWeight: "var(--weight-medium)" }}>
-                                ⚠ APK verlopen — {new Date(voertuig.apkVervaldatum!).toLocaleDateString("nl-NL")}
+                                <IconWarning /> APK verlopen — {new Date(voertuig.apkVervaldatum).toLocaleDateString("nl-NL")}
                             </div>
                         )}
-                        {apkStatus === "binnenkort" && (
+                        {apkStatus === "binnenkort" && voertuig.apkVervaldatum !== undefined && (
                             <div style={{ fontSize: "var(--text-xs)", color: "var(--color-warning, #f59e0b)", marginTop: "2px", fontWeight: "var(--weight-medium)" }}>
-                                APK verloopt binnenkort — {new Date(voertuig.apkVervaldatum!).toLocaleDateString("nl-NL")}
+                                <IconWarning /> APK verloopt binnenkort — {new Date(voertuig.apkVervaldatum).toLocaleDateString("nl-NL")}
                             </div>
                         )}
                     </div>
@@ -261,22 +280,26 @@ function BestaandVoertuigKoppelen({
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-            {/* Zoekbalk */}
-            <div style={{ position: "relative" }}>
-                <div style={{ position: "absolute", left: "var(--space-3)", top: "50%", transform: "translateY(-50%)", color: "var(--color-muted)", pointerEvents: "none" }}>
-                    <IconSearch />
+            {/* Zoekbalk met zichtbaar label */}
+            <div>
+                <label htmlFor="koppel-zoek" style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-muted)", display: "block", marginBottom: "var(--space-1)" }}>
+                    Zoek op kenteken
+                </label>
+                <div style={{ position: "relative" }}>
+                    <div style={{ position: "absolute", left: "var(--space-3)", top: "50%", transform: "translateY(-50%)", color: "var(--color-muted)", pointerEvents: "none" }}>
+                        <IconSearch />
+                    </div>
+                    <input
+                        id="koppel-zoek"
+                        className="input"
+                        style={{ minHeight: "44px", width: "100%", boxSizing: "border-box", paddingLeft: "var(--space-8)" }}
+                        value={zoekterm}
+                        onChange={e => { setZoekterm(e.target.value); setFout(null); setSucces(null); }}
+                        placeholder="bijv. AB-123-C…"
+                        autoComplete="off"
+                        spellCheck={false}
+                    />
                 </div>
-                <input
-                    id="koppel-zoek"
-                    className="input"
-                    style={{ minHeight: "44px", width: "100%", boxSizing: "border-box", paddingLeft: "var(--space-8)" }}
-                    value={zoekterm}
-                    onChange={e => { setZoekterm(e.target.value); setFout(null); setSucces(null); }}
-                    placeholder="Zoek op kenteken (bijv. AB-123…"
-                    autoComplete="off"
-                    spellCheck={false}
-                    aria-label="Kenteken zoeken"
-                />
             </div>
 
             {/* Fout */}
@@ -325,9 +348,13 @@ function BestaandVoertuigKoppelen({
                                     disabled={bezig || !!v.klantId}
                                     className="btn btn-primary btn-sm"
                                     style={{ minHeight: "36px", gap: "var(--space-1)", touchAction: "manipulation", flexShrink: 0 }}
-                                    title={v.klantId ? "Voertuig is al aan een klant gekoppeld" : undefined}
+                                    aria-label={v.klantId
+                                        ? `${v.kenteken} is al gekoppeld aan een andere klant`
+                                        : `${v.kenteken} koppelen aan mijn profiel`
+                                    }
+                                    aria-disabled={!!v.klantId}
                                 >
-                                    <IconLink /> Koppelen
+                                    <IconLink /> {v.klantId ? "Al gekoppeld" : "Koppelen"}
                                 </button>
                             </div>
                         ))
@@ -532,7 +559,9 @@ export default function MijnVoertuigenTab({ onOpenDossier, domeinRol, naam }: Mi
                 <div className="card" style={{ padding: "var(--space-4)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
                         <div style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>Bestaand voertuig koppelen</div>
-                        <button onClick={() => setModus(null)} className="btn btn-ghost btn-sm" style={{ touchAction: "manipulation" }}>✕</button>
+                        <button onClick={() => setModus(null)} className="btn btn-ghost btn-sm" style={{ touchAction: "manipulation", minWidth: "36px", minHeight: "36px" }} aria-label="Sluiten">
+                            <IconX />
+                        </button>
                     </div>
                     <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", margin: "0 0 var(--space-3)" }}>
                         Zoek een voertuig dat al in het systeem staat en koppel het aan je profiel.
