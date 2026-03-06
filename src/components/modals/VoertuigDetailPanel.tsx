@@ -124,7 +124,7 @@ function IconInfo() {
 }
 
 function IconNote() {
-    return <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>;
+    return <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>;
 }
 
 function IconFile() {
@@ -192,7 +192,7 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
                 <button
                     onClick={onSluit}
                     className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                    style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, touchAction: "manipulation" }}
                     aria-label="Sluit detail"
                 >
                     <IconX />
@@ -200,7 +200,7 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
             </div>
 
             {/* ── Scroll-body ── */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 var(--space-5) var(--space-6)" }}>
+            <div style={{ flex: 1, overflowY: "auto", overscrollBehavior: "contain", padding: "0 var(--space-5) var(--space-6)" }}>
 
                 {/* ── Garage-signalen: WOK / Recall / NAP ── */}
                 {(voertuig.wok || voertuig.heeftRecall || voertuig.nap === "Onlogisch") && (
@@ -266,7 +266,7 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
                 {voertuig.voertuigNotities && (
                     <div style={{ marginTop: "var(--space-3)", padding: "var(--space-3)", background: "var(--glass-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
                         <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic", display: "flex", alignItems: "flex-start", gap: "var(--space-2)" }}>
-                            <IconNote />
+                            <span style={{ flexShrink: 0, marginTop: 2, display: "flex" }}><IconNote /></span>
                             {voertuig.voertuigNotities}
                         </p>
                     </div>
@@ -326,7 +326,7 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
                         {klant.klantNotities && (
                             <div style={{ marginTop: "var(--space-3)", padding: "var(--space-3)", background: "var(--glass-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
                                 <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-muted)", fontStyle: "italic", display: "flex", alignItems: "flex-start", gap: "var(--space-2)" }}>
-                                    <IconNote />
+                                    <span style={{ flexShrink: 0, marginTop: 2, display: "flex" }}><IconNote /></span>
                                     {klant.klantNotities}
                                 </p>
                             </div>
@@ -439,6 +439,9 @@ export default function VoertuigDetailPanel({ voertuig, onSluit }: Props) {
                 @keyframes slideInRight {
                     from { transform: translateX(100%); opacity: 0.6; }
                     to   { transform: translateX(0);    opacity: 1; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .slide-panel { animation: none !important; }
                 }
             `}</style>
         </div>
