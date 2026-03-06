@@ -24,6 +24,8 @@ interface ModalProps {
     isEigenaar: boolean;
     isZichzelf: boolean;
     onClose: () => void;
+    /** Als true: geen overlay/backdrop, render als pagina-content */
+    embedded?: boolean;
 }
 
 const DAGEN = ["MA", "DI", "WO", "DO", "VR", "ZA", "ZO"] as const;
@@ -796,7 +798,7 @@ const TABS: { id: Tab; label: string; labelShort: string }[] = [
     { id: "beschikbaarheid", label: "Beschikbaarheid", labelShort: "Dagen" },
 ];
 
-export default function MedewerkerProfielModal({ medewerkerId, isEigenaar, isZichzelf, onClose }: ModalProps) {
+export default function MedewerkerProfielModal({ medewerkerId, isEigenaar, isZichzelf, onClose, embedded = false }: ModalProps) {
     const [activeTab, setActiveTab] = useState<Tab>("overzicht");
     const contentRef = useRef<HTMLDivElement>(null);
     const sluitKnopRef = useRef<HTMLButtonElement>(null);
@@ -841,6 +843,69 @@ export default function MedewerkerProfielModal({ medewerkerId, isEigenaar, isZic
     async function onCVSave(velden: Record<string, unknown>) {
         const { medewerkerId: _id, ...rest } = velden;
         await updateCV({ medewerkerId: isEigenaar && !isZichzelf ? medewerkerId : undefined, ...(rest as Omit<Parameters<typeof updateCV>[0], "medewerkerId">) });
+    }
+
+    // Embedded mode: render als pagina-content (geen overlay)
+    if (embedded) {
+        return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {/* ── Tabs ── */}
+                <div style={{
+                    display: "flex", overflowX: "auto", flexShrink: 0,
+                    borderBottom: "1px solid var(--color-border)",
+                    marginBottom: "var(--space-6)",
+                    scrollbarWidth: "none",
+                }} className="profiel-modal-tabs">
+                    {TABS.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => handleTabChange(tab.id)}
+                            aria-selected={activeTab === tab.id}
+                            style={{
+                                flexShrink: 0,
+                                padding: "var(--space-3) var(--space-4)",
+                                fontSize: "var(--text-sm)",
+                                fontWeight: activeTab === tab.id ? "var(--weight-semibold)" : "var(--weight-normal)",
+                                color: activeTab === tab.id ? "var(--color-accent-text)" : "var(--color-muted)",
+                                background: "none", border: "none", cursor: "pointer",
+                                borderBottom: activeTab === tab.id ? "2px solid var(--color-accent)" : "2px solid transparent",
+                                whiteSpace: "nowrap",
+                                transition: "color 150ms ease",
+                                minHeight: "44px",
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* ── Content ── */}
+                <div ref={contentRef}>
+                    {profielData === undefined ? (
+                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "200px", color: "var(--color-muted)", gap: "var(--space-2)" }}>
+                            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ animation: "spin 1s linear infinite" }}>
+                                <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+                            </svg>
+                            Profiel laden…
+                        </div>
+                    ) : profielData === null ? (
+                        <p style={{ color: "var(--color-error)", textAlign: "center", padding: "var(--space-8)" }}>Profiel niet gevonden.</p>
+                    ) : (
+                        <>
+                            {activeTab === "overzicht" && <TabOverzicht data={profielData as unknown as Record<string, unknown>} isEigenaar={isEigenaar} isZichzelf={isZichzelf} onSave={onSaveProfiel} />}
+                            {activeTab === "contract" && <TabContract data={profielData as unknown as Record<string, unknown>} isEigenaar={isEigenaar} isZichzelf={isZichzelf} onSave={onSaveProfiel} />}
+                            {activeTab === "cv" && <TabCV data={profielData as unknown as Record<string, unknown>} kanBewerken={kanBewerken} onCVSave={onCVSave} />}
+                            {activeTab === "certificaten" && <TabCertificaten data={profielData as unknown as Record<string, unknown>} kanBewerken={kanBewerken} onCVSave={onCVSave} />}
+                            {activeTab === "beschikbaarheid" && <TabBeschikbaarheid data={profielData as unknown as Record<string, unknown>} kanBewerken={kanBewerken} onSave={onSaveProfiel} />}
+                        </>
+                    )}
+                </div>
+                <style>{`
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                    .profiel-modal-tabs::-webkit-scrollbar { display: none; }
+                `}</style>
+            </div>
+        );
     }
 
     return (

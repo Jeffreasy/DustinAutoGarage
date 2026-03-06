@@ -1,0 +1,99 @@
+---
+/**
+ * src/pages/profiel.astro
+ *
+ * Eigen profiel — toegankelijk voor ALLE ingelogde medewerkers.
+ * Toont de volledige profielpagina (geen modal) voor de ingelogde gebruiker.
+ *
+ * Toegangslogica:
+ *   - Niet ingelogd → /login
+ *   - Ingelogd maar geen Convex profiel (cold-start) → /medewerkers
+ *   - Alle rollen → volledige eigen profielpagina
+ */
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import MijnProfielIsland from "../components/profiel/MijnProfielIsland";
+---
+
+<BaseLayout
+    title="Mijn profiel — Dustin Auto Garage"
+    description="Bekijk en bewerk je persoonlijke profiel, contractgegevens en certificaten."
+>
+    <div class="page-content">
+        <div class="page-kop">
+            <a
+                href="/dashboard"
+                class="back-link"
+                aria-label="Terug naar dashboard"
+            >
+                <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                Terug
+            </a>
+            <h1>Mijn profiel</h1>
+            <p class="pagina-ondertitel">
+                Bekijk en beheer jouw persoonlijke gegevens
+            </p>
+        </div>
+
+        <MijnProfielIsland client:only="react" />
+    </div>
+</BaseLayout>
+
+<style>
+    .page-content {
+        padding: var(--space-6) var(--space-5);
+        max-width: 860px;
+        margin: 0 auto;
+    }
+
+    .page-kop {
+        margin-bottom: var(--space-8);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: var(--text-sm);
+        color: var(--color-muted);
+        text-decoration: none;
+        margin-bottom: var(--space-3);
+        padding: var(--space-1) 0;
+        border-radius: var(--radius-sm);
+        transition: color var(--transition-fast);
+        touch-action: manipulation;
+    }
+    .back-link:hover {
+        color: var(--color-heading);
+    }
+    .back-link:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
+
+    .page-kop h1 {
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-bold);
+        color: var(--color-heading);
+        margin: 0 0 var(--space-1);
+        line-height: var(--leading-tight);
+    }
+
+    .pagina-ondertitel {
+        font-size: var(--text-sm);
+        color: var(--color-muted);
+        margin: 0;
+    }
+</style>

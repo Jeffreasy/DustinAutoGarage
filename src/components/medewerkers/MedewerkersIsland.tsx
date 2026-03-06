@@ -11,7 +11,7 @@
  *   - Empty state → SVG icon
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -153,6 +153,132 @@ function RolBadge({ rol }: { rol: DomeinRol }) {
         }}>
             {ROL_LABELS[rol] ?? rol}
         </span>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// StatsHeader
+// ---------------------------------------------------------------------------
+
+function StatsHeader({ medewerkers }: { medewerkers: Array<{ domeinRol: string; actief: boolean }> }) {
+    const actief = medewerkers.filter(m => m.actief).length;
+    const perRol: Record<string, number> = {};
+    for (const m of medewerkers) {
+        if (!m.actief) continue;
+        perRol[m.domeinRol] = (perRol[m.domeinRol] ?? 0) + 1;
+    }
+    const stats = [
+        { label: "Actief", value: actief, accent: true },
+        ...(["eigenaar", "balie", "monteur", "stagiair"] as DomeinRol[])
+            .filter(r => perRol[r])
+            .map(r => ({ label: ROL_LABELS[r], value: perRol[r], accent: false })),
+    ];
+    return (
+        <div style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.min(stats.length, 4)}, 1fr)`,
+            gap: "var(--space-3)",
+            marginBottom: "var(--space-6)",
+        }} className="stats-grid">
+            <style>{`
+                @media (max-width: 640px) { .stats-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+            `}</style>
+            {stats.map(s => (
+                <div key={s.label} style={{
+                    padding: "var(--space-4)",
+                    borderRadius: "var(--radius-xl)",
+                    background: s.accent ? "var(--color-accent-dim)" : "var(--glass-bg)",
+                    border: `1px solid ${s.accent ? "var(--color-border-luminous)" : "var(--glass-border)"}`,
+                    backdropFilter: "blur(8px)",
+                    display: "flex", flexDirection: "column", gap: "var(--space-1)",
+                }}>
+                    <span style={{
+                        fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)",
+                        color: s.accent ? "var(--color-accent-text)" : "var(--color-heading)",
+                        lineHeight: 1,
+                    }}>{s.value}</span>
+                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{s.label}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ZoekFilterBar
+// ---------------------------------------------------------------------------
+
+type RolFilter = "alle" | DomeinRol;
+
+function ZoekFilterBar({
+    zoekterm, onZoek,
+    actieveFilter, onFilter,
+    beschikbareRollen,
+}: {
+    zoekterm: string;
+    onZoek: (v: string) => void;
+    actieveFilter: RolFilter;
+    onFilter: (r: RolFilter) => void;
+    beschikbareRollen: DomeinRol[];
+}) {
+    const filterOpties: { id: RolFilter; label: string }[] = [
+        { id: "alle", label: "Alle" },
+        ...beschikbareRollen.map(r => ({ id: r, label: ROL_LABELS[r] ?? r })),
+    ];
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
+            {/* Zoekbalk */}
+            <div style={{ position: "relative" }}>
+                <svg
+                    width={15} height={15} viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth={2} strokeLinecap="round"
+                    aria-hidden="true"
+                    style={{
+                        position: "absolute", left: "var(--space-3)",
+                        top: "50%", transform: "translateY(-50%)",
+                        color: "var(--color-muted)", pointerEvents: "none",
+                    }}
+                >
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                    type="search"
+                    className="input"
+                    placeholder="Zoek op naam…"
+                    value={zoekterm}
+                    onChange={e => onZoek(e.target.value)}
+                    style={{ paddingLeft: "calc(var(--space-3) + 15px + var(--space-2))" }}
+                    aria-label="Zoek medewerkers op naam"
+                />
+            </div>
+            {/* Rol-filters */}
+            {filterOpties.length > 2 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }} role="group" aria-label="Filteren op functie">
+                    {filterOpties.map(opt => (
+                        <button
+                            key={opt.id}
+                            onClick={() => onFilter(opt.id)}
+                            aria-pressed={actieveFilter === opt.id}
+                            style={{
+                                padding: "0.3em 0.85em",
+                                borderRadius: "var(--radius-full)",
+                                fontSize: "var(--text-xs)",
+                                fontWeight: actieveFilter === opt.id ? "var(--weight-semibold)" : "var(--weight-normal)",
+                                border: "1px solid",
+                                cursor: "pointer",
+                                minHeight: "32px",
+                                transition: "all 150ms ease",
+                                background: actieveFilter === opt.id ? "var(--color-accent-dim)" : "var(--glass-bg)",
+                                color: actieveFilter === opt.id ? "var(--color-accent-text)" : "var(--color-muted)",
+                                borderColor: actieveFilter === opt.id ? "var(--color-border-luminous)" : "var(--color-border)",
+                            }}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -507,17 +633,26 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
     }
 
     return (
-        <div style={{
-            borderRadius: "var(--radius-xl)",
-            background: medewerker.actief ? "var(--glass-bg)" : "var(--color-surface)",
-            backdropFilter: medewerker.actief ? "blur(12px)" : "none",
-            WebkitBackdropFilter: medewerker.actief ? "blur(12px)" : "none",
-            border: "1px solid var(--glass-border)",
-            padding: "var(--space-4)",
-            opacity: medewerker.actief ? 1 : 0.55,
-            display: "flex", gap: "var(--space-3)", alignItems: "flex-start", flexWrap: "wrap",
-            transition: "opacity 200ms ease",
-        }}>
+        <div
+            style={{
+                borderRadius: "var(--radius-xl)",
+                background: medewerker.actief ? "var(--glass-bg)" : "var(--color-surface)",
+                backdropFilter: medewerker.actief ? "blur(12px)" : "none",
+                WebkitBackdropFilter: medewerker.actief ? "blur(12px)" : "none",
+                border: "1px solid var(--glass-border)",
+                padding: "var(--space-4)",
+                opacity: medewerker.actief ? 1 : 0.55,
+                display: "flex", gap: "var(--space-3)", alignItems: "flex-start", flexWrap: "wrap",
+                transition: "opacity 200ms ease, background 150ms ease, box-shadow 150ms ease",
+                cursor: "pointer",
+            }}
+            onClick={() => onProfielKlik(medewerker._id)}
+            role="button"
+            tabIndex={0}
+            aria-label={`Profiel van ${weergaveNaam} bekijken`}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onProfielKlik(medewerker._id); } }}
+            className="medewerker-kaart"
+        >
             {/* Avatar — gradient gebaseerd op rol */}
             <div aria-hidden="true" style={{
                 width: "44px", height: "44px", borderRadius: "9999px",
@@ -534,7 +669,7 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
             {/* Info + acties */}
             <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Naam + badges */}
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-1)" }}>
                     <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
                         {weergaveNaam}
                     </span>
@@ -552,14 +687,14 @@ function MedewerkerRij({ medewerker, isActerendEigenaar, actueelProfielId, onPro
                             Gedeactiveerd
                         </span>
                     )}
-                    <button
-                        onClick={() => onProfielKlik(medewerker._id)}
-                        className="btn btn-ghost btn-sm"
-                        style={{ marginLeft: "auto", fontSize: "var(--text-xs)", padding: "0.15em 0.75em" }}
-                        aria-label={`Profiel van ${medewerker.naam} bekijken`}
-                    >
-                        Profiel
-                    </button>
+                    {/* Actieve status dot */}
+                    {medewerker.actief && (
+                        <span aria-label="Actief" style={{
+                            display: "inline-block", width: 7, height: 7,
+                            borderRadius: "9999px", background: "var(--color-success)",
+                            marginLeft: "auto", flexShrink: 0,
+                        }} />
+                    )}
                 </div>
 
                 {/* Eigenaar-acties */}
@@ -701,9 +836,32 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
     const medewerkers = kanLijstZien ? alleMedewerkers : null;
     const [geselecteerdProfielId, setGeselecteerdProfielId] = useState<Id<"medewerkers"> | null>(null);
 
-    // Toon repair banner voor eigenaar als de lijst slechts 1 record bevat (zichzelf)
-    // terwijl er meer medewerkers zouden moeten zijn (herkent stale token bug)
+    // Zoek + filter state
+    const [zoekterm, setZoekterm] = useState("");
+    const [actieveFilter, setActieveFilter] = useState<RolFilter>("alle");
+
+    // Toon repair banner voor eigenaar als de lijst slechts 1 record bevat
     const toonRepairBanner = isEigenaar && Array.isArray(medewerkers) && medewerkers.length === 1;
+
+    // Gefilterde + gezochte lijst
+    const gefilterdeMediawerkers = useMemo(() => {
+        if (!Array.isArray(medewerkers)) return [];
+        return medewerkers.filter(m => {
+            const weergaveNaam = [m.voornaam, m.achternaam].filter(Boolean).join(" ") || m.naam;
+            const matchZoek = !zoekterm ||
+                weergaveNaam.toLowerCase().includes(zoekterm.toLowerCase()) ||
+                m.naam.toLowerCase().includes(zoekterm.toLowerCase());
+            const matchFilter = actieveFilter === "alle" || m.domeinRol === actieveFilter;
+            return matchZoek && matchFilter;
+        });
+    }, [medewerkers, zoekterm, actieveFilter]);
+
+    // Beschikbare rollen voor filter buttons
+    const beschikbareRollen = useMemo(() => {
+        if (!Array.isArray(medewerkers)) return [];
+        const rollen = new Set(medewerkers.map(m => m.domeinRol as DomeinRol));
+        return (["eigenaar", "balie", "monteur", "stagiair"] as DomeinRol[]).filter(r => rollen.has(r));
+    }, [medewerkers]);
 
     if (isLoading) return <Spinner />;
 
@@ -718,45 +876,30 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-8)" }}>
 
-            {/* Jouw profiel */}
-            {profiel && (
-                <section aria-labelledby="jouw-profiel-heading">
-                    <SectieTitel>Jouw profiel</SectieTitel>
-                    <div style={{
-                        display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap",
-                        padding: "var(--space-4)", borderRadius: "var(--radius-xl)",
-                        background: "var(--glass-bg)", backdropFilter: "blur(12px)",
-                        WebkitBackdropFilter: "blur(12px)", border: "1px solid var(--glass-border)",
-                        boxShadow: "var(--glass-shadow)",
-                    }}>
-                        <div aria-hidden="true" style={{
-                            width: "52px", height: "52px", borderRadius: "9999px",
-                            background: ROL_AVATAR[profiel.domeinRol as DomeinRol] ?? ROL_AVATAR.monteur,
-                            border: "2px solid rgba(255,255,255,0.15)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontWeight: "var(--weight-bold)", fontSize: "var(--text-lg)",
-                            color: "#fff", flexShrink: 0,
-                            boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
-                        }}>
-                            {profiel.naam.charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <p style={{ margin: "0 0 var(--space-1)", fontWeight: "var(--weight-bold)", fontSize: "var(--text-base)", color: "var(--color-heading)" }}>
-                                {profiel.naam}
-                            </p>
-                            <RolBadge rol={profiel.domeinRol as DomeinRol} />
-                        </div>
-                    </div>
-                </section>
+            {/* Stats header — alleen voor eigenaar/balie/admin die de lijst zien */}
+            {Array.isArray(medewerkers) && medewerkers.length > 0 && (
+                <StatsHeader medewerkers={medewerkers} />
             )}
 
-            {/* Repair banner — zichtbaar voor eigenaar als tokens niet kloppen */}
+            {/* Repair banner */}
             {toonRepairBanner && <TenantRepairBanner />}
 
-            {/* Medewerkers lijst */}
-            {(isEigenaar || domeinRol === "balie") && (
+            {/* Medewerkers lijst met zoek + filter */}
+            {(isEigenaar || domeinRol === "balie" || isAdmin) && (
                 <section aria-labelledby="medewerkers-lijst-heading">
                     <SectieTitel>Alle medewerkers</SectieTitel>
+
+                    {/* Zoek + filter bar — alleen tonen als er medewerkers zijn */}
+                    {Array.isArray(medewerkers) && medewerkers.length > 1 && (
+                        <ZoekFilterBar
+                            zoekterm={zoekterm}
+                            onZoek={setZoekterm}
+                            actieveFilter={actieveFilter}
+                            onFilter={setActieveFilter}
+                            beschikbareRollen={beschikbareRollen}
+                        />
+                    )}
+
                     {medewerkers == null ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                             {Array.from({ length: 3 }).map((_, i) => <MedewerkerSkeleton key={i} />)}
@@ -767,32 +910,75 @@ function MedewerkersContent({ identityRole }: { identityRole: IdentityRole }) {
                             <p className="empty-state-title">Geen medewerkers gevonden</p>
                             <p className="empty-state-desc">Nodig medewerkers uit via het formulier hieronder.</p>
                         </div>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                            {medewerkers.map((m: { _id: Id<"medewerkers">; naam: string; domeinRol: string; actief: boolean }) => (
-                                <MedewerkerRij
-                                    key={m._id}
-                                    medewerker={m}
-                                    isActerendEigenaar={isEigenaar}
-                                    actueelProfielId={profiel?._id}
-                                    onProfielKlik={(id) => setGeselecteerdProfielId(id)}
-                                />
-                            ))}
+                    ) : gefilterdeMediawerkers.length === 0 ? (
+                        <div className="empty-state" style={{ padding: "var(--space-10) var(--space-4)" }}>
+                            <span className="empty-state-icon"><IconUsers /></span>
+                            <p className="empty-state-title">Geen resultaten</p>
+                            <p className="empty-state-desc">Geen medewerkers gevonden voor "{zoekterm || ROL_LABELS[actieveFilter as DomeinRol]}".</p>
                         </div>
+                    ) : (
+                        <>
+                            {/* Grid layout: 1 kolom op mobiel, 2 kolommen op ≥1024px */}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-3)" }} className="medewerkers-grid">
+                                <style>{`
+                                    @media (min-width: 1024px) { .medewerkers-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+                                    .medewerker-kaart:hover { background: var(--glass-bg-strong) !important; box-shadow: var(--shadow-md); }
+                                    .medewerker-kaart:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+                                `}</style>
+                                {gefilterdeMediawerkers.map((m: { _id: Id<"medewerkers">; naam: string; voornaam?: string; achternaam?: string; domeinRol: string; actief: boolean }) => (
+                                    <MedewerkerRij
+                                        key={m._id}
+                                        medewerker={m}
+                                        isActerendEigenaar={isEigenaar}
+                                        actueelProfielId={profiel?._id}
+                                        onProfielKlik={(id) => setGeselecteerdProfielId(id)}
+                                    />
+                                ))}
+                            </div>
+                            {/* Aantal resultaten */}
+                            {(zoekterm || actieveFilter !== "alle") && (
+                                <p style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "var(--space-3)", textAlign: "center" }}>
+                                    {gefilterdeMediawerkers.length} van {medewerkers.length} medewerkers
+                                </p>
+                            )}
+                        </>
                     )}
                 </section>
             )}
 
-            {/* Eigen profiel knop voor monteur/stagiair */}
-            {!isEigenaar && domeinRol !== "balie" && profiel && (
+            {/* Eigen profiel knop voor monteur/stagiair/balie — link naar /profiel */}
+            {!isEigenaar && profiel && (
                 <section>
-                    <button
-                        className="btn btn-ghost"
-                        onClick={() => setGeselecteerdProfielId(profiel._id)}
-                        style={{ width: "100%" }}
-                    >
-                        Mijn profiel bekijken / bewerken
-                    </button>
+                    <SectieTitel>Jouw profiel</SectieTitel>
+                    <div style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-4)",
+                        padding: "var(--space-4)", borderRadius: "var(--radius-xl)",
+                        background: "var(--glass-bg)", backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)", border: "1px solid var(--glass-border)",
+                    }}>
+                        <div aria-hidden="true" style={{
+                            width: "48px", height: "48px", borderRadius: "9999px", flexShrink: 0,
+                            background: ROL_AVATAR[profiel.domeinRol as DomeinRol] ?? ROL_AVATAR.monteur,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontWeight: "var(--weight-bold)", fontSize: "var(--text-lg)",
+                            color: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+                        }}>
+                            {profiel.naam.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <p style={{ margin: "0 0 var(--space-1)", fontWeight: "var(--weight-bold)", fontSize: "var(--text-base)", color: "var(--color-heading)" }}>
+                                {profiel.naam}
+                            </p>
+                            <RolBadge rol={profiel.domeinRol as DomeinRol} />
+                        </div>
+                        <a
+                            href="/profiel"
+                            className="btn btn-ghost btn-sm"
+                            style={{ flexShrink: 0 }}
+                        >
+                            Bekijken
+                        </a>
+                    </div>
                 </section>
             )}
 
