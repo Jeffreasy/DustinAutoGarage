@@ -284,6 +284,56 @@ export const koppelKlant = mutation({
     },
 });
 
+/**
+ * koppelAanMijnProfiel — Koppel een bestaand voertuig aan het intern
+ * klant-profiel van de ingelogde medewerker.
+ *
+ * Anders dan koppelKlant is dit GEEN balie-actie — elke medewerker mag
+ * zijn eigen voertuig koppelen. Security:
+ *   - requireAuth (tenant-isolatie)
+ *   - klantId moet toebehoren aan de ingelogde user (isInternMedewerker + medewerkerId check)
+ *   - voertuig moet in zelfde tenant zitten
+ *   - Voertuig mag al een andere eigenaar hebben → fout (voorkom onbedoeld ontkoppelen)
+ */
+export const koppelAanMijnProfiel = mutation({
+    args: {
+        voertuigId: v.id("voertuigen"),
+        klantId: v.id("klanten"),    // intern klant-profiel van de medewerker
+    },
+    handler: async (ctx, args): Promise<void> => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("UNAUTHORIZED: Niet ingelogd.");
+        const tokenIdentifier = identity.tokenIdentifier;
+        const userId = (identity as Record<string, unknown>).userId as string | undefined
+            ?? identity.subject;
+
+        // IDOR: controleer dat klantId het eigen intern profiel is
+        const klant = await ctx.db.get(args.klantId);
+        if (!klant || klant.tokenIdentifier !== tokenIdentifier) {
+            throw new Error("FORBIDDEN: Klant niet gevonden.");
+        }
+        if (!klant.isInternMedewerker || klant.medewerkerId !== userId) {
+            throw new Error("FORBIDDEN: Je mag alleen aan je eigen medewerker-profiel koppelen.");
+        }
+
+        // Voertuig in zelfde tenant?
+        const voertuig = await ctx.db.get(args.voertuigId);
+        if (!voertuig || voertuig.tokenIdentifier !== tokenIdentifier) {
+            throw new Error("FORBIDDEN: Voertuig niet gevonden.");
+        }
+
+        // Voorkom onbedoeld ontkoppelen van bestaande klant
+        if (voertuig.klantId && voertuig.klantId !== args.klantId) {
+            throw new Error("CONFLICT: Dit voertuig is al gekoppeld aan een andere eigenaar. Vraag balie om te ontkoppelen.");
+        }
+
+        // Idempotent: al gekoppeld aan dit profiel → geen actie
+        if (voertuig.klantId === args.klantId) return;
+
+        await ctx.db.patch(args.voertuigId, { klantId: args.klantId });
+    },
+});
+
 
 export const update = mutation({
     args: {
