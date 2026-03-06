@@ -237,11 +237,15 @@ export default function NieuwVoertuigModal({
 
     const field = (label: string, key: keyof typeof form, type = "text", required = false) => (
         <div>
-            <label style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
+            <label htmlFor={`voertuig-${key}`} style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
                 {label}{required && <span style={{ color: "var(--color-error)" }}> *</span>}
             </label>
             <input
+                id={`voertuig-${key}`}
+                name={key as string}
                 type={type}
+                inputMode={type === "number" ? "numeric" : undefined}
+                pattern={type === "number" ? "[0-9]*" : undefined}
                 value={form[key] as string}
                 onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 required={required}
@@ -380,6 +384,10 @@ export default function NieuwVoertuigModal({
                                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleRdwLookup())}
                                     placeholder="GH-446-V"
                                     required
+                                    spellCheck={false}
+                                    autoCapitalize="characters"
+                                    autoCorrect="off"
+                                    autoComplete="off"
                                     style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}
                                     aria-label="Kenteken"
                                 />

@@ -73,7 +73,7 @@ export default function WerkorderAfsluitenModal({
                 kmStandOnderhoud: km,
                 typeWerk,
                 slotNotitie: slotNotitie.trim() || undefined,
-                totaalKosten: totaalKosten ? parseFloat(totaalKosten.replace(",", ".")) : undefined,
+                totaalKosten: totaalKosten ? Number(totaalKosten.replace(",", ".")) : undefined,
                 btwInbegrepen: totaalKosten ? btwInbegrepen : undefined,
             });
             onSluit();

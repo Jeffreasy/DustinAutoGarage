@@ -35,6 +35,10 @@
     /* Touch target — minimaal 44px voor mobiel */
     min-height: var(--control-height);
     padding: var(--space-2) var(--space-4);
+    /* TC1: verwijder 300ms double-tap zoom delay op iOS */
+    touch-action: manipulation;
+    /* TC2: verwijder grijze tap-flits op iOS (wij regelen zelf :active) */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .btn:active {
@@ -153,6 +157,13 @@
         box-shadow var(--transition-base),
         background-color var(--transition-base);
     box-shadow: var(--glass-shadow);
+}
+
+.card-hover {
+    cursor: pointer;
+    /* TC1: geen double-tap delay op interactieve kaarten */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .card-hover:hover {

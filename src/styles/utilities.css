@@ -28,6 +28,15 @@
     border-radius: var(--radius-xs);
 }
 
+/* T2: verwijder tap flash op alle interactieve elementen */
+a,
+button,
+[role="button"],
+[tabindex] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
 /* ============================================================
    TEKST HELPERS
    ============================================================ */

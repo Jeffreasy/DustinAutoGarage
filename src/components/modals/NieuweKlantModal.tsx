@@ -105,6 +105,8 @@ export default function NieuweKlantModal({ onSluit }: { onSluit: () => void }) {
                 required={required}
                 autoComplete={autocomplete}
                 inputMode={inputmode}
+                spellCheck={type === "email" || type === "tel" ? false : undefined}
+                autoCapitalize={type === "email" ? "off" : undefined}
                 style={inputStyle}
             />
         </div>
