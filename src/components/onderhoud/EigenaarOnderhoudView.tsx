@@ -9,7 +9,7 @@
  *   3. Activiteit  — garage-brede audit trail (werkorderLogs)
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -629,15 +629,60 @@ function GarageAuditTrail() {
 }
 
 // ---------------------------------------------------------------------------
-// Voertuig Dossier (eigenaar — inclusief verwijder)
+// Voertuig Dossier + Zoeken (eigenaar)
 // ---------------------------------------------------------------------------
 
+// SVG icons per TypeWerk (geen tekstlabels)
+const SOORT_CONFIG: Record<string, { label: string; kleur: string; bg: string; icon: React.ReactNode }> = {
+    "Grote Beurt": {
+        label: "Grote Beurt", kleur: "var(--color-warning)", bg: "var(--color-warning-bg)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>,
+    },
+    "Kleine Beurt": {
+        label: "Kleine Beurt", kleur: "var(--color-info)", bg: "var(--color-info-bg)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M4.93 4.93a10 10 0 0 0 0 14.14" /></svg>,
+    },
+    "APK": {
+        label: "APK", kleur: "var(--color-accent-text)", bg: "var(--color-accent-dim)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
+    },
+    "Reparatie": {
+        label: "Reparatie", kleur: "var(--color-error)", bg: "var(--color-error-bg)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>,
+    },
+    "Bandenwisseling": {
+        label: "Bandenwisseling", kleur: "var(--color-muted)", bg: "var(--color-surface-3)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>,
+    },
+    "Schadeherstel": {
+        label: "Schadeherstel", kleur: "var(--color-error)", bg: "var(--color-error-bg)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
+    },
+    "Diagnostiek": {
+        label: "Diagnostiek", kleur: "var(--color-info)", bg: "var(--color-info-bg)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>,
+    },
+    "Overig": {
+        label: "Overig", kleur: "var(--color-muted)", bg: "var(--color-surface-2)",
+        icon: <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>,
+    },
+};
+
+const SORTEER_OPTIES = ["Nieuwste eerst", "Oudste eerst"] as const;
+type SorteerOptie = typeof SORTEER_OPTIES[number];
+const FILTER_TYPES = ["Alle", "Grote Beurt", "Kleine Beurt", "APK", "Reparatie", "Bandenwisseling", "Schadeherstel", "Diagnostiek", "Overig"] as const;
+
 function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; onTerug: () => void }) {
-    const historie = useVoertuigHistorie(voertuig._id);
-    const verwijder = useMutation(api.onderhoudshistorie.verwijder);
-    const [toonNieuw, setToonNieuw] = useState(false);
-    const [verwijderBezig, setVerwijderBezig] = useState<Id<"onderhoudshistorie"> | null>(null);
-    const [verwijderConfirm, setVerwijderConfirm] = useState<Id<"onderhoudshistorie"> | null>(null);
+    const historie        = useVoertuigHistorie(voertuig._id);
+    const klant           = useQuery(api.klanten.getById, voertuig.klantId ? { klantId: voertuig.klantId } : "skip");
+    const verwijder       = useMutation(api.onderhoudshistorie.verwijder);
+
+    const [toonNieuw, setToonNieuw]               = useState(false);
+    const [verwijderBezig, setVerwijderBezig]      = useState<Id<"onderhoudshistorie"> | null>(null);
+    const [verwijderConfirm, setVerwijderConfirm]  = useState<Id<"onderhoudshistorie"> | null>(null);
+    const [expandedId, setExpandedId]              = useState<Id<"onderhoudshistorie"> | null>(null);
+    const [filterType, setFilterType]              = useState<string>("Alle");
+    const [sorteer, setSorteer]                    = useState<SorteerOptie>("Nieuwste eerst");
 
     async function handleVerwijder(id: Id<"onderhoudshistorie">) {
         setVerwijderConfirm(null);
@@ -645,133 +690,225 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
         try { await verwijder({ historieId: id }); } finally { setVerwijderBezig(null); }
     }
 
+    const gefilterd = useMemo(() => {
+        if (!historie) return [];
+        let lijst = filterType === "Alle" ? [...historie] : historie.filter(b => b.typeWerk === filterType);
+        if (sorteer === "Nieuwste eerst") lijst.sort((a, b) => b.datumUitgevoerd - a.datumUitgevoerd);
+        else                              lijst.sort((a, b) => a.datumUitgevoerd - b.datumUitgevoerd);
+        return lijst;
+    }, [historie, filterType, sorteer]);
+
+    // APK vervaldatum uit meest recente APK-beurt (approximatie)
+    const apkBeurt = useMemo(() =>
+        [...(historie ?? [])].filter(b => b.typeWerk === "APK").sort((a, b) => b.datumUitgevoerd - a.datumUitgevoerd)[0],
+        [historie]
+    );
+
+    // KPI's
+    const totaalBeurten = historie?.length ?? 0;
+    const kmTotaal = useMemo(() => {
+        if (!historie || historie.length < 2) return null;
+        const sort = [...historie].sort((a, b) => a.datumUitgevoerd - b.datumUitgevoerd);
+        return sort[sort.length - 1].kmStandOnderhoud - sort[0].kmStandOnderhoud;
+    }, [historie]);
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
-            {/* Dossier header */}
-            <div style={{
-                display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap",
-                padding: "var(--space-4)", background: "var(--color-surface-2)",
-                borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)",
-            }}>
-                <button onClick={onTerug} className="btn btn-ghost btn-sm" style={{ minHeight: "40px", gap: "var(--space-1)" }}>
-                    <IconChevronLeft /> Terug
-                </button>
-                <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
-                        <span style={{
-                            fontFamily: "var(--font-mono)", fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)",
-                            color: "var(--color-heading)", letterSpacing: "var(--tracking-wider)",
-                            background: "var(--color-surface-4)", padding: "var(--space-1) var(--space-3)",
-                            borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
-                        }}>{voertuig.kenteken}</span>
-                        <span style={{ fontSize: "var(--text-base)", color: "var(--color-body)", fontWeight: "var(--weight-medium)" }}>
-                            {voertuig.merk} {voertuig.model}
-                        </span>
-                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                            {voertuig.bouwjaar} · {voertuig.brandstof}
-                            {voertuig.kilometerstand !== undefined && ` · ${voertuig.kilometerstand.toLocaleString("nl-NL")} km`}
-                        </span>
+
+            {/* ── Dossier header ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", padding: "var(--space-4)", background: "var(--color-surface-2)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", borderLeft: "4px solid var(--color-accent)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                    <button onClick={onTerug} className="btn btn-ghost btn-sm" style={{ minHeight: "36px", gap: "var(--space-1)", flexShrink: 0 }}>
+                        <IconChevronLeft /> Terug
+                    </button>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", letterSpacing: "var(--tracking-wider)", background: "var(--color-surface-4)", padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+                                {voertuig.kenteken}
+                            </span>
+                            <span style={{ fontSize: "var(--text-base)", color: "var(--color-body)", fontWeight: "var(--weight-medium)" }}>
+                                {voertuig.merk} {voertuig.model}
+                            </span>
+                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                                {voertuig.bouwjaar} · {voertuig.brandstof}
+                            </span>
+                        </div>
+                        {/* Klant-koppeling */}
+                        {klant && (
+                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "var(--space-1)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                {klant.voornaam} {klant.achternaam}
+                                {klant.telefoonnummer && <span>· {klant.telefoonnummer}</span>}
+                            </div>
+                        )}
                     </div>
+                    <button onClick={() => setToonNieuw(true)} className="btn btn-primary" style={{ minHeight: "40px", gap: "var(--space-1)", flexShrink: 0 }}>
+                        <IconPlus /> Beurt registreren
+                    </button>
                 </div>
-                <button onClick={() => setToonNieuw(true)} className="btn btn-primary" style={{ minHeight: "40px", gap: "var(--space-1)" }}>
-                    <IconPlus /> Beurt registreren
-                </button>
+
+                {/* KPI row */}
+                {historie !== undefined && (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "var(--space-2)" }}>
+                        <div style={{ background: "var(--color-surface-3)", borderRadius: "var(--radius-md)", padding: "var(--space-2) var(--space-3)" }}>
+                            <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-muted)", fontWeight: "600" }}>Beurten</div>
+                            <div style={{ fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", fontVariantNumeric: "tabular-nums" }}>{totaalBeurten}</div>
+                        </div>
+                        {kmTotaal !== null && (
+                            <div style={{ background: "var(--color-surface-3)", borderRadius: "var(--radius-md)", padding: "var(--space-2) var(--space-3)" }}>
+                                <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-muted)", fontWeight: "600" }}>Km doorgereden</div>
+                                <div style={{ fontSize: "var(--text-xl)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", fontVariantNumeric: "tabular-nums" }}>+{kmTotaal.toLocaleString("nl-NL")}</div>
+                            </div>
+                        )}
+                        {apkBeurt && (
+                            <div style={{ background: "var(--color-accent-dim)", borderRadius: "var(--radius-md)", padding: "var(--space-2) var(--space-3)" }}>
+                                <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-accent-text)", fontWeight: "600" }}>Laatste APK</div>
+                                <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-accent-text)" }}>{new Date(apkBeurt.datumUitgevoerd).toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                            </div>
+                        )}
+                        {voertuig.kilometerstand !== undefined && (
+                            <div style={{ background: "var(--color-surface-3)", borderRadius: "var(--radius-md)", padding: "var(--space-2) var(--space-3)" }}>
+                                <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-muted)", fontWeight: "600" }}>Huidige km</div>
+                                <div style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", fontVariantNumeric: "tabular-nums" }}>{voertuig.kilometerstand.toLocaleString("nl-NL")}</div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {/* Dossier entries */}
+            {/* ── Filter + Sortering ── */}
+            {(historie?.length ?? 0) > 0 && (
+                <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+                    {FILTER_TYPES.map(type => (
+                        <button
+                            key={type}
+                            onClick={() => setFilterType(type)}
+                            className={`btn btn-sm ${filterType === type ? "btn-primary" : "btn-ghost"}`}
+                            style={{ minHeight: "28px", fontSize: "var(--text-xs)", padding: "0 var(--space-3)" }}
+                        >
+                            {type}
+                        </button>
+                    ))}
+                    <div style={{ flex: 1 }} />
+                    <button
+                        onClick={() => setSorteer(s => s === "Nieuwste eerst" ? "Oudste eerst" : "Nieuwste eerst")}
+                        className="btn btn-ghost btn-sm"
+                        style={{ minHeight: "28px", fontSize: "var(--text-xs)", gap: "var(--space-1)" }}
+                    >
+                        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><path d="M3 6h18M7 12h10M11 18h2" /></svg>
+                        {sorteer}
+                    </button>
+                </div>
+            )}
+
+            {/* ── Dossier entries ── */}
             {historie === undefined ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                     {[...Array(3)].map((_, i) => (
                         <div key={i} className="card" style={{ height: "76px", background: "var(--skeleton-base)", animation: "pulse 1.5s ease infinite" }} />
                     ))}
                 </div>
-            ) : historie.length === 0 ? (
+            ) : gefilterd.length === 0 ? (
                 <div className="card" style={{ padding: "var(--space-10)", textAlign: "center" }}>
-                    <div style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>Geen beurten gevonden.</div>
-                    <button onClick={() => setToonNieuw(true)} className="btn btn-primary" style={{ marginTop: "var(--space-4)", minHeight: "44px" }}>
-                        <IconPlus /> Eerste beurt toevoegen
-                    </button>
+                    <div style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>
+                        {filterType !== "Alle" ? `Geen ${filterType} beurten gevonden.` : "Geen beurten gevonden."}
+                    </div>
+                    {filterType === "Alle" && (
+                        <button onClick={() => setToonNieuw(true)} className="btn btn-primary" style={{ marginTop: "var(--space-4)", minHeight: "44px" }}>
+                            <IconPlus /> Eerste beurt toevoegen
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                    {historie.map((beurt) => (
-                        <div key={beurt._id} className="card" style={{ padding: "var(--space-4)" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-3)" }}>
-                                <div style={{ display: "flex", gap: "var(--space-3)", flex: 1, alignItems: "flex-start" }}>
-                                    <div style={{
-                                        width: "36px", height: "36px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                                        background: "var(--color-accent-dim)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-lg)",
-                                    }}>
-                                        {TYPE_ICOON[beurt.typeWerk as TypeWerk] ?? "OVR"}
+                    {gefilterd.map((beurt, idx) => {
+                        const soort    = SOORT_CONFIG[beurt.typeWerk] ?? SOORT_CONFIG["Overig"];
+                        const isOpen   = expandedId === beurt._id;
+                        // km delta tov vorige (in gesorteerde volgorde)
+                        const vorigeKm = gefilterd[idx + 1]?.kmStandOnderhoud;
+                        const kmDelta  = vorigeKm !== undefined ? beurt.kmStandOnderhoud - vorigeKm : null;
+
+                        return (
+                            <div key={beurt._id} className="card" style={{ overflow: "hidden", borderLeft: `3px solid ${soort.kleur}` }}>
+                                {/* Hoofd rij — klikbaar voor expand */}
+                                <button
+                                    onClick={() => setExpandedId(isOpen ? null : beurt._id)}
+                                    style={{ all: "unset", display: "flex", width: "100%", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", cursor: "pointer", boxSizing: "border-box", transition: "background var(--transition-fast)" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "var(--color-surface-2)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                                    aria-expanded={isOpen}
+                                    aria-label={`${beurt.typeWerk} — ${new Date(beurt.datumUitgevoerd).toLocaleDateString("nl-NL")} — klik voor details`}
+                                >
+                                    {/* Type icon */}
+                                    <div style={{ width: "36px", height: "36px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: soort.bg, borderRadius: "var(--radius-sm)", color: soort.kleur }}>
+                                        {soort.icon}
                                     </div>
-                                    <div>
-                                        <div style={{ fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", fontSize: "var(--text-sm)" }}>{beurt.typeWerk}</div>
-                                        <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "2px" }}>
-                                            {formatDatum(beurt.datumUitgevoerd)} · {beurt.kmStandOnderhoud.toLocaleString("nl-NL")} km
+
+                                    {/* Info */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                                            <span style={{ fontWeight: "var(--weight-semibold)", fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>{beurt.typeWerk}</span>
+                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", fontVariantNumeric: "tabular-nums" }}>
+                                                {beurt.kmStandOnderhoud.toLocaleString("nl-NL")} km
+                                                {kmDelta !== null && kmDelta > 0 && (
+                                                    <span style={{ marginLeft: "4px", color: "var(--color-success)", fontWeight: "var(--weight-semibold)" }}>
+                                                        +{kmDelta.toLocaleString("nl-NL")}
+                                                    </span>
+                                                )}
+                                            </span>
                                         </div>
+                                        <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "2px" }}>
+                                            {new Date(beurt.datumUitgevoerd).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}
+                                        </div>
+                                    </div>
+
+                                    {/* Expand chevron + verwijder */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}>
+                                        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--color-muted)" strokeWidth={2.5} aria-hidden="true" style={{ transition: "transform var(--transition-fast)", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+                                            <polyline points="6 9 12 15 18 9" />
+                                        </svg>
+                                    </div>
+                                </button>
+
+                                {/* Expanded details */}
+                                {isOpen && (
+                                    <div style={{ padding: "0 var(--space-4) var(--space-4)", borderTop: "1px solid var(--color-border)", marginTop: "-1px", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                                         {beurt.werkNotities && (
-                                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-body)", fontStyle: "italic", marginTop: "var(--space-1)" }}>{beurt.werkNotities}</div>
+                                            <div style={{ marginTop: "var(--space-3)" }}>
+                                                <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-muted)", fontWeight: "600", marginBottom: "var(--space-1)" }}>Werknotities</div>
+                                                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-body)", fontStyle: "italic", padding: "var(--space-2) var(--space-3)", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", borderLeft: "2px solid var(--color-border)" }}>
+                                                    {beurt.werkNotities}
+                                                </div>
+                                            </div>
                                         )}
                                         {beurt.documentUrl && (
                                             <a href={beurt.documentUrl} target="_blank" rel="noreferrer"
-                                                style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-accent-text)" }}
-                                                aria-label="Document bekijken">
-                                                <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                                style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-accent-text)", fontWeight: "var(--weight-semibold)", width: "fit-content" }}
+                                                aria-label="Factuur/document bekijken">
+                                                <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                                                 Document bekijken
                                             </a>
                                         )}
-                                    </div>
-                                </div>
-                                <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "var(--space-1)" }}>
-                                    {verwijderConfirm === beurt._id ? (
-                                        // Inline confirm — geen window.confirm()
-                                        <div style={{
-                                            display: "flex", flexDirection: "column", gap: "var(--space-1)",
-                                            background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)",
-                                            borderRadius: "var(--radius-sm)", padding: "var(--space-2)",
-                                        }}>
-                                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-semibold)", whiteSpace: "nowrap" }}>
-                                                Definitief verwijderen?
-                                            </span>
-                                            <div style={{ display: "flex", gap: "var(--space-1)" }}>
-                                                <button
-                                                    onClick={() => handleVerwijder(beurt._id)}
-                                                    disabled={verwijderBezig === beurt._id}
-                                                    style={{
-                                                        minHeight: "28px", padding: "0 var(--space-2)",
-                                                        background: "var(--color-error)", color: "var(--color-on-accent)", border: "none",
-                                                        borderRadius: "var(--radius-sm)", cursor: "pointer",
-                                                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                                                    }}
-                                                    aria-label="Definitief verwijderen"
-                                                >
-                                                    {verwijderBezig === beurt._id ? "…" : "Ja"}
+                                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                            {verwijderConfirm === beurt._id ? (
+                                                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-sm)", padding: "var(--space-2) var(--space-3)" }}>
+                                                    <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error-text)", fontWeight: "var(--weight-semibold)" }}>Definitief verwijderen?</span>
+                                                    <button onClick={() => handleVerwijder(beurt._id)} disabled={verwijderBezig === beurt._id} style={{ minHeight: "26px", padding: "0 var(--space-2)", background: "var(--color-error)", color: "#fff", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)" }} aria-label="Definitief verwijderen">
+                                                        {verwijderBezig === beurt._id ? "…" : "Ja"}
+                                                    </button>
+                                                    <button onClick={() => setVerwijderConfirm(null)} className="btn btn-ghost" style={{ minHeight: "26px", padding: "0 var(--space-2)", fontSize: "var(--text-xs)" }} aria-label="Annuleren">Nee</button>
+                                                </div>
+                                            ) : (
+                                                <button onClick={() => setVerwijderConfirm(beurt._id)} disabled={!!verwijderBezig} className="btn btn-ghost btn-sm" aria-label="Beurt verwijderen" style={{ color: "var(--color-error)", minHeight: "32px", padding: "0 var(--space-2)" }}>
+                                                    <IconTrash />
                                                 </button>
-                                                <button
-                                                    onClick={() => setVerwijderConfirm(null)}
-                                                    className="btn btn-ghost"
-                                                    style={{ minHeight: "28px", padding: "0 var(--space-2)", fontSize: "var(--text-xs)" }}
-                                                    aria-label="Annuleren"
-                                                >
-                                                    Nee
-                                                </button>
-                                            </div>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => setVerwijderConfirm(beurt._id)}
-                                            disabled={!!verwijderBezig}
-                                            className="btn btn-ghost btn-sm"
-                                            aria-label="Verwijder beurt"
-                                            style={{ color: "var(--color-error)", minHeight: "32px", padding: "0 var(--space-2)" }}
-                                        >
-                                            <IconTrash />
-                                        </button>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -781,16 +918,23 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
 }
 
 // ---------------------------------------------------------------------------
-// Voertuig Zoeken Tab
+// Voertuig Zoeken Tab — met "recent bekeken"
 // ---------------------------------------------------------------------------
 
-function VoertuigZoekenTab({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuigen">) => void }) {
+function VoertuigZoekenTab({
+    onOpenDossier,
+    recentBekeken,
+}: {
+    onOpenDossier: (v: Doc<"voertuigen">) => void;
+    recentBekeken: Doc<"voertuigen">[];
+}) {
     const [zoek, setZoek] = useState("");
     const resultaten = useQuery(api.voertuigen.zoekOpKenteken, zoek.length >= 2 ? { term: zoek } : "skip");
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-            <div style={{ position: "relative", maxWidth: "380px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+            {/* Zoekbalk */}
+            <div style={{ position: "relative", maxWidth: "420px" }}>
                 <div style={{ position: "absolute", left: "var(--space-3)", top: "50%", transform: "translateY(-50%)", color: "var(--color-muted)", pointerEvents: "none" }}>
                     <IconSearch />
                 </div>
@@ -798,47 +942,92 @@ function VoertuigZoekenTab({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuig
                     type="search"
                     value={zoek}
                     onChange={(e) => setZoek(e.target.value)}
-                    placeholder="Kenteken zoeken (min. 2 tekens)…"
+                    placeholder="Kenteken zoeken… bijv. AB-123-C"
                     className="input"
-                    style={{ paddingLeft: "2.5rem", minHeight: "44px" }}
-                    autoFocus
+                    style={{ paddingLeft: "2.5rem", minHeight: "48px", fontSize: "var(--text-base)" }}
+                    autoComplete="off"
+                    spellCheck={false}
                 />
             </div>
 
+            {/* Zoekresultaten */}
             {zoek.length >= 2 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                     {resultaten === undefined ? (
-                        <div style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)" }}>Zoeken…</div>
+                        // Skeleton loader
+                        [...Array(3)].map((_, i) => (
+                            <div key={i} style={{ height: "60px", background: "var(--skeleton-base)", borderRadius: "var(--radius-md)", animation: "pulse 1.5s ease infinite" }} />
+                        ))
                     ) : resultaten.length === 0 ? (
-                        <div style={{ color: "var(--color-muted)", fontSize: "var(--text-sm)", fontStyle: "italic" }}>Geen voertuigen gevonden voor "{zoek}".</div>
+                        <div style={{ padding: "var(--space-6)", background: "var(--color-surface-2)", borderRadius: "var(--radius-md)", textAlign: "center" }}>
+                            <div style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", marginBottom: "var(--space-2)" }}>
+                                Geen voertuig gevonden voor “{zoek}”
+                            </div>
+                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                                Probeer een gedeeltelijk kenteken, bijv. “AB12”
+                            </div>
+                        </div>
                     ) : resultaten.map((v) => (
-                        <button
-                            key={v._id}
-                            onClick={() => onOpenDossier(v)}
-                            className="card card-interactive"
-                            style={{ textAlign: "left", padding: "var(--space-3) var(--space-4)", width: "100%", cursor: "pointer", display: "flex", alignItems: "center", gap: "var(--space-4)" }}
-                            aria-label={`Open dossier ${v.kenteken}`}
-                        >
-                            <span style={{
-                                fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)", fontSize: "var(--text-base)",
-                                color: "var(--color-heading)", letterSpacing: "var(--tracking-wide)",
-                                background: "var(--color-surface-3)", padding: "var(--space-1) var(--space-2)",
-                                borderRadius: "var(--radius-xs)", border: "1px solid var(--color-border)",
-                            }}>{v.kenteken}</span>
-                            <span style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", flex: 1 }}>
-                                {v.merk} {v.model} · {v.bouwjaar} · {v.brandstof}
-                            </span>
-                            {v.kilometerstand !== undefined && (
-                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
-                                    {v.kilometerstand.toLocaleString("nl-NL")} km
-                                </span>
-                            )}
-                            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-accent-text)", fontWeight: "var(--weight-semibold)" }}>dossier →</span>
-                        </button>
+                        <VoertuigKaart key={v._id} voertuig={v} onClick={() => onOpenDossier(v)} />
                     ))}
                 </div>
             )}
+
+            {/* Onboarding — geen zoekterm */}
+            {zoek.length === 0 && recentBekeken.length === 0 && (
+                <div style={{ padding: "var(--space-8)", background: "var(--color-surface-2)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+                    <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="var(--color-border)" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true" style={{ margin: "0 auto var(--space-3)", display: "block" }}>
+                        <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2" />
+                        <circle cx="7.5" cy="17.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" />
+                    </svg>
+                    <div style={{ fontSize: "var(--text-sm)", color: "var(--color-body)", fontWeight: "var(--weight-medium)", marginBottom: "var(--space-2)" }}>
+                        Zoek op kenteken om het dossier te openen
+                    </div>
+                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                        Minimaal 2 tekens — bijv. “AB” of “AB123”
+                    </div>
+                </div>
+            )}
+
+            {/* Recent bekeken */}
+            {zoek.length === 0 && recentBekeken.length > 0 && (
+                <div>
+                    <div style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)", marginBottom: "var(--space-2)" }}>
+                        Recent bekeken
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                        {recentBekeken.map(v => (
+                            <VoertuigKaart key={v._id} voertuig={v} onClick={() => onOpenDossier(v)} />
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
+    );
+}
+
+// Voertuig kaart — herbruikbaar in zoekresultaten en recent bekeken
+function VoertuigKaart({ voertuig: v, onClick }: { voertuig: Doc<"voertuigen">; onClick: () => void }) {
+    return (
+        <button
+            onClick={onClick}
+            className="card card-interactive"
+            style={{ textAlign: "left", padding: "var(--space-3) var(--space-4)", width: "100%", cursor: "pointer", display: "flex", alignItems: "center", gap: "var(--space-4)", touchAction: "manipulation" }}
+            aria-label={`Open dossier ${v.kenteken}`}
+        >
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--weight-bold)", fontSize: "var(--text-base)", color: "var(--color-heading)", letterSpacing: "var(--tracking-wide)", background: "var(--color-surface-3)", padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-xs)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
+                {v.kenteken}
+            </span>
+            <span style={{ fontSize: "var(--text-sm)", color: "var(--color-muted)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {v.merk} {v.model} · {v.bouwjaar} · {v.brandstof}
+            </span>
+            {v.kilometerstand !== undefined && (
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                    {v.kilometerstand.toLocaleString("nl-NL")} km
+                </span>
+            )}
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-accent-text)", fontWeight: "var(--weight-semibold)", flexShrink: 0 }}>dossier →</span>
+        </button>
     );
 }
 
@@ -849,20 +1038,28 @@ function VoertuigZoekenTab({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuig
 type Tab = "overzicht" | "voertuig" | "activiteit";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "overzicht", label: "Overzicht", icon: <IconActivity /> },
-    { id: "voertuig", label: "Voertuigdossier", icon: <IconCar /> },
-    { id: "activiteit", label: "Teamactiviteit", icon: <IconClipboard /> },
+    { id: "overzicht",  label: "Overzicht",       icon: <IconActivity /> },
+    { id: "voertuig",  label: "Voertuigdossier",  icon: <IconCar /> },
+    { id: "activiteit", label: "Teamactiviteit",   icon: <IconClipboard /> },
 ];
 
-export default function EigenaarOnderhoudView() {
-    const [actieveTab, setActieveTab] = useState<Tab>("overzicht");
-    const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
-    const [toonRecenteModal, setToonRecenteModal] = useState(false);
+const MAX_RECENT = 5;
 
-    function handleOpenDossier(v: Doc<"voertuigen">) {
+export default function EigenaarOnderhoudView() {
+    const [actieveTab, setActieveTab]               = useState<Tab>("overzicht");
+    const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
+    const [toonRecenteModal, setToonRecenteModal]   = useState(false);
+    const [recentBekeken, setRecentBekeken]         = useState<Doc<"voertuigen">[]>([]);
+
+    const handleOpenDossier = useCallback((v: Doc<"voertuigen">) => {
         setGeselecteerdVoertuig(v);
         setActieveTab("voertuig");
-    }
+        // Voeg toe aan recent bekeken (dedup + max 5)
+        setRecentBekeken(prev => {
+            const filtered = prev.filter(r => r._id !== v._id);
+            return [v, ...filtered].slice(0, MAX_RECENT);
+        });
+    }, []);
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
@@ -909,7 +1106,6 @@ export default function EigenaarOnderhoudView() {
                             </h2>
                             <KPIDashboard />
                         </section>
-
                         <section>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
                                 <h2 style={{ margin: 0, fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)" }}>
@@ -931,7 +1127,7 @@ export default function EigenaarOnderhoudView() {
                 {actieveTab === "voertuig" && (
                     geselecteerdVoertuig
                         ? <EigenaarDossier voertuig={geselecteerdVoertuig} onTerug={() => setGeselecteerdVoertuig(null)} />
-                        : <VoertuigZoekenTab onOpenDossier={handleOpenDossier} />
+                        : <VoertuigZoekenTab onOpenDossier={handleOpenDossier} recentBekeken={recentBekeken} />
                 )}
 
                 {toonRecenteModal && (
