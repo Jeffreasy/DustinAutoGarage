@@ -107,7 +107,7 @@ export default function WerkorderAfsluitenModal({
             }}>
                 <div>
                     <h2 style={{ fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", margin: 0, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#16a34a" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: "var(--color-success)" }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                         Werkorder afsluiten
                     </h2>
                     <p style={{ margin: "2px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}>
@@ -218,7 +218,7 @@ export default function WerkorderAfsluitenModal({
                 </div>
 
                 {fout && (
-                    <div role="alert" style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-error-bg, #fef2f2)", border: "1px solid var(--color-error-border, #fecaca)", color: "var(--color-error, #dc2626)", fontSize: "var(--text-sm)" }}>
+                    <div role="alert" style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", color: "var(--color-error)", fontSize: "var(--text-sm)" }}>
                         {fout}
                     </div>
                 )}
@@ -239,7 +239,7 @@ export default function WerkorderAfsluitenModal({
                         style={{
                             flex: 2,
                             minHeight: "52px",
-                            background: bezig || !kmStand ? undefined : "linear-gradient(135deg, #16a34a, #15803d)",
+                            background: bezig || !kmStand ? undefined : "var(--color-success)",
                         }}
                         aria-label="Werkorder definitief afsluiten"
                     >

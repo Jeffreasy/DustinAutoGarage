@@ -90,8 +90,8 @@ export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkord
 
     return (
         <ModalShell onSluit={onSluit} ariaLabel="Nieuwe werkorder aanmaken" maxWidth="520px">
-            {/* H7 FIX: hover via CSS class — voorkomt inline DOM-mutaties die verloren gaan bij re-render */}
-            <style>{`.klant-optie-btn:hover,.klant-optie-btn:focus-visible{ background: var(--glass-bg) !important; outline: 2px solid var(--color-accent,#0d7a5f); outline-offset: -2px; }`}</style>
+            {/* Touch-friendly hover via CSS class — geen inline onMouseEnter die falen op touch */}
+            <style>{`.klant-optie-btn:hover,.klant-optie-btn:focus-visible,.voertuig-optie-btn:hover,.voertuig-optie-btn:focus-visible{ background: var(--glass-bg) !important; outline: 2px solid var(--color-accent); outline-offset: -2px; }`}</style>
             {/* Header */}
             <div style={{
                 padding: "var(--space-4) var(--space-5)",
@@ -120,7 +120,7 @@ export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkord
                         flex: 1,
                         height: "3px",
                         borderRadius: "var(--radius-full, 9999px)",
-                        background: s <= stap ? "var(--color-primary, #0d7a5f)" : "var(--color-border)",
+                        background: s <= stap ? "var(--color-primary)" : "var(--color-border)",
                         transition: "background var(--transition-base)",
                     }} />
                 ))}
@@ -198,6 +198,7 @@ export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkord
                                     fontSize: "var(--text-xs)", color: "var(--color-accent-text)",
                                     background: "none", border: "none", cursor: "pointer",
                                     textDecoration: "underline", textDecorationStyle: "dotted",
+                                    minHeight: "44px", padding: "0 var(--space-2)",
                                 }}
                             >
                                 Overslaan, geen klant →
@@ -211,16 +212,14 @@ export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkord
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
                         {/* Klant-badge: toon alleen als klant gekozen, anders walk-in badge */}
                         {gekozenKlantNaam ? (
-                            <div style={{ background: "var(--gradient-accent-subtle)", border: "1px solid var(--color-border-luminous)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)" }}>
-                                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
-                                    👤 <strong>{gekozenKlantNaam}</strong>
-                                </p>
+                            <div style={{ background: "var(--gradient-accent-subtle)", border: "1px solid var(--color-border-luminous)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: "var(--color-accent-text)", flexShrink: 0 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-heading)" }}><strong>{gekozenKlantNaam}</strong></p>
                             </div>
                         ) : (
-                            <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)" }}>
-                                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-muted)", fontStyle: "italic" }}>
-                                    🚶 Walk-in — geen klant gekoppeld
-                                </p>
+                            <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: "var(--color-muted)", flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="23" y1="11" x2="23" y2="17" /><line x1="20" y1="14" x2="26" y2="14" /></svg>
+                                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-muted)", fontStyle: "italic" }}>Walk-in — geen klant gekoppeld</p>
                             </div>
                         )}
 
@@ -267,6 +266,7 @@ export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkord
                                             setGekozenVoertuigId(v._id);
                                             setStap(3);
                                         }}
+                                        className="voertuig-optie-btn"
                                         style={{
                                             textAlign: "left",
                                             padding: "var(--space-3) var(--space-4)",
@@ -277,9 +277,8 @@ export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkord
                                             minHeight: "56px",
                                             color: "var(--color-body)",
                                             transition: "background var(--transition-base)",
+                                            width: "100%",
                                         }}
-                                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--glass-bg)"; }}
-                                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--color-surface)"; }}
                                     >
                                         <strong style={{ fontFamily: "var(--font-mono)", color: "var(--color-heading)", fontSize: "var(--text-base)", display: "block" }}>
                                             {v.kenteken}

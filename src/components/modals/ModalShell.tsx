@@ -124,6 +124,7 @@ export default function ModalShell({
                     style={{
                         width: "100%",
                         maxHeight: "95dvh",
+                        minHeight: "40dvh",
                         background: "var(--color-surface)",
                         border: "1px solid var(--color-border)",
                         borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
@@ -163,6 +164,8 @@ export default function ModalShell({
                         flex: 1,
                         overscrollBehavior: "contain",
                         WebkitOverflowScrolling: "touch" as any,
+                        /* iOS safe area — voorkomt dat inhoud achter home indicator valt */
+                        paddingBottom: "env(safe-area-inset-bottom, 0px)",
                     }}>
                         {children}
                     </div>
@@ -211,7 +214,7 @@ export default function ModalShell({
                     borderRadius: "var(--radius-xl)",
                     overflow: "hidden",
                     boxShadow: "var(--shadow-xl)",
-                    maxHeight: "90vh",
+                    maxHeight: "min(90dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--space-8)))",
                     display: "flex",
                     flexDirection: "column",
                 }}

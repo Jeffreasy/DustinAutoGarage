@@ -117,7 +117,9 @@ export default function NieuweBeurtModal({ voertuig, onSluit }: NieuweBeurtModal
                         {voertuig.kenteken} — {voertuig.merk} {voertuig.model}
                     </p>
                 </div>
-                <button onClick={onSluit} className="btn btn-ghost btn-sm" style={{ minHeight: "40px" }} aria-label="Modal sluiten">✕</button>
+                <button onClick={onSluit} className="btn btn-ghost btn-sm" style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Modal sluiten">
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
             </div>
 
             {/* Form */}
