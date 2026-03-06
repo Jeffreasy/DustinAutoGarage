@@ -10,14 +10,14 @@ export type TypeWerk =
     | "Bandenwisseling" | "Schadeherstel" | "Diagnostiek" | "Overig";
 
 export const TYPE_ICOON: Record<TypeWerk, string> = {
-    "Grote Beurt": "🔧",
-    "Kleine Beurt": "🪛",
-    "APK": "📋",
-    "Reparatie": "🔨",
-    "Bandenwisseling": "🔄",
-    "Schadeherstel": "🚗",
-    "Diagnostiek": "🔍",
-    "Overig": "📦",
+    "Grote Beurt": "GB",
+    "Kleine Beurt": "KB",
+    "APK": "APK",
+    "Reparatie": "REP",
+    "Bandenwisseling": "BW",
+    "Schadeherstel": "SCH",
+    "Diagnostiek": "DIA",
+    "Overig": "OVR",
 };
 
 export function formatDatum(ms: number): string {

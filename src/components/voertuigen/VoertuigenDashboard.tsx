@@ -181,7 +181,7 @@ function skeletonBlock(width: string, height: string): React.CSSProperties {
 
 function DashboardSkeleton() {
     return (
-        <section aria-label="Laden..." aria-busy="true">
+        <section aria-label="Laden…" aria-busy="true">
             <div
                 style={{
                     display: "grid",

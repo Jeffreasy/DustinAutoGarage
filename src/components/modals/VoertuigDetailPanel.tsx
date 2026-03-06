@@ -32,9 +32,9 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 const TYPE_ICOON: Record<string, string> = {
-    "Grote Beurt": "🔧", "Kleine Beurt": "🪛", "APK": "📋",
-    "Reparatie": "🔨", "Bandenwisseling": "🔄", "Schadeherstel": "🚗",
-    "Diagnostiek": "🔍", "Overig": "📦",
+    "Grote Beurt": "GB", "Kleine Beurt": "KB", "APK": "APK",
+    "Reparatie": "REP", "Bandenwisseling": "BW", "Schadeherstel": "SCH",
+    "Diagnostiek": "DIA", "Overig": "OVR",
 };
 
 function formatDatum(ms: number) {

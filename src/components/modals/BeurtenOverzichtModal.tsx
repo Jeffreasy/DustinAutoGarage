@@ -158,8 +158,9 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                 gap: "var(--space-4)", flexShrink: 0,
             }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)" }}>
-                        🔧 Beurten overzicht
+                    <h2 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-heading)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
+                        Beurten overzicht
                     </h2>
                     {stats && (
                         <p style={{ margin: "4px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
@@ -173,10 +174,10 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                 <button
                     onClick={onSluit}
                     className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "40px", flexShrink: 0 }}
+                    style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                     aria-label="Sluiten"
                 >
-                    ✕
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
             </div>
 
@@ -210,12 +211,12 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
             <div style={{ overflowY: "auto", flex: 1 }}>
                 {beurten === undefined ? (
                     <div style={{ padding: "var(--space-12)", textAlign: "center", color: "var(--color-muted)" }}>
-                        <p style={{ fontSize: "var(--text-2xl)", marginBottom: "var(--space-2)" }}>⏳</p>
+                        <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true" style={{ marginBottom: "var(--space-2)", opacity: 0.4 }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                         <p style={{ fontSize: "var(--text-sm)" }}>Beurten laden…</p>
                     </div>
                 ) : gesorteerd.length === 0 ? (
                     <div style={{ padding: "var(--space-12)", textAlign: "center", color: "var(--color-muted)" }}>
-                        <p style={{ fontSize: "var(--text-2xl)", marginBottom: "var(--space-2)" }}>📋</p>
+                        <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true" style={{ marginBottom: "var(--space-2)", opacity: 0.4 }}><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
                         <p style={{ fontSize: "var(--text-sm)" }}>
                             {filterType === "Alle" ? "Nog geen beurten geregistreerd." : `Geen "${filterType}" beurten gevonden.`}
                         </p>
@@ -341,7 +342,8 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                                 rel="noreferrer"
                                                 style={{ fontSize: "var(--text-xs)", color: "var(--color-accent-text)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}
                                             >
-                                                📄 Bekijk
+                                                <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                                Bekijk
                                             </a>
                                         ) : (
                                             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-border)" }}>—</span>
@@ -411,7 +413,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                 display: "flex", justifyContent: "flex-end", flexShrink: 0,
                 background: "var(--glass-bg-subtle)",
             }}>
-                <button onClick={onSluit} className="btn btn-ghost" style={{ minHeight: "40px" }}>
+                <button onClick={onSluit} className="btn btn-ghost" style={{ minHeight: "44px" }}>
                     Sluiten
                 </button>
             </div>

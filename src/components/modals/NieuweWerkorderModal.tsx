@@ -301,8 +301,9 @@ export default function NieuweWerkorderModal({ onSluit, preFill }: NieuweWerkord
                 {stap === 3 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
                         <div style={{ background: "var(--gradient-accent-subtle)", border: "1px solid var(--color-border-luminous)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)" }}>
-                            <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-heading)" }}>
-                                👤 <strong>{gekozenKlantNaam}</strong>
+                            <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--color-heading)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                <strong>{gekozenKlantNaam}</strong>
                             </p>
                             <p style={{ margin: "2px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
                                 Voertuig geselecteerd ✓

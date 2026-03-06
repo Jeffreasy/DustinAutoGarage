@@ -146,11 +146,15 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
 
     const veld = (label: string, key: keyof typeof form, type = "text", required = false) => (
         <div>
-            <label style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
+            <label htmlFor={`bewerk-${key}`} style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
                 {label}{required && <span style={{ color: "var(--color-error)" }}> *</span>}
             </label>
             <input
+                id={`bewerk-${key}`}
+                name={key as string}
                 type={type}
+                inputMode={type === "number" ? "numeric" : undefined}
+                pattern={type === "number" ? "[0-9]*" : undefined}
                 value={form[key]}
                 onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 required={required}
@@ -161,17 +165,19 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
 
     return (
         <ModalShell onSluit={onSluit} ariaLabel={`Voertuig bewerken — ${voertuig.kenteken}`} maxWidth="560px">
-            {/* Header */}
             <div style={{ padding: "var(--space-4) var(--space-5)", borderBottom: "1px solid var(--color-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)" }}>
-                        ✏️ Voertuig bewerken
+                    <h2 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                        Voertuig bewerken
                     </h2>
                     <p style={{ margin: "2px 0 0", fontSize: "var(--text-xs)", color: "var(--color-muted)", fontFamily: "var(--font-mono)" }}>
                         {voertuig.kenteken} — {voertuig.merk} {voertuig.model}
                     </p>
                 </div>
-                <button onClick={onSluit} className="btn btn-ghost btn-sm" style={{ minHeight: "40px" }} aria-label="Modal sluiten">✕</button>
+                <button onClick={onSluit} className="btn btn-ghost btn-sm" style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Modal sluiten">
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
             </div>
 
             {/* RDW refresh banner */}
@@ -199,12 +205,12 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                     {rdwGeladen && rdwData && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-1)", marginTop: "var(--space-2)" }}>
                             {rdwData.voertuigsoort && <span style={{ padding: "1px 6px", background: "var(--color-accent-dim)", border: "1px solid var(--color-accent)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-accent-text, var(--color-heading))" }}>{rdwData.voertuigsoort}</span>}
-                            {rdwData.kleur && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>🎨 {rdwData.kleur}{rdwData.tweedeKleur ? ` / ${rdwData.tweedeKleur}` : ""}</span>}
-                            {rdwData.massaRijklaar && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>⚖️ {rdwData.massaRijklaar} kg</span>}
-                            {rdwData.aantalZitplaatsen && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>💺 {rdwData.aantalZitplaatsen} zitpl.</span>}
-                            {rdwData.co2Uitstoot && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>🌿 {rdwData.co2Uitstoot} g/km</span>}
-                            {rdwData.wok && <span style={{ padding: "1px 6px", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-error)", fontWeight: "var(--weight-semibold)" }}>⚠️ WOK</span>}
-                            {rdwData.heeftRecall && <span style={{ padding: "1px 6px", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)" }}>📢 Recall</span>}
+                            {rdwData.kleur && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>Kleur: {rdwData.kleur}{rdwData.tweedeKleur ? ` / ${rdwData.tweedeKleur}` : ""}</span>}
+                            {rdwData.massaRijklaar && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{rdwData.massaRijklaar} kg</span>}
+                            {rdwData.aantalZitplaatsen && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{rdwData.aantalZitplaatsen} zitpl.</span>}
+                            {rdwData.co2Uitstoot && <span style={{ padding: "1px 6px", background: "var(--glass-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>{rdwData.co2Uitstoot} g/km CO₂</span>}
+                            {rdwData.wok && <span style={{ padding: "1px 6px", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-error)", fontWeight: "var(--weight-semibold)" }}>WOK</span>}
+                            {rdwData.heeftRecall && <span style={{ padding: "1px 6px", background: "var(--color-warning-bg)", border: "1px solid var(--color-warning-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-xs)", color: "var(--color-warning)", fontWeight: "var(--weight-semibold)" }}>Recall</span>}
                         </div>
                     )}
                 </div>
@@ -216,7 +222,7 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                     style={{ whiteSpace: "nowrap", flexShrink: 0, minHeight: "40px" }}
                     aria-label="RDW-gegevens vernieuwen"
                 >
-                    {rdwBezig ? "Ophalen…" : "🔄 RDW vernieuwen"}
+                    {rdwBezig ? "Ophalen…" : <><svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" /></svg> RDW vernieuwen</>}
                 </button>
             </div>
 
@@ -232,18 +238,22 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                         value={form.kenteken}
                         onChange={(e) => setForm((f) => ({ ...f, kenteken: e.target.value }))}
                         required
+                        spellCheck={false}
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        autoComplete="off"
                         style={{ ...inputStyle, fontFamily: "var(--font-mono)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}
                     />
                 </div>
 
                 {/* Merk + Model */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-3)" }}>
                     {veld("Merk", "merk", "text", true)}
                     {veld("Model", "model", "text", true)}
                 </div>
 
                 {/* Bouwjaar + Brandstof */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-3)" }}>
                     {veld("Bouwjaar", "bouwjaar", "number", true)}
                     <div>
                         <label style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
@@ -263,13 +273,13 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                 </div>
 
                 {/* Kilometerstand + APK */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-3)" }}>
                     {veld("Kilometerstand", "kilometerstand", "number")}
                     {veld("APK vervaldatum", "apkVervaldatum", "date")}
                 </div>
 
                 {/* VIN + Meldcode */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-3)" }}>
                     {veld("VIN (17 tekens)", "vin")}
                     {veld("Meldcode (laatste 4 VIN)", "meldcode")}
                 </div>
@@ -295,7 +305,7 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                         Annuleren
                     </button>
                     <button type="submit" disabled={bezig} className="btn btn-primary" style={{ flex: 2, minHeight: "52px" }}>
-                        {bezig ? "Opslaan…" : "💾 Wijzigingen opslaan"}
+                        {bezig ? "Opslaan…" : <><svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg> Wijzigingen opslaan</>}
                     </button>
                 </div>
             </form>
