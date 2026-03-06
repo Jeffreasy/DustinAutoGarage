@@ -199,7 +199,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                         className={`btn btn-sm ${filterType === type ? "btn-primary" : "btn-ghost"}`}
                         style={{ minHeight: "32px", fontSize: "var(--text-xs)", gap: "var(--space-1)" }}
                     >
-                        {type !== "Alle" && (TYPE_ICOON[type as TypeWerk] ?? "🔧")} {type}
+                        {type !== "Alle" && (TYPE_ICOON[type as TypeWerk] ?? "OVR")} {type}
                     </button>
                 ))}
                 <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
@@ -297,7 +297,7 @@ export default function BeurtenOverzichtModal({ onSluit }: { onSluit: () => void
                                     <td style={tdStyle}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                                             <span style={{ fontSize: "var(--text-base)" }}>
-                                                {TYPE_ICOON[beurt.typeWerk as TypeWerk] ?? "🔧"}
+                                                {TYPE_ICOON[beurt.typeWerk as TypeWerk] ?? "OVR"}
                                             </span>
                                             <span
                                                 style={{

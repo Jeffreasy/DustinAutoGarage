@@ -199,8 +199,8 @@ function BeurtKaart({
                                 textDecoration: "none",
                             }}
                             title="Bekijk document"
-                        >
-                            📄
+                            aria-label="Document bekijken">
+                            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                         </a>
                     )}
                     {beurt.werkNotities && (
@@ -296,10 +296,10 @@ export default function RecenteBeurtenModal({ onSluit, onOpenVoertuig }: Props) 
                 <button
                     onClick={onSluit}
                     className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "40px", flexShrink: 0 }}
+                    style={{ minHeight: "40px", minWidth: "40px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
                     aria-label="Sluiten"
                 >
-                    ✕
+                    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
             </div>
 
@@ -335,7 +335,7 @@ export default function RecenteBeurtenModal({ onSluit, onOpenVoertuig }: Props) 
                     <BeurtSkeleton />
                 ) : gefilterd.length === 0 ? (
                     <div style={{ padding: "var(--space-12)", textAlign: "center", color: "var(--color-muted)" }}>
-                        <p style={{ fontSize: "var(--text-2xl)", margin: "0 0 var(--space-2)" }}>📋</p>
+                        <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="var(--color-border)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ margin: "0 auto var(--space-3)", display: "block" }}><path d="M9 2h6l1 3H8z" /><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="16" x2="13" y2="16" /></svg>
                         <p style={{ fontSize: "var(--text-sm)", margin: 0 }}>
                             {filterType === "Alle"
                                 ? "Nog geen beurten geregistreerd."

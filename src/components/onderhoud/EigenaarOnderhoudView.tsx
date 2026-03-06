@@ -219,7 +219,7 @@ function ActiviteitsFeed({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuigen
                         background: "var(--color-accent-dim)", borderRadius: "var(--radius-sm)",
                         color: "var(--color-accent-text)", fontSize: "var(--text-lg)", flexShrink: 0,
                     }}>
-                        {TYPE_ICOON[b.typeWerk as TypeWerk] ?? "🔧"}
+                        {TYPE_ICOON[b.typeWerk as TypeWerk] ?? "OVR"}
                     </div>
 
                     {/* Content */}
@@ -455,7 +455,7 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
                                         width: "36px", height: "36px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
                                         background: "var(--color-accent-dim)", borderRadius: "var(--radius-sm)", fontSize: "var(--text-lg)",
                                     }}>
-                                        {TYPE_ICOON[beurt.typeWerk as TypeWerk] ?? "🔧"}
+                                        {TYPE_ICOON[beurt.typeWerk as TypeWerk] ?? "OVR"}
                                     </div>
                                     <div>
                                         <div style={{ fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", fontSize: "var(--text-sm)" }}>{beurt.typeWerk}</div>
@@ -467,8 +467,10 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
                                         )}
                                         {beurt.documentUrl && (
                                             <a href={beurt.documentUrl} target="_blank" rel="noreferrer"
-                                                style={{ display: "inline-flex", gap: "4px", marginTop: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-accent-text)" }}>
-                                                📄 Document bekijken
+                                                style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--color-accent-text)" }}
+                                                aria-label="Document bekijken">
+                                                <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                                Document bekijken
                                             </a>
                                         )}
                                     </div>
@@ -671,7 +673,7 @@ export default function EigenaarOnderhoudView() {
                                     className="btn btn-ghost btn-sm"
                                     style={{ fontSize: "var(--text-xs)", minHeight: "30px", gap: "var(--space-1)" }}
                                 >
-                                    🔧 Bekijk alle
+                                    <IconWrench /> Bekijk alle
                                 </button>
                             </div>
                             <ActiviteitsFeed onOpenDossier={handleOpenDossier} />
