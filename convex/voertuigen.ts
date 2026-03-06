@@ -190,6 +190,14 @@ export const create = mutation({
         aantalZitplaatsen: v.optional(v.number()),
         eersteTenaamstelling: v.optional(v.string()),
         co2Uitstoot: v.optional(v.number()),
+        // ── RDW-verrijking uitgebreid ─────────────────────────────────────────
+        inrichting: v.optional(v.string()),
+        cilinderinhoud: v.optional(v.number()),
+        vermogen: v.optional(v.number()),
+        emissieklasse: v.optional(v.string()),
+        wok: v.optional(v.boolean()),
+        heeftRecall: v.optional(v.boolean()),
+        nap: v.optional(v.string()),
     },
     handler: async (ctx, args): Promise<Id<"voertuigen">> => {
         // B-12 FIX: Stagiairs zijn read-only — minimaal monteur vereist om voertuigen aan te maken.
@@ -300,6 +308,14 @@ export const update = mutation({
         aantalZitplaatsen: v.optional(v.number()),
         eersteTenaamstelling: v.optional(v.string()),
         co2Uitstoot: v.optional(v.number()),
+        // ── RDW-verrijking uitgebreid ─────────────────────────────────────────
+        inrichting: v.optional(v.string()),
+        cilinderinhoud: v.optional(v.number()),
+        vermogen: v.optional(v.number()),
+        emissieklasse: v.optional(v.string()),
+        wok: v.optional(v.boolean()),
+        heeftRecall: v.optional(v.boolean()),
+        nap: v.optional(v.string()),
     },
     handler: async (ctx, args): Promise<void> => {
         // B-12 FIX: Stagiairs zijn read-only — minimaal monteur vereist.

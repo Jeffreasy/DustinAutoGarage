@@ -133,6 +133,14 @@ export default function VoertuigBewerkModal({ voertuig, onSluit }: VoertuigBewer
                     aantalZitplaatsen: rdwData.aantalZitplaatsen,
                     eersteTenaamstelling: rdwData.eersteTenaamstelling,
                     co2Uitstoot: rdwData.co2Uitstoot,
+                    // ── Uitgebreid
+                    inrichting: rdwData.inrichting,
+                    cilinderinhoud: rdwData.cilinderinhoud,
+                    vermogen: rdwData.vermogen,
+                    emissieklasse: rdwData.emissieklasse,
+                    wok: rdwData.wok,
+                    heeftRecall: rdwData.heeftRecall,
+                    nap: rdwData.nap,
                 } : {}),
             });
             onSluit();

@@ -313,6 +313,40 @@ export default defineSchema({
         /** CO₂-uitstoot in g/km gecombineerd. */
         co2Uitstoot: v.optional(v.number()),
 
+        /**
+         * Inrichting van het voertuig, bijv. "hatchback", "sedan", "stationwagon".
+         * Afkomstig uit RDW OPEN API dataset.
+         */
+        inrichting: v.optional(v.string()),
+
+        /** Cilinderinhoud in cc, bijv. 1598 voor een 1.6-motor. */
+        cilinderinhoud: v.optional(v.number()),
+
+        /** Vermogen van de verbrandingsmotor in kW, bijv. 85 kW = ~116 pk. */
+        vermogen: v.optional(v.number()),
+
+        /** Emissieklasse, bijv. "Euro 6", "Euro 5". */
+        emissieklasse: v.optional(v.string()),
+
+        /**
+         * WOK-status: Wacht Op Keuren.
+         * true = voertuig mag niet rijden totdat het gekeurd is.
+         * Garage-kritisch signaal — altijd prominent tonen.
+         */
+        wok: v.optional(v.boolean()),
+
+        /**
+         * Openstaande terugroepactie (recall).
+         * true = er is een openstaande recall voor dit voertuig.
+         */
+        heeftRecall: v.optional(v.boolean()),
+
+        /**
+         * NAP-status (Nationale Auto Pas).
+         * "Logisch" = kilometerstand klopt, "Onlogisch" = fraude-indicator.
+         */
+        nap: v.optional(v.string()),
+
         /** Laatste bekende kilometerstand. */
         kilometerstand: v.optional(v.number()),
 

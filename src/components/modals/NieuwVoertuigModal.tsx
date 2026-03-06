@@ -109,6 +109,14 @@ export type NieuwVoertuigPreFill = {
     aantalZitplaatsen?: number;
     eersteTenaamstelling?: string;
     co2Uitstoot?: number;
+    // RDW-verrijking uitgebreid
+    inrichting?: string;
+    cilinderinhoud?: number;
+    vermogen?: number;
+    emissieklasse?: string;
+    wok?: boolean;
+    heeftRecall?: boolean;
+    nap?: string;
     // Optionele klant-koppeling vanuit ScanKlantKeuzeModal
     klantId?: Id<"klanten">;
     klantNaam?: string;
@@ -214,7 +222,7 @@ export default function NieuwVoertuigModal({
                 kilometerstand: form.kilometerstand ? Number(form.kilometerstand) : undefined,
                 apkVervaldatum: apkMs,
                 voertuigNotities: form.voertuigNotities || undefined,
-                // ── RDW-verrijking ────────────────────────────────────────────
+                // ── RDW-verrijking ────────────────────────────────────────────────
                 voertuigsoort: rdw?.voertuigsoort ?? preFill?.voertuigsoort,
                 kleur: rdw?.kleur ?? preFill?.kleur,
                 tweedeKleur: rdw?.tweedeKleur ?? preFill?.tweedeKleur,
@@ -224,6 +232,14 @@ export default function NieuwVoertuigModal({
                 aantalZitplaatsen: rdw?.aantalZitplaatsen ?? preFill?.aantalZitplaatsen,
                 eersteTenaamstelling: rdw?.eersteTenaamstelling ?? preFill?.eersteTenaamstelling,
                 co2Uitstoot: rdw?.co2Uitstoot ?? preFill?.co2Uitstoot,
+                // ── RDW-verrijking uitgebreid ─────────────────────────────────────────
+                inrichting: rdw?.inrichting ?? preFill?.inrichting,
+                cilinderinhoud: rdw?.cilinderinhoud ?? preFill?.cilinderinhoud,
+                vermogen: rdw?.vermogen ?? preFill?.vermogen,
+                emissieklasse: rdw?.emissieklasse ?? preFill?.emissieklasse,
+                wok: rdw?.wok ?? preFill?.wok,
+                heeftRecall: rdw?.heeftRecall ?? preFill?.heeftRecall,
+                nap: rdw?.nap ?? preFill?.nap,
             });
             analyticsVoertuigNieuw(form.merk, form.brandstof);
             onSluit();
