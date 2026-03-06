@@ -18,6 +18,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import ModalShell from "./ModalShell";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { useMijnKlantId } from "../../hooks/useVoertuigen";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -141,6 +142,8 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
         voertuig.klantId ? { klantId: voertuig.klantId } : "skip"
     );
     const beurten = useQuery(api.onderhoudshistorie.getHistorie, { voertuigId: voertuig._id });
+    const mijnKlantId = useMijnKlantId();
+    const isEigenVoertuig = !!mijnKlantId && voertuig.klantId === mijnKlantId;
 
     const recenteBeurten = (beurten ?? []).slice(0, 5);
 
@@ -176,6 +179,27 @@ function PanelInhoud({ voertuig, onSluit }: Props) {
                                 background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)",
                                 borderRadius: "var(--radius-md)", padding: "0.15em 0.5em",
                             }}>WOK</span>
+                        )}
+                        {isEigenVoertuig && (
+                            <span
+                                style={{
+                                    display: "inline-flex", alignItems: "center", gap: "0.3em",
+                                    fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
+                                    color: "var(--color-accent-text, var(--color-accent))",
+                                    background: "var(--color-accent-dim, rgba(99,102,241,0.12))",
+                                    border: "1px solid var(--color-accent-border, rgba(99,102,241,0.3))",
+                                    borderRadius: "var(--radius-full)",
+                                    padding: "0.15em 0.6em",
+                                    whiteSpace: "nowrap",
+                                }}
+                                aria-label="Dit is jouw persoonlijke voertuig"
+                            >
+                                <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+                                    <circle cx="7" cy="7" r="5" />
+                                    <path d="M12 7h10M19 4l3 3-3 3" />
+                                </svg>
+                                Mijn auto
+                            </span>
                         )}
                         {voertuig.heeftRecall && (
                             <span style={{
