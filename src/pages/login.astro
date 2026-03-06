@@ -3,12 +3,31 @@
  * src/pages/login.astro
  *
  * Publieke login pagina — authenticeert via de lokale BFF proxy.
- * ui-ux-pro-max audit fixes (2026-02-25):
+ *
+ * Audit fixes (2026-03-06):
+ *   - <main> ipv <div role="main"> — correct landmark
+ *   - <h1> voor branding ipv <p> — heading hiërarchie
+ *   - Skip-link voor toetsenbordgebruikers (WCAG 2.4.1)
+ *   - touch-action: manipulation op alle interactieve elementen (iOS 300ms fix)
+ *   - -webkit-tap-highlight-color — teal highlight ipv blauw/grijs
+ *   - <meta name="color-scheme"> — correct renderer hint
+ *   - <meta name="theme-color"> — mobiele browser status bar
+ *   - aria-hidden op MFA stap + JS toggle
+ *   - aria-busy op submit knoppen
+ *   - input:focus → input:focus-visible (geen ring bij muisklik)
+ *   - text-wrap: balance op logo/subtitle
+ *   - overscroll-behavior: contain op body
+ *   - Vergeten link touch target vergroot (min-height: 36px)
+ *   - font-variant-numeric + letter-spacing op MFA input
+ *   - Glare ::before artefact gefixd (clip-path)
+ *   - MFA input: pattern + inputmode attribuut
+ *
+ * Bestaande fixes (2026-02-25):
  *   - SVG icon ipv emoji 🔧
  *   - Input padding verhoogd (44px touch target)
  *   - Error box met CSS transitie i.p.v. display:none toggle
  *   - Wachtwoord show/hide toggle
- *   - autocomplete="username" op e-mailveldd
+ *   - autocomplete="username" op e-mailadres
  *   - MFA auto-submit bij 6 tekens
  *   - prefers-reduced-motion guard
  *   - Loading spinner op submit knop
@@ -28,6 +47,19 @@ import "../styles/components.css";
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!-- FIX: color-scheme hint voor renderer (scrollbar, inputs, native UI) -->
+        <meta name="color-scheme" content="dark light" />
+        <!-- FIX: mobiele browser status bar kleur -->
+        <meta
+            name="theme-color"
+            content="#050810"
+            media="(prefers-color-scheme: dark)"
+        />
+        <meta
+            name="theme-color"
+            content="#eef1f5"
+            media="(prefers-color-scheme: light)"
+        />
         <meta
             name="description"
             content="Log in op het werkplaatsportaal van Dustin Auto Garage."
@@ -69,9 +101,38 @@ import "../styles/components.css";
                 align-items: center;
                 justify-content: center;
                 padding: var(--space-4);
+                /* FIX: geen scroll-bounce die UX verstoort bij open keyboard (iOS) */
+                overscroll-behavior: contain;
                 transition:
                     background-color var(--transition-slow),
                     color var(--transition-slow);
+            }
+
+            /* FIX: tap highlight in teal ipv iOS blauw/grijs */
+            * {
+                -webkit-tap-highlight-color: rgba(20, 184, 166, 0.15);
+            }
+
+            /* ── Skip-link (WCAG 2.4.1) ── */
+            .skip-link {
+                position: fixed;
+                top: var(--space-3);
+                left: 50%;
+                transform: translateX(-50%)
+                    translateY(calc(-100% - var(--space-4)));
+                background: var(--color-accent);
+                color: var(--color-on-accent);
+                padding: var(--space-2) var(--space-4);
+                border-radius: var(--radius-md);
+                font-size: var(--text-sm);
+                font-weight: var(--weight-semibold);
+                text-decoration: none;
+                z-index: var(--z-toast);
+                transition: transform var(--transition-fast);
+                white-space: nowrap;
+            }
+            .skip-link:focus-visible {
+                transform: translateX(-50%) translateY(0);
             }
 
             /* ── Card ── */
@@ -96,7 +157,7 @@ import "../styles/components.css";
                 }
             }
 
-            /* Glare accent lijn bovenaan */
+            /* Glare accent lijn bovenaan — FIX: clip via border-radius mask */
             .login-card::before {
                 content: "";
                 position: absolute;
@@ -112,24 +173,34 @@ import "../styles/components.css";
                     var(--color-border-luminous) 70%,
                     transparent 100%
                 );
+                /* FIX: was zichtbaar buiten border-radius door stacking context */
+                border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
                 pointer-events: none;
+                z-index: 1;
             }
 
             /* ── Branding ── */
+            /* FIX: was <p>, nu <h1> voor correcte heading hiërarchie */
             .login-logo {
                 font-size: var(--text-lg);
                 font-weight: var(--weight-bold);
                 color: var(--color-heading);
-                margin-bottom: var(--space-1);
+                margin: 0 0 var(--space-1) 0;
                 display: flex;
                 align-items: center;
                 gap: var(--space-2);
+                /* FIX: voorkomt widows op smalle schermen */
+                text-wrap: balance;
             }
 
+            /* FIX: subtitle als <h2> voor correcte document outline */
             .login-subtitle {
                 font-size: var(--text-sm);
+                font-weight: var(--weight-normal);
                 color: var(--color-muted);
-                margin-bottom: var(--space-6);
+                margin: 0 0 var(--space-6) 0;
+                /* FIX: voorkomt widows op smalle schermen */
+                text-wrap: balance;
             }
 
             /* ── Form ── */
@@ -148,7 +219,7 @@ import "../styles/components.css";
                 text-transform: uppercase;
             }
 
-            /* Fix #2: verhoogde padding voor 44px touch target */
+            /* Fix: verhoogde padding voor 44px touch target */
             input[type="email"],
             input[type="password"],
             input[type="text"] {
@@ -164,11 +235,13 @@ import "../styles/components.css";
                 font-family: var(--font-sans);
                 min-height: 44px;
                 box-sizing: border-box;
+                /* FIX: prevents 300ms tap delay on iOS */
+                touch-action: manipulation;
                 transition:
                     border-color var(--transition-fast),
                     box-shadow var(--transition-fast),
                     background-color var(--transition-fast);
-                outline: none;
+                /* FIX: geen outline:none meer zonder fallback */
             }
 
             input::placeholder {
@@ -177,10 +250,15 @@ import "../styles/components.css";
             input:hover:not(:disabled) {
                 border-color: var(--color-border-hover);
             }
+            /* FIX: focus-visible ipv focus — geen ring bij muisklik */
             input:focus {
+                outline: none;
+            }
+            input:focus-visible {
                 border-color: var(--color-border-focus);
                 box-shadow: var(--focus-ring);
                 background: var(--color-surface);
+                outline: none;
             }
 
             /* ── Wachtwoord wrapper met show/hide ── */
@@ -208,6 +286,8 @@ import "../styles/components.css";
                 align-items: center;
                 justify-content: center;
                 border-radius: var(--radius-sm);
+                /* FIX: prevents 300ms tap delay on iOS */
+                touch-action: manipulation;
                 transition: color var(--transition-fast);
                 min-height: 32px;
                 min-width: 32px;
@@ -223,17 +303,30 @@ import "../styles/components.css";
 
             /* ── Vergeten link ── */
             .forgot-link {
-                display: block;
+                /* FIX: vergroot touch target met min-height */
+                display: inline-flex;
+                align-items: center;
+                min-height: 36px;
                 font-size: var(--text-xs);
                 color: var(--color-muted);
                 text-align: right;
                 text-decoration: none;
+                /* Rechts uitlijnen als block */
+                width: 100%;
+                justify-content: flex-end;
                 margin-top: calc(var(--space-1) * -1);
-                margin-bottom: var(--space-4);
+                margin-bottom: var(--space-2);
+                /* FIX: prevents 300ms tap delay on iOS */
+                touch-action: manipulation;
                 transition: color var(--transition-fast);
             }
             .forgot-link:hover {
                 color: var(--color-accent-text);
+            }
+            .forgot-link:focus-visible {
+                outline: 2px solid var(--color-accent);
+                outline-offset: 2px;
+                border-radius: var(--radius-sm);
             }
 
             /* ── Submit knop ── */
@@ -254,6 +347,8 @@ import "../styles/components.css";
                 align-items: center;
                 justify-content: center;
                 gap: var(--space-2);
+                /* FIX: prevents 300ms tap delay on iOS */
+                touch-action: manipulation;
                 transition:
                     background var(--transition-fast),
                     box-shadow var(--transition-fast),
@@ -274,8 +369,12 @@ import "../styles/components.css";
                 opacity: 0.5;
                 cursor: not-allowed;
             }
+            .btn-login:focus-visible {
+                outline: 2px solid var(--color-accent);
+                outline-offset: 2px;
+            }
 
-            /* Fix #7: prefers-reduced-motion */
+            /* prefers-reduced-motion */
             @media (prefers-reduced-motion: reduce) {
                 .btn-login {
                     transition: none;
@@ -288,7 +387,7 @@ import "../styles/components.css";
                 }
             }
 
-            /* ── Spinner (Fix #8) ── */
+            /* ── Spinner ── */
             .spinner {
                 width: 14px;
                 height: 14px;
@@ -297,7 +396,20 @@ import "../styles/components.css";
                 border-radius: 50%;
                 animation: spin 0.7s linear infinite;
                 flex-shrink: 0;
-                display: none;
+                /* FIX: gebruik opacity+visibility ipv display toggle — compositable */
+                opacity: 0;
+                visibility: hidden;
+                width: 0;
+                transition:
+                    opacity var(--transition-fast),
+                    width var(--transition-fast),
+                    visibility var(--transition-fast);
+            }
+
+            .spinner.active {
+                opacity: 1;
+                visibility: visible;
+                width: 14px;
             }
 
             @keyframes spin {
@@ -312,7 +424,7 @@ import "../styles/components.css";
                 }
             }
 
-            /* ── Error box (Fix #3: animatie i.p.v. display toggle) ── */
+            /* ── Error box (animatie i.p.v. display toggle) ── */
             .error-box {
                 background: var(--color-error-bg);
                 border: 1px solid var(--color-error-border);
@@ -370,13 +482,25 @@ import "../styles/components.css";
             .mfa-dot.filled {
                 background: var(--color-accent);
             }
+
+            /* FIX: MFA input — numerieke stijl voor leesbaarheid */
+            #mfa-code {
+                font-family: var(--font-mono);
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.15em;
+                text-align: center;
+            }
         </style>
     </head>
 
     <body>
-        <div class="login-card" role="main">
-            <!-- Fix #1: SVG icon ipv emoji 🔧 -->
-            <p class="login-logo">
+        <!-- FIX: Skip-link voor toetsenbordgebruikers (WCAG 2.4.1) -->
+        <a href="#login-form" class="skip-link">Ga naar formulier</a>
+
+        <!-- FIX: <main> ipv <div role="main"> — correct semantisch landmark -->
+        <main class="login-card">
+            <!-- FIX: <h1> ipv <p> voor correcte heading hiërarchie -->
+            <h1 class="login-logo">
                 <svg
                     width="20"
                     height="20"
@@ -393,9 +517,9 @@ import "../styles/components.css";
                     ></path>
                 </svg>
                 Dustin Auto Garage
-            </p>
-            <!-- Fix #11: informeel taalgebruik -->
-            <p class="login-subtitle">Log in op je werkplaatsportaal</p>
+            </h1>
+            <!-- FIX: <h2> voor correcte document outline na <h1> -->
+            <h2 class="login-subtitle">Log in op je werkplaatsportaal</h2>
 
             <div
                 id="error-box"
@@ -408,7 +532,6 @@ import "../styles/components.css";
 
             <form id="login-form" novalidate>
                 <div class="form-group">
-                    <!-- Fix #5: autocomplete="username", Fix #14+15 -->
                     <label for="email">E-mailadres</label>
                     <input
                         id="email"
@@ -424,7 +547,6 @@ import "../styles/components.css";
 
                 <div class="form-group">
                     <label for="password">Wachtwoord</label>
-                    <!-- Fix #4: wachtwoord show/hide wrapper -->
                     <div class="password-wrapper">
                         <input
                             id="password"
@@ -482,7 +604,6 @@ import "../styles/components.css";
                     </div>
                 </div>
 
-                <!-- Fix #10: wachtwoord vergeten link -->
                 <a
                     href="mailto:beheerder@dustinautogarage.nl?subject=Wachtwoord%20vergeten"
                     class="forgot-link"
@@ -490,16 +611,21 @@ import "../styles/components.css";
                     Wachtwoord vergeten? Neem contact op met de beheerder
                 </a>
 
-                <button type="submit" id="submit-btn" class="btn-login">
-                    <!-- Fix #8: spinner -->
+                <!-- FIX: aria-busy wordt via JS gesettled tijdens laden -->
+                <button
+                    type="submit"
+                    id="submit-btn"
+                    class="btn-login"
+                    aria-busy="false"
+                >
                     <span class="spinner" id="login-spinner" aria-hidden="true"
                     ></span>
                     <span id="submit-label">Inloggen</span>
                 </button>
             </form>
 
-            <!-- MFA stap -->
-            <div id="mfa-step" style="display:none">
+            <!-- MFA stap — FIX: aria-hidden="true" zodat screen readers dit niet lezen als het verborgen is -->
+            <div id="mfa-step" style="display:none" aria-hidden="true">
                 <p class="mfa-hint">
                     Voor je veiligheid is verificatie vereist.<br />
                     Klik op de knop om een code naar je e-mailadres te sturen.
@@ -508,6 +634,7 @@ import "../styles/components.css";
                     type="button"
                     id="send-code-btn"
                     class="btn-login mfa-spacing"
+                    aria-busy="false"
                 >
                     Stuur verificatiecode
                 </button>
@@ -523,11 +650,14 @@ import "../styles/components.css";
                         <span class="mfa-dot" id="dot-4"></span>
                         <span class="mfa-dot" id="dot-5"></span>
                     </div>
+                    <!-- FIX: pattern attribuut voor native validatie -->
                     <input
                         id="mfa-code"
                         type="text"
                         inputmode="numeric"
                         maxlength="6"
+                        pattern="[0-9]{6}"
+                        title="Voer een 6-cijferige verificatiecode in"
                         placeholder="123456"
                         autocomplete="one-time-code"
                         autocapitalize="none"
@@ -535,13 +665,18 @@ import "../styles/components.css";
                     />
                 </div>
 
-                <button type="button" id="mfa-submit-btn" class="btn-login">
+                <button
+                    type="button"
+                    id="mfa-submit-btn"
+                    class="btn-login"
+                    aria-busy="false"
+                >
                     <span class="spinner" id="mfa-spinner" aria-hidden="true"
                     ></span>
                     <span id="mfa-label">Verifiëren</span>
                 </button>
             </div>
-        </div>
+        </main>
 
         <script is:inline>
             // ── Helpers ──────────────────────────────────────────────────────
@@ -555,6 +690,7 @@ import "../styles/components.css";
                 err.classList.remove("visible");
             }
 
+            // FIX: aria-busy + spinner via CSS class ipv display toggle
             function setLoading(
                 btnEl,
                 spinnerEl,
@@ -564,7 +700,12 @@ import "../styles/components.css";
                 idleText,
             ) {
                 btnEl.disabled = loading;
-                spinnerEl.style.display = loading ? "block" : "none";
+                btnEl.setAttribute("aria-busy", loading ? "true" : "false");
+                if (loading) {
+                    spinnerEl.classList.add("active");
+                } else {
+                    spinnerEl.classList.remove("active");
+                }
                 labelEl.textContent = loading ? loadingText : idleText;
             }
 
@@ -581,7 +722,7 @@ import "../styles/components.css";
             const mfaSpinner = document.getElementById("mfa-spinner");
             const mfaLabel = document.getElementById("mfa-label");
 
-            // Fix #4: wachtwoord toggle
+            // Wachtwoord toggle
             const togglePwd = document.getElementById("toggle-pwd");
             const pwdInput = document.getElementById("password");
             const iconEye = document.getElementById("icon-eye");
@@ -602,7 +743,7 @@ import "../styles/components.css";
                 );
             });
 
-            // Fix #12: focus-trap binnen de card
+            // Focus-trap binnen de card
             const card = document.querySelector(".login-card");
             card.addEventListener("keydown", (e) => {
                 if (e.key !== "Tab") return;
@@ -624,7 +765,7 @@ import "../styles/components.css";
                 }
             });
 
-            // Fix #6: MFA auto-submit + progress dots
+            // MFA auto-submit + progress dots
             mfaCode.addEventListener("input", () => {
                 const val = mfaCode.value.replace(/\D/g, "");
                 mfaCode.value = val;
@@ -669,7 +810,9 @@ import "../styles/components.css";
                     if (data.mfa_required) {
                         mfaRequired = true;
                         form.style.display = "none";
+                        // FIX: aria-hidden toggler zodat screen readers de MFA stap correct aankondigingen
                         mfaStep.style.display = "block";
+                        mfaStep.removeAttribute("aria-hidden");
                         return;
                     }
 
@@ -684,6 +827,7 @@ import "../styles/components.css";
             // ── Stap 2: Verstuur e-mail verificatiecode ───────────────────────
             sendBtn.addEventListener("click", async () => {
                 sendBtn.disabled = true;
+                sendBtn.setAttribute("aria-busy", "true");
                 sendBtn.textContent = "Versturen…";
                 hideError();
 
@@ -697,16 +841,19 @@ import "../styles/components.css";
 
                     if (res.ok) {
                         sendBtn.textContent = "✓ Code verstuurd";
+                        sendBtn.setAttribute("aria-busy", "false");
                         mfaCode.focus();
                     } else {
                         const d = await res.json().catch(() => ({}));
                         showError(d.error ?? "Kon geen code versturen.");
                         sendBtn.disabled = false;
+                        sendBtn.setAttribute("aria-busy", "false");
                         sendBtn.textContent = "Stuur nieuwe code";
                     }
                 } catch {
                     showError("Verbinding mislukt.");
                     sendBtn.disabled = false;
+                    sendBtn.setAttribute("aria-busy", "false");
                     sendBtn.textContent = "Probeer opnieuw";
                 }
             });
