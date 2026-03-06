@@ -72,7 +72,7 @@ interface ScanResultaat {
 
 interface KentekenScannerProps {
     /** Callback: kenteken string zodra OCR slaagt */
-    onGescanned: (kenteken: string, voertuig?: ScanResultaat["voertuig"]) => void;
+    onGescanned: (kenteken: string, voertuig?: ScanResultaat["voertuig"], aiImageUrl?: string) => void;
     label?: string;
 }
 
@@ -306,7 +306,7 @@ export default function KentekenScanner({ onGescanned, label = "Scan Kenteken" }
             setVoertuigInfo(data.voertuig);
             setAiImageURL(data.ai_image_url ?? "");
             setStatus("success");
-            onGescanned(data.detected_kenteken, data.voertuig);
+            onGescanned(data.detected_kenteken, data.voertuig, data.ai_image_url);
 
         } catch (err) {
             setFoutmelding(err instanceof Error ? err.message : "Netwerk fout — probeer opnieuw.");

@@ -25,9 +25,10 @@ export default function ScannerSlot({
 }: ScannerSlotProps) {
     return (
         <KentekenScanner
-            onGescanned={(kenteken, voertuig) => {
+            onGescanned={(kenteken, voertuig, aiImageUrl) => {
                 onKenteken?.(kenteken);
-                onGescandResultaat?.(kenteken, voertuig);
+                // Voeg ai_image_url toe aan het voertuig-object zodat useScannerActie het doorgeeft
+                onGescandResultaat?.(kenteken, voertuig ? { ...voertuig, ai_image_url: aiImageUrl } : undefined);
             }}
             label={label}
         />

@@ -45,6 +45,9 @@ export interface ScanVoertuigData {
     heeftRecall?: boolean;
     recalls?: RecallDetail[];
     nap?: string;
+
+    // AI-impressie
+    ai_image_url?: string;
 }
 
 export interface ScanPreFillData {
@@ -68,6 +71,8 @@ export interface ScanPreFillData {
     heeftRecall?: boolean;
     recalls?: RecallDetail[];
     nap?: string;
+    // AI-impressie van het voertuig
+    ai_image_url?: string;
     // Klant-koppeling vanuit ScanKlantKeuzeModal (optioneel)
     klantId?: Id<"klanten">;
     klantNaam?: string;
@@ -151,6 +156,8 @@ export function useScannerActie(
             if (voertuigInfo.heeftRecall !== undefined) preFill.heeftRecall = voertuigInfo.heeftRecall;
             if (voertuigInfo.recalls?.length) preFill.recalls = voertuigInfo.recalls;
             if (voertuigInfo.nap) preFill.nap = voertuigInfo.nap;
+            // AI-impressie
+            if (voertuigInfo.ai_image_url) preFill.ai_image_url = voertuigInfo.ai_image_url;
         }
         return preFill;
 
