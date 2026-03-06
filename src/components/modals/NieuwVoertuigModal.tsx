@@ -126,14 +126,15 @@ export default function NieuwVoertuigModal({
     // Als klantId al via preFill meegegeven is, sla klant-stap over
     const [gekozenKlantId, setGekozenKlantId] = useState<Id<"klanten"> | null>(preFill?.klantId ?? null);
     const [gekozenKlantNaam, setGekozenKlantNaam] = useState(preFill?.klantNaam ?? "");
+    // Gebruiker kiest expliciet om zonder klant door te gaan
+    const [slaKlantOver, setSlaKlantOver] = useState(false);
     const klantResultaten = useQuery(
         api.klanten.zoek,
         zoekKlant.length >= 2 ? { term: zoekKlant } : "skip",
     );
 
-    // Als preFill aanwezig is, is de klant-keuze al gemaakt buiten deze modal
-    // (via ScanKlantKeuzeModal). In dat geval altijd het voertuig-formulier tonen.
-    const klantKeuzeGedaan = preFill !== undefined || gekozenKlantId !== null;
+    // klantKeuzeGedaan = preFill aanwezig (scan-flow) OF klant gekozen OF expliciet overgeslagen
+    const klantKeuzeGedaan = preFill !== undefined || gekozenKlantId !== null || slaKlantOver;
 
     const [form, setForm] = useState({
         kenteken: preFill?.kenteken ?? "",
@@ -292,9 +293,22 @@ export default function NieuwVoertuigModal({
                 {/* Klant-stap: toon alleen als klantKeuzeGedaan=false (handmatige aanmaak zonder keuze-modal) */}
                 {!klantKeuzeGedaan ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                        <label style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)" }}>
-                            Koppel aan klant <span style={{ color: "var(--color-error)" }}>*</span>
-                        </label>
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                            <label style={{ fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)" }}>
+                                Koppel aan klant <span style={{ color: "var(--color-muted)", fontWeight: "normal" }}>(optioneel)</span>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setSlaKlantOver(true)}
+                                style={{
+                                    fontSize: "var(--text-xs)", color: "var(--color-accent-text)",
+                                    background: "none", border: "none", cursor: "pointer", padding: 0,
+                                    textDecoration: "underline", textDecorationStyle: "dotted",
+                                }}
+                            >
+                                Doorgaan zonder klant →
+                            </button>
+                        </div>
                         <input
                             type="text"
                             value={zoekKlant}
@@ -335,7 +349,7 @@ export default function NieuwVoertuigModal({
                                 {!preFill?.klantId && (
                                     <button
                                         type="button"
-                                        onClick={() => { setGekozenKlantId(null); setGekozenKlantNaam(""); }}
+                                        onClick={() => { setGekozenKlantId(null); setGekozenKlantNaam(""); setSlaKlantOver(false); }}
                                         className="btn btn-ghost btn-sm"
                                         style={{ fontSize: "var(--text-xs)" }}
                                     >
