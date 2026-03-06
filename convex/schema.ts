@@ -240,6 +240,21 @@ export default defineSchema({
         /** Vrije notitieveld — bijv. "Betaalt altijd contant". */
         klantNotities: v.optional(v.string()),
 
+        // ── Medewerker-profiel (intern) ───────────────────────────────────────
+        /**
+         * Wanneer true behandelt het systeem dit klant-record als een intern
+         * medewerker-profiel. Verborgen in klantenoverzicht; alleen zichtbaar
+         * via medewerker-portaal en voertuig-koppeling.
+         */
+        isInternMedewerker: v.optional(v.boolean()),
+
+        /**
+         * LaventeCare userId — koppelt dit record aan een medewerker.
+         * Formaat: zelfde userId als medewerkers.userId.
+         * Gebruikt voor IDOR-check: medewerker mag alleen eigen record lezen.
+         */
+        medewerkerId: v.optional(v.string()),
+
         // ── Multi-tenant isolatie ─────────────────────────────────────────────
         /**
          * OIDC tokenIdentifier: `getUserIdentity().tokenIdentifier`
@@ -251,7 +266,9 @@ export default defineSchema({
         // Index: eerst tenant-filter, dan email-lookup — zelfde redenering als by_apk_and_token.
         .index("by_email_and_token", ["tokenIdentifier", "emailadres"])
         // Index: eerst tenant-filter, dan status-filter.
-        .index("by_status_and_token", ["tokenIdentifier", "status"]),
+        .index("by_status_and_token", ["tokenIdentifier", "status"])
+        // Index: medewerker-profiel snel ophalen via userId
+        .index("by_medewerker_and_token", ["tokenIdentifier", "medewerkerId"]),
 
     // ──────────────────────────────────────────────────────────────────────────
     // Tabel 2: voertuigen

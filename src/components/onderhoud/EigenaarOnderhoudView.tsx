@@ -23,6 +23,7 @@ import BeurtenOverzichtModal from "../modals/BeurtenOverzichtModal";
 import NieuweBeurtModal from "../modals/NieuweBeurtModal";
 import RecenteBeurtenModal from "../modals/RecenteBeurtenModal";
 import WerkorderDetailModal from "../modals/WerkorderDetailModal";
+import MijnVoertuigenTab from "./MijnVoertuigenTab";
 import type { WerkorderVerrijkt } from "../../hooks/useWerkplaats";
 import { TYPE_ICOON, SOORT_CONFIG, formatDatum } from "./utils";
 import type { TypeWerk } from "./utils";
@@ -100,7 +101,7 @@ function SoortSvg({ type, size = 16 }: { type: string; size?: number }) {
 function KPIDashboard() {
     const stats = useTotaalStatistieken();
     const [toonBeurtenModal, setToonBeurtenModal] = useState(false);
-    const [modalFilter, setModalFilter]           = useState("Alle");
+    const [modalFilter, setModalFilter] = useState("Alle");
 
     function openGefilterd(filter: string) {
         setModalFilter(filter);
@@ -346,8 +347,8 @@ const RANGE_LABELS: Record<DatumRange, string> = {
 function vanafMsVoor(range: DatumRange): number | undefined {
     const nu = new Date();
     if (range === "vandaag") { const d = new Date(nu); d.setHours(0, 0, 0, 0); return d.getTime(); }
-    if (range === "week")    { const d = new Date(nu); d.setDate(nu.getDate() - 7); d.setHours(0, 0, 0, 0); return d.getTime(); }
-    if (range === "maand")   { const d = new Date(nu); d.setDate(nu.getDate() - 30); d.setHours(0, 0, 0, 0); return d.getTime(); }
+    if (range === "week") { const d = new Date(nu); d.setDate(nu.getDate() - 7); d.setHours(0, 0, 0, 0); return d.getTime(); }
+    if (range === "maand") { const d = new Date(nu); d.setDate(nu.getDate() - 30); d.setHours(0, 0, 0, 0); return d.getTime(); }
     return undefined;
 }
 
@@ -390,7 +391,7 @@ function TeamKPIBalk({ logs }: { logs: GarageLogRegel[] }) {
     }
     const topEntry = Object.entries(telPerMedewerker).sort(([, a], [, b]) => b - a)[0];
     const aangemaakt = logs.filter(l => l.actie.toLowerCase().includes("aangemaakt")).length;
-    const afgerond   = logs.filter(l => l.actie.toLowerCase().includes("afgerond")).length;
+    const afgerond = logs.filter(l => l.actie.toLowerCase().includes("afgerond")).length;
 
     if (logs.length === 0) return null;
 
@@ -419,21 +420,21 @@ function TeamKPIBalk({ logs }: { logs: GarageLogRegel[] }) {
 }
 
 function GarageAuditTrail() {
-    const [limiet, setLimiet]                     = useState(LIMIET_STAP);
-    const [zoek, setZoek]                         = useState("");
+    const [limiet, setLimiet] = useState(LIMIET_STAP);
+    const [zoek, setZoek] = useState("");
     const [filterMedewerker, setFilterMedewerker] = useState<string>("Alle");
-    const [datumRange, setDatumRange]             = useState<DatumRange>("week");
+    const [datumRange, setDatumRange] = useState<DatumRange>("week");
     const [geopendWerkorderId, setGeopendWerkorderId] = useState<Id<"werkorders"> | null>(null);
 
     const vanafMs = vanafMsVoor(datumRange);
-    const logs    = useGarageActiviteit(limiet, vanafMs);
+    const logs = useGarageActiviteit(limiet, vanafMs);
 
     const medewerkers = useMemo(
         () => logs ? Array.from(new Set(logs.map((l: GarageLogRegel) => l.medewerkerNaam).filter(Boolean))).sort() as string[] : [],
         [logs]
     );
 
-    const vandaag      = new Date().toDateString();
+    const vandaag = new Date().toDateString();
     const vandaagAantal = logs?.filter((l: GarageLogRegel) => new Date(l.tijdstip).toDateString() === vandaag).length ?? 0;
 
     const gefilterd = useMemo(() => (logs ?? []).filter((log: GarageLogRegel) => {
@@ -454,12 +455,12 @@ function GarageAuditTrail() {
     const groepen = useMemo(() => {
         const g: Record<string, GarageLogRegel[]> = {};
         gefilterd.forEach((log: GarageLogRegel) => {
-            const d  = new Date(log.tijdstip);
+            const d = new Date(log.tijdstip);
             const nu = new Date();
             let sleutel: string;
-            if (d.toDateString()      === nu.toDateString())                                      sleutel = "Vandaag";
-            else if (d.toDateString() === new Date(nu.getTime() - 86400000).toDateString())       sleutel = "Gisteren";
-            else                                                                                   sleutel = d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+            if (d.toDateString() === nu.toDateString()) sleutel = "Vandaag";
+            else if (d.toDateString() === new Date(nu.getTime() - 86400000).toDateString()) sleutel = "Gisteren";
+            else sleutel = d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
             if (!g[sleutel]) g[sleutel] = [];
             g[sleutel].push(log);
         });
@@ -574,9 +575,9 @@ function GarageAuditTrail() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
                         {regels.map((log: GarageLogRegel) => {
-                            const badge        = actieBadge(log.actie);
-                            const kleur        = avatarKleurVoor(log.medewerkerNaam ?? "?");
-                            const heeftOrder   = !!log.werkorderId;
+                            const badge = actieBadge(log.actie);
+                            const kleur = avatarKleurVoor(log.medewerkerNaam ?? "?");
+                            const heeftOrder = !!log.werkorderId;
 
                             return (
                                 <button
@@ -675,16 +676,16 @@ type SorteerOptie = typeof SORTEER_OPTIES[number];
 const FILTER_TYPES = ["Alle", "Grote Beurt", "Kleine Beurt", "APK", "Reparatie", "Bandenwisseling", "Schadeherstel", "Diagnostiek", "Overig"] as const;
 
 function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; onTerug: () => void }) {
-    const historie        = useVoertuigHistorie(voertuig._id);
-    const klant           = useQuery(api.klanten.getById, voertuig.klantId ? { klantId: voertuig.klantId } : "skip");
-    const verwijder       = useMutation(api.onderhoudshistorie.verwijder);
+    const historie = useVoertuigHistorie(voertuig._id);
+    const klant = useQuery(api.klanten.getById, voertuig.klantId ? { klantId: voertuig.klantId } : "skip");
+    const verwijder = useMutation(api.onderhoudshistorie.verwijder);
 
-    const [toonNieuw, setToonNieuw]               = useState(false);
-    const [verwijderBezig, setVerwijderBezig]      = useState<Id<"onderhoudshistorie"> | null>(null);
-    const [verwijderConfirm, setVerwijderConfirm]  = useState<Id<"onderhoudshistorie"> | null>(null);
-    const [expandedId, setExpandedId]              = useState<Id<"onderhoudshistorie"> | null>(null);
-    const [filterType, setFilterType]              = useState<string>("Alle");
-    const [sorteer, setSorteer]                    = useState<SorteerOptie>("Nieuwste eerst");
+    const [toonNieuw, setToonNieuw] = useState(false);
+    const [verwijderBezig, setVerwijderBezig] = useState<Id<"onderhoudshistorie"> | null>(null);
+    const [verwijderConfirm, setVerwijderConfirm] = useState<Id<"onderhoudshistorie"> | null>(null);
+    const [expandedId, setExpandedId] = useState<Id<"onderhoudshistorie"> | null>(null);
+    const [filterType, setFilterType] = useState<string>("Alle");
+    const [sorteer, setSorteer] = useState<SorteerOptie>("Nieuwste eerst");
 
     async function handleVerwijder(id: Id<"onderhoudshistorie">) {
         setVerwijderConfirm(null);
@@ -696,7 +697,7 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
         if (!historie) return [];
         let lijst = filterType === "Alle" ? [...historie] : historie.filter(b => b.typeWerk === filterType);
         if (sorteer === "Nieuwste eerst") lijst.sort((a, b) => b.datumUitgevoerd - a.datumUitgevoerd);
-        else                              lijst.sort((a, b) => a.datumUitgevoerd - b.datumUitgevoerd);
+        else lijst.sort((a, b) => a.datumUitgevoerd - b.datumUitgevoerd);
         return lijst;
     }, [historie, filterType, sorteer]);
 
@@ -824,11 +825,11 @@ function EigenaarDossier({ voertuig, onTerug }: { voertuig: Doc<"voertuigen">; o
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                     {gefilterd.map((beurt, idx) => {
-                        const soort    = SOORT_CONFIG[beurt.typeWerk] ?? SOORT_CONFIG["Overig"];
-                        const isOpen   = expandedId === beurt._id;
+                        const soort = SOORT_CONFIG[beurt.typeWerk] ?? SOORT_CONFIG["Overig"];
+                        const isOpen = expandedId === beurt._id;
                         // km delta tov vorige (in gesorteerde volgorde)
                         const vorigeKm = gefilterd[idx + 1]?.kmStandOnderhoud;
-                        const kmDelta  = vorigeKm !== undefined ? beurt.kmStandOnderhoud - vorigeKm : null;
+                        const kmDelta = vorigeKm !== undefined ? beurt.kmStandOnderhoud - vorigeKm : null;
 
                         return (
                             <div key={beurt._id} className="card" style={{ overflow: "hidden", borderLeft: `3px solid ${soort.kleur}` }}>
@@ -1037,21 +1038,25 @@ function VoertuigKaart({ voertuig: v, onClick }: { voertuig: Doc<"voertuigen">; 
 // Export — Tabbed Layout
 // ---------------------------------------------------------------------------
 
-type Tab = "overzicht" | "voertuig" | "activiteit";
+type Tab = "overzicht" | "voertuig" | "activiteit" | "mijnvoertuigen";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "overzicht",  label: "Overzicht",       icon: <IconActivity /> },
-    { id: "voertuig",  label: "Voertuigdossier",  icon: <IconCar /> },
-    { id: "activiteit", label: "Teamactiviteit",   icon: <IconClipboard /> },
+    { id: "overzicht", label: "Overzicht", icon: <IconActivity /> },
+    { id: "voertuig", label: "Voertuigdossier", icon: <IconCar /> },
+    { id: "activiteit", label: "Teamactiviteit", icon: <IconClipboard /> },
+    { id: "mijnvoertuigen", label: "Mijn voertuigen", icon: <IconCar /> },
 ];
 
 const MAX_RECENT = 5;
 
 export default function EigenaarOnderhoudView() {
-    const [actieveTab, setActieveTab]               = useState<Tab>("overzicht");
+    const [actieveTab, setActieveTab] = useState<Tab>("overzicht");
     const [geselecteerdVoertuig, setGeselecteerdVoertuig] = useState<Doc<"voertuigen"> | null>(null);
-    const [toonRecenteModal, setToonRecenteModal]   = useState(false);
-    const [recentBekeken, setRecentBekeken]         = useState<Doc<"voertuigen">[]>([]);
+    const [toonRecenteModal, setToonRecenteModal] = useState(false);
+    const [recentBekeken, setRecentBekeken] = useState<Doc<"voertuigen">[]>([]);
+
+    // Eigenaar-naam voor MijnVoertuigenTab registratie
+    const profiel = useQuery(api.medewerkers.getMijnProfiel);
 
     const handleOpenDossier = useCallback((v: Doc<"voertuigen">) => {
         setGeselecteerdVoertuig(v);
@@ -1146,6 +1151,14 @@ export default function EigenaarOnderhoudView() {
                         </p>
                         <GarageAuditTrail />
                     </div>
+                )}
+
+                {actieveTab === "mijnvoertuigen" && (
+                    <MijnVoertuigenTab
+                        onOpenDossier={handleOpenDossier}
+                        domeinRol={(profiel?.domeinRol ?? "monteur") as "eigenaar" | "balie" | "monteur" | "stagiair"}
+                        naam={profiel ? `${profiel.voornaam} ${profiel.achternaam}` : "Medewerker"}
+                    />
                 )}
             </div>
         </div>

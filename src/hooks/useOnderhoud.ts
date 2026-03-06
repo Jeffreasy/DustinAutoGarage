@@ -107,3 +107,20 @@ export function useUpdateDocumentUrl() {
 export function useVerwijderOnderhoud() {
     return useMutation(api.onderhoudshistorie.verwijder);
 }
+
+// ---------------------------------------------------------------------------
+// Persoonlijk voertuig (medewerker-as-klant)
+// ---------------------------------------------------------------------------
+
+/**
+ * Haalt het interne klant-profiel op van de ingelogde medewerker.
+ * Retourneert null als nog geen profiel bestaat.
+ */
+export function useMijnKlantProfiel() {
+    return useQuery(api.klanten.getMijnKlantProfiel);
+}
+
+/** Registreer de ingelogde medewerker als interne klant (idempotent). */
+export function useRegistreerMedewerkerAlsKlant() {
+    return useMutation(api.klanten.registreerMedewerkerAlsKlant);
+}

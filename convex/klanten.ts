@@ -23,21 +23,49 @@ import { requireAuth, requireDomainRole } from "./helpers";
 // Queries — beschikbaar voor alle ingelogde medewerkers
 // ---------------------------------------------------------------------------
 
-/** list — Alle klanten voor de huidige tenant, nieuwste eerst. */
+/** list — Alle klanten voor de huidige tenant, nieuwste eerst.
+ *  Interne medewerker-profielen (isInternMedewerker=true) worden gefilterd. */
 export const list = query({
     args: {},
     handler: async (ctx): Promise<Doc<"klanten">[]> => {
         const tokenIdentifier = await requireAuth(ctx);
 
-        return ctx.db
+        const alle = await ctx.db
             .query("klanten")
             .withIndex("by_token_identifier", (q) =>
                 q.eq("tokenIdentifier", tokenIdentifier)
             )
             .order("desc")
             .collect();
+
+        // Filter interne medewerker-records uit het standaard overzicht
+        return alle.filter((k) => !k.isInternMedewerker);
     },
 });
+
+/**
+ * getMijnKlantProfiel — haalt het interne klant-profiel op van de ingelogde medewerker.
+ * Retourneert null als nog geen intern profiel bestaat.
+ * Toegankelijk voor alle rollen — iedereen mag zijn eigen profiel ophalen.
+ */
+export const getMijnKlantProfiel = query({
+    args: {},
+    handler: async (ctx): Promise<Doc<"klanten"> | null> => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return null;
+        const tokenIdentifier = identity.tokenIdentifier;
+        const userId = (identity as Record<string, unknown>).userId as string | undefined
+            ?? identity.subject;
+
+        return ctx.db
+            .query("klanten")
+            .withIndex("by_medewerker_and_token", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier).eq("medewerkerId", userId)
+            )
+            .first();
+    },
+});
+
 
 /** getById — Eén klant op basis van ID. Retourneert null als niet gevonden/eigendom. */
 export const getById = query({
@@ -447,5 +475,74 @@ export const verwijder = mutation({
         }
 
         await ctx.db.delete(args.klantId);
+    },
+});
+
+/**
+ * registreerMedewerkerAlsKlant — maakt een intern klant-profiel voor een medewerker.
+ *
+ * Idempotent: retourneert bestaand profiel-ID als medewerker al geregistreerd is.
+ * Security:
+ *   - Balie+: mag voor elke medewerker een profiel aanmaken
+ *   - Elke rol: mag eigen profiel aanmaken (userId wordt gevalideerd)
+ *
+ * Voertuig koppeling: gebruik daarna voertuigen.create({ klantId: returnwaarde })
+ */
+export const registreerMedewerkerAlsKlant = mutation({
+    args: {
+        voornaam: v.string(),
+        achternaam: v.string(),
+        telefoonnummer: v.optional(v.string()),
+        emailadres: v.optional(v.string()),
+        /** userId van de te registreren medewerker — indien leeg: huidige gebruiker */
+        medewerkerId: v.optional(v.string()),
+    },
+    handler: async (ctx, args): Promise<{ klantId: string; isNieuw: boolean }> => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("UNAUTHORIZED: Niet ingelogd.");
+        const tokenIdentifier = identity.tokenIdentifier;
+        const huidigUserId = (identity as Record<string, unknown>).userId as string | undefined
+            ?? identity.subject;
+
+        // Medewerker registreert zichzelf, of balie/eigenaar registreert iemand anders
+        const doelMedewerkerId = args.medewerkerId ?? huidigUserId;
+
+        // IDOR check: als je iemand anders registreert moet je balie+ zijn
+        if (doelMedewerkerId !== huidigUserId) {
+            await requireDomainRole(ctx, "balie");
+        }
+
+        // Idempotentie: al een profiel?
+        const bestaand = await ctx.db
+            .query("klanten")
+            .withIndex("by_medewerker_and_token", (q) =>
+                q.eq("tokenIdentifier", tokenIdentifier).eq("medewerkerId", doelMedewerkerId)
+            )
+            .first();
+
+        if (bestaand) {
+            return { klantId: bestaand._id, isNieuw: false };
+        }
+
+        // Nieuw intern klant-record aanmaken
+        const klantId = await ctx.db.insert("klanten", {
+            klanttype: "Particulier",
+            voornaam: args.voornaam.trim(),
+            achternaam: args.achternaam.trim(),
+            bedrijfsnaam: undefined,
+            adres: "—",
+            postcode: "—",
+            woonplaats: "—",
+            telefoonnummer: args.telefoonnummer?.trim() ?? "—",
+            emailadres: args.emailadres?.trim().toLowerCase() ?? `intern.${doelMedewerkerId}@garage`,
+            accepteertMarketing: false,
+            status: "Actief",
+            klantSinds: Date.now(),
+            isInternMedewerker: true,
+            medewerkerId: doelMedewerkerId,
+            tokenIdentifier,
+        });
+
+        return { klantId, isNieuw: true };
     },
 });
