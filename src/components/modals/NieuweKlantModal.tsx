@@ -89,16 +89,22 @@ export default function NieuweKlantModal({ onSluit }: { onSluit: () => void }) {
         key: keyof typeof LEGE_KLANT,
         type = "text",
         required = false,
+        autocomplete?: string,
+        inputmode?: React.HTMLAttributes<HTMLInputElement>["inputMode"],
     ) => (
         <div>
-            <label style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
+            <label htmlFor={`klant-${key}`} style={{ display: "block", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--color-heading)", marginBottom: "var(--space-1)" }}>
                 {label}{required && <span style={{ color: "var(--color-error)" }}> *</span>}
             </label>
             <input
+                id={`klant-${key}`}
+                name={key as string}
                 type={type}
                 value={form[key] as string}
                 onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 required={required}
+                autoComplete={autocomplete}
+                inputMode={inputmode}
                 style={inputStyle}
             />
         </div>
@@ -119,15 +125,15 @@ export default function NieuweKlantModal({ onSluit }: { onSluit: () => void }) {
 
             <form onSubmit={handleSubmit} style={{ padding: "var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-4)", overflowY: "auto" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-4)" }}>
-                    {veld("Voornaam", "voornaam", "text", true)}
-                    {veld("Achternaam", "achternaam", "text", true)}
+                    {veld("Voornaam", "voornaam", "text", true, "given-name")}
+                    {veld("Achternaam", "achternaam", "text", true, "family-name")}
                 </div>
-                {veld("E-mailadres", "emailadres", "email", true)}
-                {veld("Telefoonnummer", "telefoonnummer", "tel", true)}
-                {veld("Straat + huisnummer", "adres", "text", true)}
+                {veld("E-mailadres", "emailadres", "email", true, "email")}
+                {veld("Telefoonnummer", "telefoonnummer", "tel", true, "tel", "tel")}
+                {veld("Straat + huisnummer", "adres", "text", true, "street-address")}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "var(--space-4)" }}>
-                    {veld("Postcode", "postcode", "text", true)}
-                    {veld("Woonplaats", "woonplaats", "text", true)}
+                    {veld("Postcode", "postcode", "text", true, "postal-code")}
+                    {veld("Woonplaats", "woonplaats", "text", true, "address-level2")}
                 </div>
 
                 {/* Type klant */}

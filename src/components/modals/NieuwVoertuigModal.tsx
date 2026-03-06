@@ -279,10 +279,10 @@ export default function NieuwVoertuigModal({
                 <button
                     onClick={onSluit}
                     className="btn btn-ghost btn-sm"
-                    style={{ minHeight: "40px" }}
                     aria-label="Modal sluiten"
+                    style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
-                    ✕
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
             </div>
 
@@ -452,7 +452,7 @@ export default function NieuwVoertuigModal({
                         </div>
 
                         {/* Voertuig velden */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-3)" }}>
                             {field("Bouwjaar", "bouwjaar", "number", true)}
                             {field("Merk", "merk", "text", true)}
                             {field("Model", "model", "text", true)}
@@ -473,7 +473,7 @@ export default function NieuwVoertuigModal({
                             </select>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-3)" }}>
                             {field("Kilometerstand", "kilometerstand", "number")}
                             {field("APK vervaldatum", "apkVervaldatum", "date")}
                             {field("Notities", "voertuigNotities")}

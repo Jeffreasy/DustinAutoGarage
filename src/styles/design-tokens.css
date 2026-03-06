@@ -168,7 +168,8 @@
      */
    --control-height: 2.75rem;
    /* 44px — minimale raakbare hoogte */
-   --control-height-sm: 2rem;
+   --control-height-sm: 2.75rem;
+   /* 44px — WCAG 2.5.8 touch target minimum */
    /* 32px — kleine varianten */
    --control-height-lg: 3rem;
    /* 48px — grote varianten */
