@@ -100,6 +100,42 @@ export const lijstWerkordersVoorWerkplek = query({
     },
 });
 
+/**
+ * getWerkorderById — haalt één werkorder op inclusief verrijking.
+ *
+ * Wordt gebruikt door de Teamactiviteit tab om een werkorder-detail
+ * te tonen vanuit een audit-log rij (ook gearchiveerde/afgeronde orders).
+ *
+ * IDOR-bescherming: tokenIdentifier wordt geverifieerd.
+ * Vereist minimaal de rol "balie".
+ */
+export const getWerkorderById = query({
+    args: { werkorderId: v.id("werkorders") },
+    handler: async (ctx, args) => {
+        const profiel = await requireDomainRole(ctx, "balie");
+
+        const order = await ctx.db.get(args.werkorderId);
+        if (!order || order.tokenIdentifier !== profiel.tokenIdentifier) {
+            return null; // Geen toegang of niet gevonden
+        }
+
+        const voertuig = await ctx.db.get(order.voertuigId);
+        const klant = order.klantId ? await ctx.db.get(order.klantId) : null;
+        const monteur = order.monteursId ? await ctx.db.get(order.monteursId) : null;
+
+        return {
+            ...order,
+            voertuig: voertuig
+                ? { kenteken: voertuig.kenteken, merk: voertuig.merk, model: voertuig.model }
+                : null,
+            klant: klant
+                ? { voornaam: klant.voornaam, achternaam: klant.achternaam, telefoonnummer: klant.telefoonnummer }
+                : null,
+            monteur: monteur ? { naam: monteur.naam } : null,
+        };
+    },
+});
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------

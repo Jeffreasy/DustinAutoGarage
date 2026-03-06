@@ -9,7 +9,7 @@
  *   3. Activiteit  — garage-brede audit trail (werkorderLogs)
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -22,6 +22,8 @@ import {
 import BeurtenOverzichtModal from "../modals/BeurtenOverzichtModal";
 import NieuweBeurtModal from "../modals/NieuweBeurtModal";
 import RecenteBeurtenModal from "../modals/RecenteBeurtenModal";
+import WerkorderDetailModal from "../modals/WerkorderDetailModal";
+import type { WerkorderVerrijkt } from "../../hooks/useWerkplaats";
 import { TYPE_ICOON, formatDatum } from "./utils";
 import type { TypeWerk } from "./utils";
 
@@ -271,22 +273,22 @@ function ActiviteitsFeed({ onOpenDossier }: { onOpenDossier: (v: Doc<"voertuigen
 
 type GarageLogRegel = NonNullable<ReturnType<typeof useGarageActiviteit>>[number];
 
-// Kleur per actie-type — gebaseerd op bekende acties in werkorders.ts
-function actieBadge(actie: string): { bg: string; kleur: string; label: string } {
+// Kleur per actie-type
+function actieBadge(actie: string): { bg: string; kleur: string } {
     const a = actie.toLowerCase();
     if (a.includes("aangemaakt") || a.includes("registreer"))
-        return { bg: "var(--color-info-bg)", kleur: "var(--color-info)", label: actie };
+        return { bg: "var(--color-info-bg)", kleur: "var(--color-info)" };
     if (a.includes("bezig") || a.includes("opgepakt"))
-        return { bg: "var(--color-warning-bg)", kleur: "var(--color-warning)", label: actie };
+        return { bg: "var(--color-warning-bg)", kleur: "var(--color-warning)" };
     if (a.includes("klaar") || a.includes("afgerond") || a.includes("voltooid"))
-        return { bg: "var(--color-success-bg)", kleur: "var(--color-success)", label: actie };
+        return { bg: "var(--color-success-bg)", kleur: "var(--color-success)" };
     if (a.includes("geannuleerd") || a.includes("verwijder"))
-        return { bg: "var(--color-error-bg)", kleur: "var(--color-error)", label: actie };
+        return { bg: "var(--color-error-bg)", kleur: "var(--color-error)" };
     if (a.includes("notitie") || a.includes("opmerking"))
-        return { bg: "var(--color-surface-3)", kleur: "var(--color-muted)", label: actie };
+        return { bg: "var(--color-surface-3)", kleur: "var(--color-muted)" };
     if (a.includes("wacht") || a.includes("onderdeel"))
-        return { bg: "var(--color-info-bg)", kleur: "var(--color-info-text)", label: actie };
-    return { bg: "var(--color-surface-2)", kleur: "var(--color-body)", label: actie };
+        return { bg: "var(--color-info-bg)", kleur: "var(--color-info-text)" };
+    return { bg: "var(--color-surface-2)", kleur: "var(--color-body)" };
 }
 
 function avatarKleurVoor(naam: string): string {
@@ -296,25 +298,109 @@ function avatarKleurVoor(naam: string): string {
     return KLEUREN[h];
 }
 
+// Datum range
+type DatumRange = "vandaag" | "week" | "maand" | "alles";
+const RANGE_LABELS: Record<DatumRange, string> = {
+    vandaag: "Vandaag",
+    week: "Deze week",
+    maand: "Deze maand",
+    alles: "Alles",
+};
+
+function vanafMsVoor(range: DatumRange): number | undefined {
+    const nu = new Date();
+    if (range === "vandaag") { const d = new Date(nu); d.setHours(0, 0, 0, 0); return d.getTime(); }
+    if (range === "week")    { const d = new Date(nu); d.setDate(nu.getDate() - 7); d.setHours(0, 0, 0, 0); return d.getTime(); }
+    if (range === "maand")   { const d = new Date(nu); d.setDate(nu.getDate() - 30); d.setHours(0, 0, 0, 0); return d.getTime(); }
+    return undefined;
+}
+
 const LIMIET_STAP = 50;
 
+// Sub-component: lazy-loaded WerkorderDetailModal opener
+function WerkorderOpener({ werkorderId, onSluit }: { werkorderId: Id<"werkorders">; onSluit: () => void }) {
+    const order = useQuery(api.werkorders.getWerkorderById, { werkorderId });
+
+    if (order === undefined) {
+        return (
+            <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)" }} onClick={onSluit}>
+                <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", padding: "var(--space-8)", display: "flex", alignItems: "center", gap: "var(--space-3)", fontSize: "var(--text-sm)", color: "var(--color-muted)" }}>
+                    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }} aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56" /></svg>
+                    Werkorder laden…
+                </div>
+            </div>
+        );
+    }
+
+    if (order === null) {
+        return (
+            <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)" }} onClick={onSluit}>
+                <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", padding: "var(--space-8)", fontSize: "var(--text-sm)", color: "var(--color-error)", maxWidth: "300px", textAlign: "center" }}>
+                    Werkorder niet gevonden of geen toegang.<br />
+                    <button className="btn btn-ghost btn-sm" style={{ marginTop: "var(--space-3)" }} onClick={onSluit}>Sluiten</button>
+                </div>
+            </div>
+        );
+    }
+
+    return <WerkorderDetailModal order={order as WerkorderVerrijkt} onSluit={onSluit} />;
+}
+
+// Team KPI mini-balk (client-side berekend uit geladen logs)
+function TeamKPIBalk({ logs }: { logs: GarageLogRegel[] }) {
+    const telPerMedewerker: Record<string, number> = {};
+    for (const l of logs) {
+        if (l.medewerkerNaam) telPerMedewerker[l.medewerkerNaam] = (telPerMedewerker[l.medewerkerNaam] ?? 0) + 1;
+    }
+    const topEntry = Object.entries(telPerMedewerker).sort(([, a], [, b]) => b - a)[0];
+    const aangemaakt = logs.filter(l => l.actie.toLowerCase().includes("aangemaakt")).length;
+    const afgerond   = logs.filter(l => l.actie.toLowerCase().includes("afgerond")).length;
+
+    if (logs.length === 0) return null;
+
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+            {topEntry && (
+                <div style={{ background: "var(--color-surface-2)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-muted)", fontWeight: "600" }}>Meest actief</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <span style={{ width: "18px", height: "18px", borderRadius: "var(--radius-full)", background: avatarKleurVoor(topEntry[0]), color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "700", flexShrink: 0 }}>{topEntry[0].charAt(0).toUpperCase()}</span>
+                        <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{topEntry[0]}</span>
+                        <span style={{ fontSize: "10px", color: "var(--color-muted)", flexShrink: 0 }}>{topEntry[1]}x</span>
+                    </div>
+                </div>
+            )}
+            <div style={{ background: "var(--color-info-bg)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-info)", fontWeight: "600" }}>WO aangemaakt</span>
+                <span style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-info)", fontVariantNumeric: "tabular-nums" }}>{aangemaakt}</span>
+            </div>
+            <div style={{ background: "var(--color-success-bg)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-success)", fontWeight: "600" }}>WO afgerond</span>
+                <span style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-bold)", color: "var(--color-success)", fontVariantNumeric: "tabular-nums" }}>{afgerond}</span>
+            </div>
+        </div>
+    );
+}
+
 function GarageAuditTrail() {
-    const [limiet, setLimiet] = useState(LIMIET_STAP);
-    const [zoek, setZoek] = useState("");
+    const [limiet, setLimiet]                     = useState(LIMIET_STAP);
+    const [zoek, setZoek]                         = useState("");
     const [filterMedewerker, setFilterMedewerker] = useState<string>("Alle");
-    const logs = useGarageActiviteit(limiet);
+    const [datumRange, setDatumRange]             = useState<DatumRange>("week");
+    const [geopendWerkorderId, setGeopendWerkorderId] = useState<Id<"werkorders"> | null>(null);
 
-    // Bouw unieke medewerker-lijst op uit geladen logs
-    const medewerkers = logs
-        ? Array.from(new Set(logs.map((l: GarageLogRegel) => l.medewerkerNaam).filter(Boolean))).sort()
-        : [];
+    const vanafMs = vanafMsVoor(datumRange);
+    const logs    = useGarageActiviteit(limiet, vanafMs);
 
-    // Vandaag-teller
-    const vandaag = new Date().toDateString();
+    const medewerkers = useMemo(
+        () => logs ? Array.from(new Set(logs.map((l: GarageLogRegel) => l.medewerkerNaam).filter(Boolean))).sort() as string[] : [],
+        [logs]
+    );
+
+    const vandaag      = new Date().toDateString();
     const vandaagAantal = logs?.filter((l: GarageLogRegel) => new Date(l.tijdstip).toDateString() === vandaag).length ?? 0;
 
-    // Filter: medewerker + zoekterm
-    const gefilterd = (logs ?? []).filter((log: GarageLogRegel) => {
+    const gefilterd = useMemo(() => (logs ?? []).filter((log: GarageLogRegel) => {
         if (filterMedewerker !== "Alle" && log.medewerkerNaam !== filterMedewerker) return false;
         if (zoek.trim()) {
             const q = zoek.toLowerCase();
@@ -327,24 +413,22 @@ function GarageAuditTrail() {
             );
         }
         return true;
-    });
+    }), [logs, filterMedewerker, zoek]);
 
-    // Groepeer op datum
-    const groepen: Record<string, GarageLogRegel[]> = {};
-    gefilterd.forEach((log: GarageLogRegel) => {
-        const d = new Date(log.tijdstip);
-        const nu = new Date();
-        let sleutel: string;
-        if (d.toDateString() === nu.toDateString()) {
-            sleutel = "Vandaag";
-        } else if (d.toDateString() === new Date(nu.getTime() - 86400000).toDateString()) {
-            sleutel = "Gisteren";
-        } else {
-            sleutel = d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
-        }
-        if (!groepen[sleutel]) groepen[sleutel] = [];
-        groepen[sleutel].push(log);
-    });
+    const groepen = useMemo(() => {
+        const g: Record<string, GarageLogRegel[]> = {};
+        gefilterd.forEach((log: GarageLogRegel) => {
+            const d  = new Date(log.tijdstip);
+            const nu = new Date();
+            let sleutel: string;
+            if (d.toDateString()      === nu.toDateString())                                      sleutel = "Vandaag";
+            else if (d.toDateString() === new Date(nu.getTime() - 86400000).toDateString())       sleutel = "Gisteren";
+            else                                                                                   sleutel = d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+            if (!g[sleutel]) g[sleutel] = [];
+            g[sleutel].push(log);
+        });
+        return g;
+    }, [gefilterd]);
 
     if (logs === undefined) {
         return (
@@ -359,21 +443,36 @@ function GarageAuditTrail() {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
 
-            {/* ── KPI-balk + zoek ── */}
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
-                {/* Vandaag badge */}
-                <div style={{
-                    display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
-                    background: "var(--color-accent-dim)", borderRadius: "var(--radius-full)",
-                    padding: "var(--space-1) var(--space-3)", fontSize: "var(--text-xs)",
-                    fontWeight: "var(--weight-semibold)", color: "var(--color-accent-text)",
-                    flexShrink: 0,
-                }}>
-                    <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
-                    {vandaagAantal} acties vandaag
+            {/* ── Datum range filter + Live indicator ── */}
+            <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+                {(Object.keys(RANGE_LABELS) as DatumRange[]).map((range) => (
+                    <button
+                        key={range}
+                        onClick={() => { setDatumRange(range); setLimiet(LIMIET_STAP); }}
+                        className={`btn btn-sm ${datumRange === range ? "btn-primary" : "btn-ghost"}`}
+                        style={{ minHeight: "30px", fontSize: "var(--text-xs)", padding: "0 var(--space-3)" }}
+                    >
+                        {RANGE_LABELS[range]}
+                    </button>
+                ))}
+                <div style={{ flex: 1 }} />
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "var(--text-xs)", color: "var(--color-muted)" }}>
+                    <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "var(--color-success)", display: "inline-block", animation: "pulse 2s ease infinite", flexShrink: 0 }} />
+                    Live
                 </div>
+            </div>
 
-                {/* Zoekbalk */}
+            {/* ── Team KPI balk ── */}
+            {logs.length > 0 && <TeamKPIBalk logs={logs} />}
+
+            {/* ── Zoek + tellers ── */}
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                {datumRange !== "vandaag" && (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", background: "var(--color-accent-dim)", borderRadius: "var(--radius-full)", padding: "var(--space-1) var(--space-3)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-accent-text)", flexShrink: 0 }}>
+                        <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                        {vandaagAantal} acties vandaag
+                    </div>
+                )}
                 <div style={{ position: "relative", flex: "1 1 200px", minWidth: "160px" }}>
                     <div style={{ position: "absolute", left: "var(--space-3)", top: "50%", transform: "translateY(-50%)", color: "var(--color-muted)", pointerEvents: "none" }}>
                         <IconSearch />
@@ -387,8 +486,6 @@ function GarageAuditTrail() {
                         style={{ paddingLeft: "2.25rem", minHeight: "36px", fontSize: "var(--text-xs)" }}
                     />
                 </div>
-
-                {/* Totaal teller */}
                 <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", flexShrink: 0 }}>
                     {gefilterd.length} {gefilterd.length === 1 ? "log" : "logs"}
                     {logs.length > gefilterd.length && ` (van ${logs.length})`}
@@ -396,7 +493,7 @@ function GarageAuditTrail() {
             </div>
 
             {/* ── Medewerker filter chips ── */}
-            {medewerkers.length > 0 && (
+            {medewerkers.length > 1 && (
                 <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
                     {["Alle", ...medewerkers].map((naam) => (
                         <button
@@ -406,12 +503,7 @@ function GarageAuditTrail() {
                             style={{ minHeight: "28px", fontSize: "var(--text-xs)", gap: "var(--space-2)", padding: "0 var(--space-3)" }}
                         >
                             {naam !== "Alle" && (
-                                <span style={{
-                                    width: "16px", height: "16px", borderRadius: "var(--radius-full)",
-                                    background: avatarKleurVoor(naam), color: "#fff",
-                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                    fontSize: "9px", fontWeight: "700", flexShrink: 0,
-                                }}>
+                                <span style={{ width: "16px", height: "16px", borderRadius: "var(--radius-full)", background: avatarKleurVoor(naam), color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "700", flexShrink: 0 }}>
                                     {naam.charAt(0).toUpperCase()}
                                 </span>
                             )}
@@ -429,8 +521,8 @@ function GarageAuditTrail() {
                     </svg>
                     <div style={{ fontSize: "var(--text-sm)" }}>
                         {zoek || filterMedewerker !== "Alle"
-                            ? "Geen resultaten gevonden — pas de filters aan."
-                            : "Nog geen activiteit geregistreerd."}
+                            ? "Geen resultaten — pas de filters aan."
+                            : `Geen activiteit in ${RANGE_LABELS[datumRange].toLowerCase()}.`}
                     </div>
                 </div>
             )}
@@ -438,116 +530,79 @@ function GarageAuditTrail() {
             {/* ── Tijdlijn per datum ── */}
             {Object.entries(groepen).map(([datum, regels]) => (
                 <div key={datum}>
-                    {/* Datum-header */}
-                    <div style={{
-                        display: "flex", alignItems: "center", gap: "var(--space-3)",
-                        marginBottom: "var(--space-2)",
-                    }}>
-                        <div style={{
-                            fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)",
-                            color: datum === "Vandaag" ? "var(--color-accent-text)" : "var(--color-muted)",
-                            textTransform: "uppercase", letterSpacing: "var(--tracking-wider)",
-                            whiteSpace: "nowrap",
-                        }}>{datum}</div>
-                        <div style={{
-                            flex: 1, height: "1px",
-                            background: datum === "Vandaag" ? "var(--color-accent)" : "var(--color-border)",
-                            opacity: datum === "Vandaag" ? 0.4 : 1,
-                        }} />
-                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", flexShrink: 0 }}>
-                            {regels.length}
-                        </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                        <div style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: datum === "Vandaag" ? "var(--color-accent-text)" : "var(--color-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)", whiteSpace: "nowrap" }}>{datum}</div>
+                        <div style={{ flex: 1, height: "1px", background: datum === "Vandaag" ? "var(--color-accent)" : "var(--color-border)", opacity: datum === "Vandaag" ? 0.4 : 1 }} />
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", flexShrink: 0 }}>{regels.length}</span>
                     </div>
 
-                    {/* Log regels */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
                         {regels.map((log: GarageLogRegel) => {
-                            const badge = actieBadge(log.actie);
-                            const kleur = avatarKleurVoor(log.medewerkerNaam ?? "?");
+                            const badge        = actieBadge(log.actie);
+                            const kleur        = avatarKleurVoor(log.medewerkerNaam ?? "?");
+                            const heeftOrder   = !!log.werkorderId;
+
                             return (
-                                <div key={log._id} style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "auto 1fr auto",
-                                    gap: "var(--space-3)",
-                                    padding: "var(--space-3) var(--space-3)",
-                                    borderRadius: "var(--radius-md)",
-                                    background: "var(--color-surface-2)",
-                                    borderLeft: `3px solid ${badge.kleur}`,
-                                    alignItems: "flex-start",
-                                    transition: "background var(--transition-fast)",
-                                }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-3)")}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
+                                <button
+                                    key={log._id}
+                                    onClick={heeftOrder ? () => setGeopendWerkorderId(log.werkorderId as Id<"werkorders">) : undefined}
+                                    disabled={!heeftOrder}
+                                    style={{
+                                        all: "unset",
+                                        display: "grid",
+                                        gridTemplateColumns: "auto 1fr auto",
+                                        gap: "var(--space-3)",
+                                        padding: "var(--space-3)",
+                                        borderRadius: "var(--radius-md)",
+                                        background: "var(--color-surface-2)",
+                                        borderLeft: `3px solid ${badge.kleur}`,
+                                        alignItems: "flex-start",
+                                        cursor: heeftOrder ? "pointer" : "default",
+                                        transition: "background var(--transition-fast)",
+                                        boxSizing: "border-box",
+                                        width: "100%",
+                                        textAlign: "left",
+                                    }}
+                                    onMouseEnter={(e) => { if (heeftOrder) e.currentTarget.style.background = "var(--color-surface-3)"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "var(--color-surface-2)"; }}
+                                    aria-label={heeftOrder ? `Werkorder openen: ${log.actie}${log.voertuigKenteken ? ` — ${log.voertuigKenteken}` : ""}` : log.actie}
                                 >
                                     {/* Avatar */}
-                                    <div style={{
-                                        width: "30px", height: "30px", borderRadius: "var(--radius-full)",
-                                        background: kleur, color: "#fff",
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                        fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)",
-                                        flexShrink: 0, marginTop: "1px",
-                                    }}>
+                                    <div style={{ width: "30px", height: "30px", borderRadius: "var(--radius-full)", background: kleur, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--text-xs)", fontWeight: "var(--weight-bold)", flexShrink: 0, marginTop: "1px" }}>
                                         {log.medewerkerNaam?.charAt(0).toUpperCase() ?? "?"}
                                     </div>
 
                                     {/* Content */}
                                     <div style={{ minWidth: 0 }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
-                                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)" }}>
-                                                {log.medewerkerNaam}
-                                            </span>
-                                            {/* Actie badge */}
-                                            <span style={{
-                                                fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)",
-                                                color: badge.kleur, background: badge.bg,
-                                                borderRadius: "var(--radius-full)",
-                                                padding: "1px var(--space-2)",
-                                            }}>
-                                                {log.actie}
-                                            </span>
-                                            {/* Kenteken */}
+                                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", color: "var(--color-heading)" }}>{log.medewerkerNaam}</span>
+                                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)", color: badge.kleur, background: badge.bg, borderRadius: "var(--radius-full)", padding: "1px var(--space-2)" }}>{log.actie}</span>
                                             {log.voertuigKenteken && (
-                                                <span style={{
-                                                    fontFamily: "var(--font-mono)", fontSize: "10px",
-                                                    background: "var(--color-surface-4)", border: "1px solid var(--color-border)",
-                                                    borderRadius: "var(--radius-xs)", padding: "1px 6px",
-                                                    color: "var(--color-heading)", fontWeight: "var(--weight-bold)",
-                                                    letterSpacing: "0.08em",
-                                                }}>
+                                                <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", background: "var(--color-surface-4)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xs)", padding: "1px 6px", color: "var(--color-heading)", fontWeight: "var(--weight-bold)", letterSpacing: "0.08em" }}>
                                                     {log.voertuigKenteken}
                                                 </span>
                                             )}
                                         </div>
-
-                                        {/* Voertuig merk/model */}
                                         {(log.voertuigMerk || log.voertuigModel) && (
-                                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "2px" }}>
-                                                {log.voertuigMerk} {log.voertuigModel}
-                                            </div>
+                                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", marginTop: "2px" }}>{log.voertuigMerk} {log.voertuigModel}</div>
                                         )}
-
-                                        {/* Notitie — BUG FIX: was `"{log.notitie}"` als string literal */}
                                         {log.notitie && (
-                                            <div style={{
-                                                fontSize: "var(--text-xs)", color: "var(--color-body)",
-                                                fontStyle: "italic", marginTop: "var(--space-1)",
-                                                paddingLeft: "var(--space-2)",
-                                                borderLeft: "2px solid var(--color-border)",
-                                            }}>
+                                            <div style={{ fontSize: "var(--text-xs)", color: "var(--color-body)", fontStyle: "italic", marginTop: "var(--space-1)", paddingLeft: "var(--space-2)", borderLeft: "2px solid var(--color-border)" }}>
                                                 {log.notitie}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Tijdstip */}
-                                    <div style={{
-                                        fontSize: "var(--text-xs)", color: "var(--color-muted)",
-                                        whiteSpace: "nowrap", flexShrink: 0,
-                                        fontVariantNumeric: "tabular-nums",
-                                    }}>
-                                        {new Intl.DateTimeFormat("nl-NL", { hour: "2-digit", minute: "2-digit" }).format(new Date(log.tijdstip))}
+                                    {/* Tijdstip + pijl */}
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", flexShrink: 0 }}>
+                                        <div style={{ fontSize: "var(--text-xs)", color: "var(--color-muted)", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                                            {new Intl.DateTimeFormat("nl-NL", { hour: "2-digit", minute: "2-digit" }).format(new Date(log.tijdstip))}
+                                        </div>
+                                        {heeftOrder && (
+                                            <span style={{ fontSize: "9px", color: "var(--color-accent-text)", fontWeight: "var(--weight-semibold)" }}>detail →</span>
+                                        )}
                                     </div>
-                                </div>
+                                </button>
                             );
                         })}
                     </div>
@@ -563,6 +618,11 @@ function GarageAuditTrail() {
                 >
                     Meer laden ({limiet} geladen — klik voor volgende {LIMIET_STAP})
                 </button>
+            )}
+
+            {/* ── WerkorderDetailModal via lazy WerkorderOpener ── */}
+            {geopendWerkorderId && (
+                <WerkorderOpener werkorderId={geopendWerkorderId} onSluit={() => setGeopendWerkorderId(null)} />
             )}
         </div>
     );
