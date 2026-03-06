@@ -401,6 +401,25 @@
     cursor: pointer;
 }
 
+/*
+ * iOS AUTO-ZOOM FIX
+ * iOS Safari automatically zooms in when focusing an input with font-size < 16px.
+ * `hover: none` targets touch devices only — desktop layout is unaffected.
+ * This is the correct accessible fix; DO NOT use user-scalable=no (a11y violation).
+ */
+@media (hover: none) and (pointer: coarse) {
+
+    .input,
+    .select,
+    .textarea,
+    input,
+    select,
+    textarea {
+        font-size: 1rem;
+        /* 16px minimum — prevents iOS Safari auto-zoom */
+    }
+}
+
 /* Helper tekst */
 .field-hint {
     font-size: var(--text-xs);
