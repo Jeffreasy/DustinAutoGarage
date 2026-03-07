@@ -190,6 +190,15 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
         } finally { setBezig(false); }
     }
 
+    /** Balie+: terug naar Gepland of Aanwezig — verwijdert ook de werkplek-koppeling. */
+    async function handleVerplaatsNaarStatus(nieuweStatus: "Gepland" | "Aanwezig") {
+        setBezig(true);
+        setToonVerplaatsSheet(false);
+        try {
+            await verplaats({ werkorderId: order._id, werkplekId: undefined, nieuweStatus });
+        } finally { setBezig(false); }
+    }
+
     async function handleAanwezig() {
         setBezig(true);
         try { await updateStatus({ werkorderId: order._id, nieuweStatus: "Aanwezig", notitie: "Auto aanwezig op terrein" }); }
@@ -566,6 +575,38 @@ export default function WerkorderKaart({ order, werkplekken, domeinRol, mijnId, 
                                             </button>
                                         )}
                                     </div>
+
+                                    {/* Terug naar Gepland / Aanwezig — balie+ correctie na fout */}
+                                    {isBalie && !(["Gepland", "Aanwezig"].includes(order.status)) && (
+                                        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                                            {order.status !== "Gepland" && (
+                                                <button
+                                                    onClick={() => handleVerplaatsNaarStatus("Gepland")}
+                                                    disabled={bezig}
+                                                    className="werkplek-btn"
+                                                    style={{ flex: 1, minHeight: "44px", borderRadius: "var(--radius-md)", border: "1px dashed var(--color-info-border, rgba(59,130,246,0.4))", background: "var(--color-info-bg)", color: "var(--color-info-text)", cursor: "pointer", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
+                                                    aria-label="Terugzetten naar Gepland"
+                                                >
+                                                    <IconArrowLeft />
+                                                    <span>← Gepland</span>
+                                                </button>
+                                            )}
+                                            {order.status !== "Aanwezig" && (
+                                                <button
+                                                    onClick={() => handleVerplaatsNaarStatus("Aanwezig")}
+                                                    disabled={bezig}
+                                                    className="werkplek-btn"
+                                                    style={{ flex: 1, minHeight: "44px", borderRadius: "var(--radius-md)", border: "1px dashed var(--color-info-border, rgba(59,130,246,0.4))", background: "var(--color-info-bg)", color: "var(--color-info-text)", cursor: "pointer", fontSize: "var(--text-xs)", fontWeight: "var(--weight-semibold)", display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-1)" }}
+                                                    aria-label="Terugzetten naar Aanwezig"
+                                                >
+                                                    <IconArrowLeft />
+                                                    <span>← Aanwezig</span>
+
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
                                 </div>
                             )
                         }

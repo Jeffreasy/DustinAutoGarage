@@ -266,12 +266,8 @@ export default function WerkplaatsBord() {
 
             {/* Kanban bord */}
             <div style={{ display: "flex", gap: "var(--space-4)", overflowX: "auto", paddingBottom: "var(--space-4)", alignItems: "flex-start" }}>
-                {gepland.length > 0 && (
-                    <WerkplekKolom naam="Gepland" type="Overig" orders={gepland} werkplekken={werkplekken} domeinRol={domeinRol} mijnId={mijnId} onOpenLogboek={setLogboekOrderId} />
-                )}
-                {aanwezig.length > 0 && (
-                    <WerkplekKolom naam="Aanwezig" type="Buiten" orders={aanwezig} werkplekken={werkplekken} domeinRol={domeinRol} mijnId={mijnId} onOpenLogboek={setLogboekOrderId} />
-                )}
+                <WerkplekKolom naam="Gepland" type="Overig" orders={gepland} werkplekken={werkplekken} domeinRol={domeinRol} mijnId={mijnId} onOpenLogboek={setLogboekOrderId} />
+                <WerkplekKolom naam="Aanwezig" type="Buiten" orders={aanwezig} werkplekken={werkplekken} domeinRol={domeinRol} mijnId={mijnId} onOpenLogboek={setLogboekOrderId} />
                 <WerkplekKolom naam="Wachtend / Buiten" type="Buiten" orders={wachtend} werkplekken={werkplekken} domeinRol={domeinRol} mijnId={mijnId} onOpenLogboek={setLogboekOrderId} />
 
                 {werkplekken.map((plek) => (
